@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, TrendingDown, Coins, Zap } from 'lucide-react';
 import { useRealtimeFeeds, LiveBetFeed } from '@/hooks/useRealtimeFeeds';
 import { formatDistanceToNow } from 'date-fns';
 import UserStatsModal from './UserStatsModal';
+import { supabase } from '@/integrations/supabase/client';
 
 export const LiveBetFeedComponent = () => {
   const { liveBetFeed, loading, isConnected } = useRealtimeFeeds();
@@ -21,6 +23,20 @@ export const LiveBetFeedComponent = () => {
   const handleUsernameClick = (username: string) => {
     setSelectedUsername(username);
     setShowUserStats(true);
+  };
+
+  const testRealtime = async () => {
+    try {
+      console.log('🧪 Testing realtime functionality...');
+      const { error } = await supabase.rpc('test_realtime_feed');
+      if (error) {
+        console.error('❌ Test failed:', error);
+      } else {
+        console.log('✅ Test function called successfully');
+      }
+    } catch (error) {
+      console.error('❌ Test error:', error);
+    }
   };
 
   const formatProfit = (profit: number) => {
@@ -74,6 +90,14 @@ export const LiveBetFeedComponent = () => {
             </Badge>
           </CardTitle>
           <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={testRealtime}
+              className="text-xs"
+            >
+              Test Real-time
+            </Button>
             <Badge 
               variant={selectedGame === 'all' ? 'default' : 'outline'}
               className="cursor-pointer"

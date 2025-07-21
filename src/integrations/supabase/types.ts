@@ -331,6 +331,10 @@ export type Database = {
           xp_to_next: number
         }[]
       }
+      test_realtime_feed: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
