@@ -124,7 +124,7 @@ serve(async (req) => {
           });
         }
 
-        // Deduct bet amount
+        // Deduct bet amount immediately (like coinflip)
         await supabase
           .from('profiles')
           .update({ balance: profile.balance - betAmount })
@@ -149,6 +149,12 @@ serve(async (req) => {
 
         if (gameError) {
           console.error('❌ Error creating game:', gameError);
+          // Refund bet if game creation fails
+          await supabase
+            .from('profiles')
+            .update({ balance: profile.balance })
+            .eq('id', user.id);
+          
           return new Response(JSON.stringify({ error: 'Failed to create game' }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -272,9 +278,9 @@ serve(async (req) => {
             .eq('id', user.id);
         }
 
-        // Add to game history and live feed only if game ended
+        // Add to game history and live feed only if game ended (like coinflip)
         if (newStatus !== 'active') {
-          // Add to game history for all outcomes
+          // Use the same pattern as coinflip - insert into game_history which triggers live feed via database trigger
           await supabase
             .from('game_history')
             .insert({
@@ -287,30 +293,6 @@ serve(async (req) => {
                 difficulty: game.difficulty,
                 level_reached: isMine ? game.current_level + 1 : nextLevel,
                 multiplier: newMultiplier,
-                hit_mine: isMine
-              }
-            });
-
-          // Add to live feed for ALL outcomes (not just big wins)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('username')
-            .eq('id', user.id)
-            .single();
-
-          await supabase
-            .from('live_bet_feed')
-            .insert({
-              user_id: user.id,
-              username: profile?.username || 'Unknown',
-              game_type: 'tower',
-              bet_amount: game.bet_amount,
-              result: newStatus === 'cashed_out' ? 'win' : 'lose',
-              profit: (finalPayout || 0) - game.bet_amount,
-              multiplier: newMultiplier > 1 ? newMultiplier : null,
-              game_data: {
-                difficulty: game.difficulty,
-                level_reached: isMine ? game.current_level + 1 : nextLevel,
                 hit_mine: isMine
               }
             });
@@ -387,7 +369,7 @@ serve(async (req) => {
           })
           .eq('id', user.id);
 
-        // Add to game history
+        // Use the same pattern as coinflip - insert into game_history which triggers live feed via database trigger
         await supabase
           .from('game_history')
           .insert({
@@ -399,30 +381,7 @@ serve(async (req) => {
             game_data: {
               difficulty: game.difficulty,
               level_reached: game.current_level,
-              multiplier
-            }
-          });
-
-        // Add to live feed for cash out
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', user.id)
-          .single();
-
-        await supabase
-          .from('live_bet_feed')
-          .insert({
-            user_id: user.id,
-            username: profile?.username || 'Unknown',
-            game_type: 'tower',
-            bet_amount: game.bet_amount,
-            result: 'win',
-            profit: payout - game.bet_amount,
-            multiplier,
-            game_data: {
-              difficulty: game.difficulty,
-              level_reached: game.current_level,
+              multiplier,
               cashed_out: true
             }
           });
