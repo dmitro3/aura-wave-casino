@@ -765,7 +765,69 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
           )}
         </div>
 
-        {/* This large Tower Live Feed section is removed to make the game more compact */}
+        
+        {/* Heroes' Chronicle - Compact Live Feed */}
+        <Card className="glass border-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center space-x-2 text-lg">
+              <Trophy className="w-5 h-5 text-accent" />
+              <span>Heroes' Chronicle</span>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-card/30 border">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+                  <span className="text-xs font-medium">Live Feed</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {towerBets.length} quests
+                </Badge>
+              </div>
+              
+              {towerBets.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Building className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">No recent adventures</p>
+                  <p className="text-xs">Be the first hero!</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {towerBets.slice(0, 4).map((bet, index) => (
+                    <div
+                      key={index}
+                      className="p-2 rounded-lg border bg-card/20 text-xs animate-fade-in"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1">
+                          <span className="font-medium text-primary truncate max-w-20">{bet.username}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <span>${bet.bet_amount.toFixed(0)}</span>
+                          <span className="text-muted-foreground">•</span>
+                          <span>Lv{bet.game_data?.level_reached || 1}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          {bet.result === 'win' ? (
+                            <span className="text-success">+${bet.profit.toFixed(0)}</span>
+                          ) : (
+                            <span className="text-destructive">-${bet.bet_amount.toFixed(0)}</span>
+                          )}
+                          {bet.multiplier && (
+                            <Badge variant="secondary" className="text-xs h-4 px-1">
+                              {bet.multiplier.toFixed(1)}x
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
