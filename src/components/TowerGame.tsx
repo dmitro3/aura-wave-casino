@@ -599,10 +599,10 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-3 space-y-3 h-full">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full">
+    <div className="max-w-6xl mx-auto p-3 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Main Game Area */}
-        <div className="lg:col-span-2 space-y-3 h-full overflow-auto">
+        <div className="lg:col-span-2 space-y-3">
           {/* Game Settings */}
           <Card className="glass border-0 bg-gradient-to-br from-slate-900/50 to-slate-800/50">
             <CardHeader className="pb-2">
@@ -707,7 +707,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
           {/* Tower */}
           <Card className="glass border-0 bg-gradient-to-b from-slate-900/50 to-slate-800/30 flex-1">
             <CardContent className="p-3">
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <div className="space-y-2">
                 {game ? (
                   /* Render levels from top to bottom */
                   Array.from({ length: game.max_level }, (_, i) => game.max_level - 1 - i)
