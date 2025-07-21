@@ -8,8 +8,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building, Trophy, Zap, AlertTriangle, Coins } from 'lucide-react';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
+import { useGameHistory } from '@/hooks/useGameHistory';
+import { UserProfile } from '@/hooks/useUserProfile';
 
-interface TowerGame {
+interface TowerGameProps {
+  userData: UserProfile;
+  onUpdateUser: (updatedData: Partial<UserProfile>) => Promise<void>;
+}
+
+interface TowerGameState {
   id: string;
   difficulty: string;
   bet_amount: number;
@@ -18,6 +25,7 @@ interface TowerGame {
   status: 'active' | 'cashed_out' | 'lost';
   current_multiplier: number;
   final_payout?: number;
+  mine_positions: number[][];
 }
 
 interface DifficultyConfig {
@@ -31,28 +39,44 @@ const DIFFICULTY_INFO = {
     color: 'bg-green-500/20 text-green-400 border-green-500/30',
     icon: '🟢',
     description: '4 tiles, 3 safe, 75% chance',
-    maxMultiplier: '11.95x'
+    maxMultiplier: '11.95x',
+    tilesPerRow: 4,
+    safeCount: 3,
+    mineCount: 1,
+    maxLevel: 9
   },
   medium: { 
     name: 'Medium', 
     color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
     icon: '🟡',
     description: '3 tiles, 2 safe, 66.6% chance',
-    maxMultiplier: '33.99x'
+    maxMultiplier: '33.99x',
+    tilesPerRow: 3,
+    safeCount: 2,
+    mineCount: 1,
+    maxLevel: 9
   },
   hard: { 
     name: 'Hard', 
     color: 'bg-red-500/20 text-red-400 border-red-500/30',
     icon: '🔴',
     description: '2 tiles, 1 safe, 50% chance',
-    maxMultiplier: '475.40x'
+    maxMultiplier: '475.40x',
+    tilesPerRow: 2,
+    safeCount: 1,
+    mineCount: 1,
+    maxLevel: 9
   },
   extreme: { 
     name: 'Extreme', 
     color: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     icon: '🔥',
     description: '3 tiles, 1 safe, 33.3% chance',
-    maxMultiplier: '643.10x'
+    maxMultiplier: '643.10x',
+    tilesPerRow: 3,
+    safeCount: 1,
+    mineCount: 2,
+    maxLevel: 6
   }
 };
 
@@ -63,8 +87,8 @@ const PAYOUT_MULTIPLIERS = {
   extreme: [2.94, 8.64, 25.37, 74.51, 218.82, 643.10]
 };
 
-export const TowerGame = () => {
-  const [game, setGame] = useState<TowerGame | null>(null);
+export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
+  const [game, setGame] = useState<TowerGameState | null>(null);
   const [config, setConfig] = useState<DifficultyConfig | null>(null);
   const [difficulty, setDifficulty] = useState('easy');
   const [betAmount, setBetAmount] = useState('10');
@@ -74,35 +98,104 @@ export const TowerGame = () => {
   const [animatingLevel, setAnimatingLevel] = useState<number | null>(null);
   const { toast } = useToast();
   const { liveBetFeed, isConnected } = useRealtimeFeeds();
+  const { addGameRecord } = useGameHistory('tower', 10);
 
   // Filter tower bets from live feed
   const towerBets = liveBetFeed.filter(bet => bet.game_type === 'tower');
 
+  // Generate mine positions for a difficulty
+  const generateMinePositions = (difficulty: string): number[][] => {
+    const config = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO];
+    const positions: number[][] = [];
+    
+    for (let level = 0; level < config.maxLevel; level++) {
+      const levelMines: number[] = [];
+      const availablePositions = Array.from({ length: config.tilesPerRow }, (_, i) => i);
+      
+      // Shuffle and pick mine positions
+      for (let i = availablePositions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [availablePositions[i], availablePositions[j]] = [availablePositions[j], availablePositions[i]];
+      }
+      
+      for (let i = 0; i < config.mineCount; i++) {
+        levelMines.push(availablePositions[i]);
+      }
+      
+      positions.push(levelMines.sort((a, b) => a - b));
+    }
+    
+    return positions;
+  };
+
   const startGame = async () => {
+    if (!userData || loading) return;
+
+    const bet = parseFloat(betAmount);
+    if (isNaN(bet) || bet <= 0) {
+      toast({
+        title: "Invalid Bet",
+        description: "Please enter a valid bet amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (bet > userData.balance) {
+      toast({
+        title: "Insufficient Balance",
+        description: "You don't have enough balance for this bet",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('tower-engine', {
-        body: {
-          action: 'start',
+      
+      // Generate mine positions
+      const minePositions = generateMinePositions(difficulty);
+      const difficultyConfig = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO];
+      
+      // Create game in database
+      const { data: gameData, error: gameError } = await supabase
+        .from('tower_games')
+        .insert({
+          user_id: userData.id,
           difficulty,
-          betAmount: parseFloat(betAmount)
-        }
+          bet_amount: bet,
+          max_level: difficultyConfig.maxLevel,
+          mine_positions: minePositions
+        })
+        .select()
+        .single();
+
+      if (gameError) throw gameError;
+
+      // Update local state
+      setGame({
+        ...gameData,
+        mine_positions: minePositions
+      } as TowerGameState);
+      
+      setConfig({
+        tilesPerRow: difficultyConfig.tilesPerRow,
+        maxLevel: difficultyConfig.maxLevel
+      });
+      
+      setRevealedTiles({});
+      setSelectedTile(null);
+
+      // Update user balance immediately (like coinflip)
+      await onUpdateUser({
+        balance: userData.balance - bet,
+        total_wagered: userData.total_wagered + bet
       });
 
-      if (error) throw error;
-
-      if (data.success) {
-        setGame(data.game);
-        setConfig(data.config);
-        setRevealedTiles({});
-        setSelectedTile(null);
-        toast({
-          title: "Game Started!",
-          description: `Tower game on ${DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name} difficulty`,
-        });
-      } else {
-        throw new Error(data.error);
-      }
+      toast({
+        title: "Game Started!",
+        description: `Tower game on ${difficultyConfig.name} difficulty`,
+      });
     } catch (error: any) {
       toast({
         title: "Error",
@@ -115,34 +208,50 @@ export const TowerGame = () => {
   };
 
   const selectTile = async (tileIndex: number) => {
-    if (!game || selectedTile !== null || loading) return;
+    if (!game || selectedTile !== null || loading || !userData) return;
 
     try {
       setLoading(true);
       setSelectedTile(tileIndex);
       setAnimatingLevel(game.current_level + 1);
 
-      const { data, error } = await supabase.functions.invoke('tower-engine', {
-        body: {
-          action: 'selectTile',
-          gameId: game.id,
-          tileSelected: tileIndex
-        }
-      });
+      // Get mine positions for current level
+      const currentLevelMines = game.mine_positions[game.current_level];
+      const isMine = currentLevelMines.includes(tileIndex);
+      const nextLevel = game.current_level + 1;
+      const difficultyConfig = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO];
+      const wasLastLevel = nextLevel >= difficultyConfig.maxLevel;
 
-      if (error) throw error;
+      let newStatus = game.status;
+      let newMultiplier = game.current_multiplier;
+      let finalPayout = 0;
+
+      if (isMine) {
+        // Hit a mine - game over
+        newStatus = 'lost';
+        finalPayout = 0;
+      } else {
+        // Safe tile - advance to next level or complete game
+        newMultiplier = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level];
+        
+        if (wasLastLevel) {
+          // Reached max level - auto cash out
+          newStatus = 'cashed_out';
+          finalPayout = game.bet_amount * newMultiplier;
+        }
+      }
 
       // Update revealed tiles
       const levelKey = game.current_level;
       setRevealedTiles(prev => ({
         ...prev,
-        [`${levelKey}-${tileIndex}`]: { safe: !data.isMine, selected: true }
+        [`${levelKey}-${tileIndex}`]: { safe: !isMine, selected: true }
       }));
 
       // Reveal all mines if hit one
-      if (data.isMine && data.minePositions) {
+      if (isMine) {
         const newRevealed = { ...revealedTiles };
-        data.minePositions.forEach((minePos: number) => {
+        currentLevelMines.forEach((minePos: number) => {
           if (minePos !== tileIndex) {
             newRevealed[`${levelKey}-${minePos}`] = { safe: false, selected: false };
           }
@@ -150,32 +259,80 @@ export const TowerGame = () => {
         setRevealedTiles(newRevealed);
       }
 
-      // Update game state
+      // Update game state in database
+      const updateData: any = {
+        current_level: isMine ? game.current_level : nextLevel,
+        current_multiplier: newMultiplier,
+        status: newStatus
+      };
+
+      if (finalPayout > 0) {
+        updateData.final_payout = finalPayout;
+      }
+
+      await supabase
+        .from('tower_games')
+        .update(updateData)
+        .eq('id', game.id);
+
+      // Update local game state
       setGame(prev => prev ? {
         ...prev,
-        current_level: data.newLevel,
-        current_multiplier: data.multiplier,
-        status: data.gameStatus,
-        final_payout: data.payout
+        current_level: isMine ? game.current_level : nextLevel,
+        current_multiplier: newMultiplier,
+        status: newStatus,
+        final_payout: finalPayout
       } : null);
+
+      // If game ended, record it (like coinflip)
+      if (newStatus !== 'active') {
+        const profit = (finalPayout || 0) - game.bet_amount;
+        
+        // Add game record to history (this will trigger the live feed update via database trigger)
+        await addGameRecord({
+          game_type: 'tower',
+          bet_amount: game.bet_amount,
+          result: newStatus === 'cashed_out' ? 'win' : 'lose',
+          profit,
+          game_data: {
+            difficulty: game.difficulty,
+            level_reached: isMine ? game.current_level + 1 : nextLevel,
+            multiplier: newMultiplier,
+            hit_mine: isMine
+          }
+        });
+
+        // Update user balance if won
+        if (finalPayout > 0) {
+          await onUpdateUser({
+            balance: userData.balance - game.bet_amount + finalPayout,
+            total_profit: userData.total_profit + profit
+          });
+        } else {
+          // Just update total_profit for losses
+          await onUpdateUser({
+            total_profit: userData.total_profit + profit
+          });
+        }
+      }
 
       // Show result
       setTimeout(() => {
-        if (data.isMine) {
+        if (isMine) {
           toast({
             title: "💥 Mine Hit!",
             description: "Game over! Better luck next time.",
             variant: "destructive",
           });
-        } else if (data.gameStatus === 'cashed_out') {
+        } else if (newStatus === 'cashed_out') {
           toast({
             title: "🏆 Tower Completed!",
-            description: `Amazing! You won $${data.payout.toFixed(2)}!`,
+            description: `Amazing! You won $${finalPayout.toFixed(2)}!`,
           });
         } else {
           toast({
             title: "✅ Safe!",
-            description: `Level ${data.newLevel} - ${data.multiplier.toFixed(2)}x multiplier`,
+            description: `Level ${nextLevel} - ${newMultiplier.toFixed(2)}x multiplier`,
           });
         }
         setAnimatingLevel(null);
@@ -195,31 +352,57 @@ export const TowerGame = () => {
   };
 
   const cashOut = async () => {
-    if (!game || loading) return;
+    if (!game || loading || game.current_level === 0 || !userData) return;
 
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('tower-engine', {
-        body: {
-          action: 'cashOut',
-          gameId: game.id
+      
+      const difficultyConfig = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO];
+      const multiplier = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level - 1];
+      const payout = game.bet_amount * multiplier;
+
+      // Update game status in database
+      await supabase
+        .from('tower_games')
+        .update({
+          status: 'cashed_out',
+          final_payout: payout
+        })
+        .eq('id', game.id);
+
+      // Update local state
+      setGame(prev => prev ? {
+        ...prev,
+        status: 'cashed_out',
+        final_payout: payout
+      } : null);
+
+      const profit = payout - game.bet_amount;
+
+      // Add game record to history (this will trigger the live feed update via database trigger)
+      await addGameRecord({
+        game_type: 'tower',
+        bet_amount: game.bet_amount,
+        result: 'win',
+        profit,
+        game_data: {
+          difficulty: game.difficulty,
+          level_reached: game.current_level,
+          multiplier,
+          cashed_out: true
         }
       });
 
-      if (error) throw error;
+      // Update user balance
+      await onUpdateUser({
+        balance: userData.balance - game.bet_amount + payout,
+        total_profit: userData.total_profit + profit
+      });
 
-      if (data.success) {
-        setGame(prev => prev ? {
-          ...prev,
-          status: 'cashed_out',
-          final_payout: data.payout
-        } : null);
-
-        toast({
-          title: "💰 Cashed Out!",
-          description: `You won $${data.payout.toFixed(2)} at ${data.multiplier.toFixed(2)}x!`,
-        });
-      }
+      toast({
+        title: "💰 Cashed Out!",
+        description: `You won $${payout.toFixed(2)} at ${multiplier.toFixed(2)}x!`,
+      });
     } catch (error: any) {
       toast({
         title: "Error",

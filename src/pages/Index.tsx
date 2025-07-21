@@ -213,7 +213,7 @@ export default function Index() {
             </TabsContent>
 
             <TabsContent value="tower">
-              <TowerGame />
+              <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
             </TabsContent>
 
             <TabsContent value="crash">
