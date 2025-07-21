@@ -14,7 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      game_history: {
+        Row: {
+          bet_amount: number
+          created_at: string
+          game_data: Json | null
+          game_type: string
+          id: string
+          profit: number
+          result: string
+          user_id: string
+        }
+        Insert: {
+          bet_amount: number
+          created_at?: string
+          game_data?: Json | null
+          game_type: string
+          id?: string
+          profit: number
+          result: string
+          user_id: string
+        }
+        Update: {
+          bet_amount?: number
+          created_at?: string
+          game_data?: Json | null
+          game_type?: string
+          id?: string
+          profit?: number
+          result?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      game_stats: {
+        Row: {
+          created_at: string
+          game_type: string
+          id: string
+          losses: number
+          total_profit: number
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          created_at?: string
+          game_type: string
+          id?: string
+          losses?: number
+          total_profit?: number
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          created_at?: string
+          game_type?: string
+          id?: string
+          losses?: number
+          total_profit?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          badges: string[]
+          balance: number
+          created_at: string
+          id: string
+          last_claim_time: string
+          level: number
+          registration_date: string
+          total_profit: number
+          total_wagered: number
+          updated_at: string
+          username: string
+          xp: number
+        }
+        Insert: {
+          badges?: string[]
+          balance?: number
+          created_at?: string
+          id: string
+          last_claim_time?: string
+          level?: number
+          registration_date?: string
+          total_profit?: number
+          total_wagered?: number
+          updated_at?: string
+          username: string
+          xp?: number
+        }
+        Update: {
+          badges?: string[]
+          balance?: number
+          created_at?: string
+          id?: string
+          last_claim_time?: string
+          level?: number
+          registration_date?: string
+          total_profit?: number
+          total_wagered?: number
+          updated_at?: string
+          username?: string
+          xp?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

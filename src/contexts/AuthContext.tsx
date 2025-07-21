@@ -43,51 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          username,
+        },
+      },
     })
 
-    if (error) return { error }
-
-    // Create profile after successful signup
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          username,
-          registration_date: new Date().toISOString(),
-          balance: 0,
-          level: 1,
-          xp: 0,
-          total_wagered: 0,
-          total_profit: 0,
-          last_claim_time: new Date(0).toISOString(),
-          badges: ['welcome'],
-        })
-
-      if (profileError) return { error: profileError }
-
-      // Create initial game stats
-      await supabase
-        .from('game_stats')
-        .insert([
-          {
-            user_id: data.user.id,
-            game_type: 'coinflip',
-            wins: 0,
-            losses: 0,
-            total_profit: 0,
-          },
-          {
-            user_id: data.user.id,
-            game_type: 'crash',
-            wins: 0,
-            losses: 0,
-            total_profit: 0,
-          },
-        ])
-    }
-
-    return { data, error: null }
+    return { data, error }
   }
 
   const signIn = async (email: string, password: string) => {
