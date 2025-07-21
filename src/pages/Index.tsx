@@ -15,7 +15,7 @@ import { RouletteGame } from '@/components/RouletteGame';
 import { RealtimeChat } from '@/components/RealtimeChat';
 import { LevelUpNotification } from '@/components/LevelUpNotification';
 import RewardsPanel from '@/components/RewardsPanel';
-import { LiveBetFeed } from '@/components/LiveBetFeed';
+
 
 export default function Index() {
   const { user, signOut } = useAuth();
@@ -208,7 +208,7 @@ export default function Index() {
         username={selectedStatsUser}
       />
 
-      <LevelUpNotification />
+      
     </div>
   );
 }
