@@ -298,6 +298,113 @@ export type Database = {
         }
         Relationships: []
       }
+      roulette_bets: {
+        Row: {
+          actual_payout: number | null
+          bet_amount: number
+          bet_color: string
+          created_at: string
+          id: string
+          is_winner: boolean | null
+          potential_payout: number
+          round_id: string
+          user_id: string
+        }
+        Insert: {
+          actual_payout?: number | null
+          bet_amount: number
+          bet_color: string
+          created_at?: string
+          id?: string
+          is_winner?: boolean | null
+          potential_payout: number
+          round_id: string
+          user_id: string
+        }
+        Update: {
+          actual_payout?: number | null
+          bet_amount?: number
+          bet_color?: string
+          created_at?: string
+          id?: string
+          is_winner?: boolean | null
+          potential_payout?: number
+          round_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roulette_bets_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roulette_results: {
+        Row: {
+          created_at: string
+          id: string
+          result_color: string
+          result_slot: number
+          round_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          result_color: string
+          result_slot: number
+          round_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          result_color?: string
+          result_slot?: number
+          round_number?: number
+        }
+        Relationships: []
+      }
+      roulette_rounds: {
+        Row: {
+          betting_end_time: string | null
+          created_at: string
+          id: string
+          result_color: string | null
+          result_multiplier: number | null
+          result_slot: number | null
+          round_number: number
+          spin_end_time: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          betting_end_time?: string | null
+          created_at?: string
+          id?: string
+          result_color?: string | null
+          result_multiplier?: number | null
+          result_slot?: number | null
+          round_number?: number
+          spin_end_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          betting_end_time?: string | null
+          created_at?: string
+          id?: string
+          result_color?: string | null
+          result_multiplier?: number | null
+          result_slot?: number | null
+          round_number?: number
+          spin_end_time?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
