@@ -79,10 +79,10 @@ export const useRealtimeFeeds = () => {
         if (crashRoundData.data?.[0]) setCurrentCrashRound(crashRoundData.data[0] as CrashRound);
         if (crashBetsData.data) setCrashBets(crashBetsData.data as CrashBet[]);
 
-        // Set up live bet feed subscription with simpler configuration
+        // Set up live bet feed subscription with the most basic approach
         console.log('🔗 Setting up live bet feed subscription...');
         liveFeedChannel = supabase
-          .channel('live_bet_feed_channel')
+          .channel('live_bet_feed_changes')
           .on(
             'postgres_changes',
             {
@@ -91,29 +91,44 @@ export const useRealtimeFeeds = () => {
               table: 'live_bet_feed'
             },
             (payload) => {
-              console.log('📡 New bet in feed:', payload.new);
+              console.log('📡 RECEIVED: New bet in feed:', payload);
               const newBet = payload.new as LiveBetFeed;
+              
               setLiveBetFeed(prev => {
-                // Avoid duplicates
+                // Check for duplicates
                 const exists = prev.some(bet => bet.id === newBet.id);
                 if (exists) {
                   console.log('⚠️ Duplicate bet detected, skipping:', newBet.id);
                   return prev;
                 }
-                console.log('✅ Adding new bet to feed:', newBet.username, newBet.game_type);
-                return [newBet, ...prev.slice(0, 49)];
+                
+                console.log('✅ SUCCESS: Adding bet to feed:', newBet.username, newBet.game_type, newBet.bet_amount);
+                
+                // Add to beginning of array and limit to 50 items
+                return [newBet, ...prev].slice(0, 50);
               });
             }
           )
           .subscribe((status) => {
-            console.log('📡 Live bet feed subscription status:', status);
+            console.log('📡 Live bet feed status change:', status);
             setIsConnected(status === 'SUBSCRIBED');
+            
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ CONNECTED: Live bet feed is now listening for changes');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('❌ ERROR: Live bet feed subscription failed');
+              setTimeout(() => {
+                console.log('🔄 RETRY: Attempting to reconnect live bet feed...');
+                liveFeedChannel?.unsubscribe();
+                setupRealtimeSubscriptions();
+              }, 3000);
+            }
           });
 
         // Set up crash rounds subscription
         console.log('🎰 Setting up crash rounds subscription...');
         crashRoundChannel = supabase
-          .channel('crash_rounds_channel')
+          .channel('crash_rounds_changes')
           .on(
             'postgres_changes',
             {
@@ -122,21 +137,21 @@ export const useRealtimeFeeds = () => {
               table: 'crash_rounds'
             },
             (payload) => {
-              console.log('🎰 Crash round update:', payload);
+              console.log('🎰 RECEIVED: Crash round update:', payload);
               if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-                console.log('✅ Updating crash round:', payload.new);
+                console.log('✅ SUCCESS: Updating crash round:', payload.new);
                 setCurrentCrashRound(payload.new as CrashRound);
               }
             }
           )
           .subscribe((status) => {
-            console.log('🎰 Crash rounds subscription status:', status);
+            console.log('🎰 Crash rounds status change:', status);
           });
 
         // Set up crash bets subscription
         console.log('💰 Setting up crash bets subscription...');
         crashBetsChannel = supabase
-          .channel('crash_bets_channel')
+          .channel('crash_bets_changes')
           .on(
             'postgres_changes',
             {
@@ -145,7 +160,7 @@ export const useRealtimeFeeds = () => {
               table: 'crash_bets'
             },
             (payload) => {
-              console.log('💰 Crash bet update:', payload);
+              console.log('💰 RECEIVED: Crash bet update:', payload);
               if (payload.eventType === 'INSERT') {
                 const newBet = payload.new as CrashBet;
                 setCrashBets(prev => {
@@ -154,11 +169,11 @@ export const useRealtimeFeeds = () => {
                     console.log('⚠️ Duplicate crash bet detected, skipping:', newBet.id);
                     return prev;
                   }
-                  console.log('✅ Adding new crash bet:', newBet);
-                  return [newBet, ...prev.slice(0, 99)];
+                  console.log('✅ SUCCESS: Adding new crash bet:', newBet);
+                  return [newBet, ...prev].slice(0, 100);
                 });
               } else if (payload.eventType === 'UPDATE') {
-                console.log('✅ Updating crash bet:', payload.new);
+                console.log('✅ SUCCESS: Updating crash bet:', payload.new);
                 setCrashBets(prev => 
                   prev.map(bet => 
                     bet.id === payload.new.id ? payload.new as CrashBet : bet
@@ -168,7 +183,7 @@ export const useRealtimeFeeds = () => {
             }
           )
           .subscribe((status) => {
-            console.log('💰 Crash bets subscription status:', status);
+            console.log('💰 Crash bets status change:', status);
           });
 
         console.log('✅ All subscriptions set up successfully');
