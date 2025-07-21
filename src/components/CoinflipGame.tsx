@@ -25,7 +25,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
   const [showUserStats, setShowUserStats] = useState(false);
   const { addGameRecord } = useGameHistory('coinflip', 10);
-  const { liveBetFeed } = useRealtimeFeeds();
+  const { liveBetFeed, isConnected } = useRealtimeFeeds();
   const { toast } = useToast();
 
   // Filter only coinflip games from the live feed
@@ -218,10 +218,10 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       <Card className="glass border-0">
         <CardHeader>
           <CardTitle className="text-lg flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-glow-pulse" />
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-glow-pulse' : 'bg-red-500 animate-pulse'}`} />
             <span>Live Coinflip Feed</span>
             <Badge variant="secondary" className="text-xs animate-fade-in">
-              Real-time
+              {isConnected ? 'Connected' : 'Connecting...'}
             </Badge>
           </CardTitle>
         </CardHeader>

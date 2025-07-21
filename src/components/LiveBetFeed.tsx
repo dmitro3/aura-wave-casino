@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import UserStatsModal from './UserStatsModal';
 
 export const LiveBetFeedComponent = () => {
-  const { liveBetFeed, loading } = useRealtimeFeeds();
+  const { liveBetFeed, loading, isConnected } = useRealtimeFeeds();
   const [selectedGame, setSelectedGame] = useState<'all' | 'crash' | 'coinflip'>('all');
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
   const [showUserStats, setShowUserStats] = useState(false);
@@ -67,10 +67,10 @@ export const LiveBetFeedComponent = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-glow-pulse" />
+            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-glow-pulse' : 'bg-red-500 animate-pulse'}`} />
             <span>Live Bet Feed</span>
             <Badge variant="secondary" className="text-xs animate-fade-in">
-              Real-time
+              {isConnected ? 'Connected' : 'Connecting...'}
             </Badge>
           </CardTitle>
           <div className="flex gap-2">

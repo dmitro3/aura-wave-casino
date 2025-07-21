@@ -46,6 +46,7 @@ export const useRealtimeFeeds = () => {
   const [currentCrashRound, setCurrentCrashRound] = useState<CrashRound | null>(null);
   const [crashBets, setCrashBets] = useState<CrashBet[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     let liveFeedChannel: RealtimeChannel;
@@ -106,6 +107,7 @@ export const useRealtimeFeeds = () => {
           )
           .subscribe((status) => {
             console.log('📡 Live bet feed subscription status:', status);
+            setIsConnected(status === 'SUBSCRIBED');
           });
 
         // Set up crash rounds subscription
@@ -202,7 +204,8 @@ export const useRealtimeFeeds = () => {
     liveBetFeed,
     currentCrashRound,
     crashBets,
-    loading
+    loading,
+    isConnected
   };
 };
 
