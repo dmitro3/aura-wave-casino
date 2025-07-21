@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -125,6 +126,13 @@ export default {
 						transform: 'translateY(-100px) rotate(360deg)',
 						opacity: '0'
 					}
+				},
+				'coin-flip': {
+					'0%': { transform: 'rotateY(0deg) rotateX(0deg)' },
+					'25%': { transform: 'rotateY(90deg) rotateX(180deg)' },
+					'50%': { transform: 'rotateY(180deg) rotateX(360deg)' },
+					'75%': { transform: 'rotateY(270deg) rotateX(540deg)' },
+					'100%': { transform: 'rotateY(360deg) rotateX(720deg)' }
 				}
 			},
 			animation: {
@@ -132,7 +140,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.3s ease-out',
 				'spin-slow': 'spin-slow 3s linear infinite',
-				'float-particle': 'float-particle 3s ease-out infinite'
+				'float-particle': 'float-particle 3s ease-out infinite',
+				'coin-flip': 'coin-flip 2s ease-in-out'
 			}
 		}
 	},

@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Coins, TrendingUp, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGameHistory } from '@/hooks/useGameHistory';
+import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { UserProfile } from '@/hooks/useUserProfile';
 
 interface CoinflipGameProps {
@@ -19,8 +21,14 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const [selectedSide, setSelectedSide] = useState<'heads' | 'tails'>('heads');
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<'heads' | 'tails' | null>(null);
-  const { history, addGameRecord } = useGameHistory('coinflip', 10);
+  const { addGameRecord } = useGameHistory('coinflip', 10);
+  const { liveBetFeed } = useRealtimeFeeds();
   const { toast } = useToast();
+
+  // Filter only coinflip games from the live feed
+  const coinflipBets = liveBetFeed
+    .filter(bet => bet.game_type === 'coinflip')
+    .slice(0, 10); // Show last 10 coinflip bets
 
   const handleFlip = async () => {
     if (!userData || isFlipping) return;
@@ -55,7 +63,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       setCoinResult(result);
 
       try {
-        // Add game record to history
+        // Add game record to history (this will trigger the live feed update via database trigger)
         await addGameRecord({
           game_type: 'coinflip',
           bet_amount: bet,
@@ -82,7 +90,6 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           balance: userData.balance + profit,
           total_wagered: userData.total_wagered + bet,
           total_profit: userData.total_profit + profit,
-          xp: userData.xp + Math.floor(bet / 10), // XP based on bet size
           gameStats: updatedGameStats
         });
 
@@ -199,36 +206,55 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
         </CardContent>
       </Card>
 
-      {/* Game History */}
+      {/* Live Global Coinflip Feed */}
       <Card className="glass border-0">
         <CardHeader>
-          <CardTitle className="text-lg">Recent Flips</CardTitle>
+          <CardTitle className="text-lg flex items-center space-x-2">
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+            <span>Live Coinflip Feed</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {history.length === 0 ? (
+          {coinflipBets.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">
-              No games played yet. Make your first flip!
+              No recent coinflip games. Be the first to play!
             </p>
           ) : (
-            <div className="space-y-2">
-              {history.map((game) => (
-                <div key={game.id} className="flex items-center justify-between p-2 glass rounded">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">
-                      {game.game_data?.coinResult === 'heads' ? '👑' : '⚡'}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      Chose {game.game_data?.choice}
-                    </span>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {coinflipBets.map((bet) => (
+                <div 
+                  key={bet.id} 
+                  className="flex items-center justify-between p-3 glass rounded-lg hover:bg-card/80 transition-colors animate-fade-in"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
+                      <AvatarFallback>{bet.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-sm truncate cursor-pointer hover:text-primary">
+                          {bet.username}
+                        </span>
+                        <span className="text-lg">
+                          {bet.game_data?.coinResult === 'heads' ? '👑' : '⚡'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Chose {bet.game_data?.choice} • ${bet.bet_amount}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={game.result === 'win' ? 'default' : 'destructive'} className="glass">
-                      ${game.bet_amount.toFixed(2)}
+                  
+                  <div className="text-right">
+                    <Badge variant={bet.profit >= 0 ? 'default' : 'destructive'} className="glass">
+                      {bet.profit >= 0 ? 'WIN' : 'LOSE'}
                     </Badge>
-                    <div className={`flex items-center space-x-1 ${game.profit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {game.profit >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                      <span className="text-sm font-medium">
-                        {game.profit >= 0 ? '+' : ''}${game.profit.toFixed(2)}
+                    <div className={`flex items-center space-x-1 text-sm mt-1 ${bet.profit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {bet.profit >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      <span className="font-medium">
+                        {bet.profit >= 0 ? '+' : ''}${bet.profit.toFixed(2)}
                       </span>
                     </div>
                   </div>

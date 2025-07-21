@@ -11,6 +11,7 @@ import AuthModal from '@/components/AuthModal';
 import UserProfile from '@/components/UserProfile';
 import RewardsPanel from '@/components/RewardsPanel';
 import CoinflipGame from '@/components/CoinflipGame';
+import { LiveBetFeedComponent } from '@/components/LiveBetFeed';
 
 export default function Index() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -27,7 +28,7 @@ export default function Index() {
   };
 
   const getXpForNextLevel = (level: number) => level * 100;
-  const xpProgress = userData ? (userData.xp / getXpForNextLevel(userData.level)) * 100 : 0;
+  const xpProgress = userData ? (userData.current_xp / (userData.current_xp + userData.xp_to_next_level)) * 100 : 0;
 
   if (authLoading || profileLoading) {
     return (
@@ -108,7 +109,7 @@ export default function Index() {
               <div className="hidden md:flex items-center space-x-2 glass px-3 py-1 rounded-lg">
                 <Trophy className="w-4 h-4 text-accent" />
                 <span className="font-semibold">
-                  Level {userData.level}
+                  Level {userData.current_level}
                 </span>
               </div>
 
@@ -136,8 +137,8 @@ export default function Index() {
           {/* XP Progress Bar */}
           <div className="mt-3 space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Level {userData.level} Progress</span>
-              <span>{userData.xp} / {getXpForNextLevel(userData.level)} XP</span>
+              <span>Level {userData.current_level} Progress</span>
+              <span>{userData.current_xp} / {userData.current_xp + userData.xp_to_next_level} XP</span>
             </div>
             <Progress value={xpProgress} className="h-2" />
           </div>
@@ -145,8 +146,8 @@ export default function Index() {
       </header>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+        {/* Left Sidebar */}
         <div className="lg:col-span-1 space-y-4">
           <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />
           
@@ -209,6 +210,11 @@ export default function Index() {
               </Card>
             </TabsContent>
           </Tabs>
+        </div>
+
+        {/* Right Sidebar - Live Feed */}
+        <div className="lg:col-span-2">
+          <LiveBetFeedComponent />
         </div>
       </div>
 
