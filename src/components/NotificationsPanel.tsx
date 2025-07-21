@@ -26,6 +26,7 @@ export default function NotificationsPanel() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [processedNotificationIds, setProcessedNotificationIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -46,6 +47,14 @@ export default function NotificationsPanel() {
         (payload) => {
           console.log('🔔 New notification received:', payload.new);
           const newNotification = payload.new as Notification;
+          
+          // Prevent duplicate notifications
+          if (processedNotificationIds.has(newNotification.id)) {
+            console.log('🚫 Duplicate notification ignored:', newNotification.id);
+            return;
+          }
+          
+          setProcessedNotificationIds(prev => new Set([...prev, newNotification.id]));
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
           
