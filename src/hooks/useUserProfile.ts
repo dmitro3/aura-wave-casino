@@ -10,6 +10,10 @@ export interface UserProfile {
   balance: number
   level: number
   xp: number
+  current_level: number
+  current_xp: number
+  xp_to_next_level: number
+  lifetime_xp: number
   total_wagered: number
   total_profit: number
   last_claim_time: string

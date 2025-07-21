@@ -34,9 +34,9 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
     return avatars[index];
   };
 
-  const getXpForNextLevel = (level: number) => level * 100;
-  const xpForNext = getXpForNextLevel(userData.level);
-  const xpProgress = (userData.xp / xpForNext) * 100;
+  const xpProgress = userData.xp_to_next_level > 0 
+    ? ((userData.current_xp / (userData.current_xp + userData.xp_to_next_level)) * 100)
+    : 100;
 
   const registrationDate = new Date(userData.registration_date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -75,7 +75,7 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
                 Level {userData.level}
               </div>
               <div className="text-sm text-muted-foreground">
-                {userData.xp}/{xpForNext} XP
+                {userData.current_xp}/{userData.current_xp + userData.xp_to_next_level} XP
               </div>
             </div>
           </div>

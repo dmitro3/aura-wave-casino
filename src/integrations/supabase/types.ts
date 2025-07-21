@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          permissions: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          permissions?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          permissions?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crash_bets: {
+        Row: {
+          auto_cashout_at: number | null
+          bet_amount: number
+          cashed_out_at: number | null
+          cashout_time: string | null
+          created_at: string
+          id: string
+          profit: number | null
+          round_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          auto_cashout_at?: number | null
+          bet_amount: number
+          cashed_out_at?: number | null
+          cashout_time?: string | null
+          created_at?: string
+          id?: string
+          profit?: number | null
+          round_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          auto_cashout_at?: number | null
+          bet_amount?: number
+          cashed_out_at?: number | null
+          cashout_time?: string | null
+          created_at?: string
+          id?: string
+          profit?: number | null
+          round_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crash_bets_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "crash_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crash_rounds: {
+        Row: {
+          countdown_end_time: string | null
+          crash_point: number | null
+          crash_time: string | null
+          created_at: string
+          id: string
+          multiplier: number
+          round_number: number
+          start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          countdown_end_time?: string | null
+          crash_point?: number | null
+          crash_time?: string | null
+          created_at?: string
+          id?: string
+          multiplier?: number
+          round_number?: number
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          countdown_end_time?: string | null
+          crash_point?: number | null
+          crash_time?: string | null
+          created_at?: string
+          id?: string
+          multiplier?: number
+          round_number?: number
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       game_history: {
         Row: {
           bet_amount: number
@@ -80,48 +184,117 @@ export type Database = {
         }
         Relationships: []
       }
+      level_rewards: {
+        Row: {
+          bonus_amount: number
+          level: number
+          xp_required: number
+        }
+        Insert: {
+          bonus_amount: number
+          level: number
+          xp_required: number
+        }
+        Update: {
+          bonus_amount?: number
+          level?: number
+          xp_required?: number
+        }
+        Relationships: []
+      }
+      live_bet_feed: {
+        Row: {
+          bet_amount: number
+          created_at: string
+          game_data: Json | null
+          game_type: string
+          id: string
+          multiplier: number | null
+          profit: number
+          result: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          bet_amount: number
+          created_at?: string
+          game_data?: Json | null
+          game_type: string
+          id?: string
+          multiplier?: number | null
+          profit: number
+          result: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          bet_amount?: number
+          created_at?: string
+          game_data?: Json | null
+          game_type?: string
+          id?: string
+          multiplier?: number | null
+          profit?: number
+          result?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           badges: string[]
           balance: number
           created_at: string
+          current_level: number
+          current_xp: number
           id: string
           last_claim_time: string
           level: number
+          lifetime_xp: number
           registration_date: string
           total_profit: number
           total_wagered: number
           updated_at: string
           username: string
           xp: number
+          xp_to_next_level: number
         }
         Insert: {
           badges?: string[]
           balance?: number
           created_at?: string
+          current_level?: number
+          current_xp?: number
           id: string
           last_claim_time?: string
           level?: number
+          lifetime_xp?: number
           registration_date?: string
           total_profit?: number
           total_wagered?: number
           updated_at?: string
           username: string
           xp?: number
+          xp_to_next_level?: number
         }
         Update: {
           badges?: string[]
           balance?: number
           created_at?: string
+          current_level?: number
+          current_xp?: number
           id?: string
           last_claim_time?: string
           level?: number
+          lifetime_xp?: number
           registration_date?: string
           total_profit?: number
           total_wagered?: number
           updated_at?: string
           username?: string
           xp?: number
+          xp_to_next_level?: number
         }
         Relationships: []
       }
@@ -130,7 +303,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_to_live_feed: {
+        Args: {
+          p_user_id: string
+          p_game_type: string
+          p_bet_amount: number
+          p_result: string
+          p_profit: number
+          p_multiplier?: number
+          p_game_data?: Json
+        }
+        Returns: undefined
+      }
+      add_xp_and_check_levelup: {
+        Args: { user_uuid: string; xp_amount: number }
+        Returns: {
+          leveled_up: boolean
+          new_level: number
+          bonus_earned: number
+        }[]
+      }
+      calculate_level_from_xp: {
+        Args: { total_xp: number }
+        Returns: {
+          level: number
+          current_level_xp: number
+          xp_to_next: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
