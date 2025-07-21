@@ -819,7 +819,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
                 </div>
               ) : (
                 <div className="space-y-1 h-full overflow-y-auto">
-                  {towerBets.slice(0, 20).map((bet, index) => (
+                  {towerBets.slice(0, 18).map((bet, index) => (
                     <div
                       key={index}
                       className="p-2 rounded-lg border bg-card/20 hover:bg-card/30 transition-colors animate-fade-in cursor-pointer"
