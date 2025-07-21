@@ -11,7 +11,7 @@ import AuthModal from '@/components/AuthModal';
 import UserProfile from '@/components/UserProfile';
 import RewardsPanel from '@/components/RewardsPanel';
 import CoinflipGame from '@/components/CoinflipGame';
-import { LiveBetFeedComponent } from '@/components/LiveBetFeed';
+import { RealtimeChat } from '@/components/RealtimeChat';
 import { RouletteGame } from '@/components/RouletteGame';
 import { TowerGame } from '@/components/TowerGame';
 
@@ -230,9 +230,9 @@ export default function Index() {
           </Tabs>
         </div>
 
-        {/* Right Sidebar - Live Feed */}
+        {/* Right Sidebar - Real-time Chat */}
         <div className="lg:col-span-2">
-          <LiveBetFeedComponent />
+          <RealtimeChat />
         </div>
       </div>
 
