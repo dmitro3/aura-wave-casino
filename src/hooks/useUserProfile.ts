@@ -105,8 +105,8 @@ export function useUserProfile() {
         .from('profiles')
         .update({
           balance: updates.balance,
-          level: updates.level,
-          xp: updates.xp,
+          current_level: updates.current_level || updates.level,
+          current_xp: updates.current_xp || updates.xp,
           total_wagered: updates.total_wagered,
           total_profit: updates.total_profit,
           last_claim_time: updates.last_claim_time,
