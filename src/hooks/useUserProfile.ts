@@ -38,6 +38,29 @@ export function useUserProfile() {
     }
 
     fetchUserProfile()
+    
+    // Set up real-time subscription for profile changes (including balance updates)
+    const channel = supabase
+      .channel('profile_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Real-time profile update:', payload.new);
+          // Refresh the full profile data when balance or other fields change
+          fetchUserProfile();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user])
 
   const fetchUserProfile = async () => {
