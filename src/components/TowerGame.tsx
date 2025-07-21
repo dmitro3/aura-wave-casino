@@ -498,7 +498,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
     const isAnimating = animatingLevel === levelIndex + 1;
     const hasCharacter = characterPosition.level === levelIndex && characterPosition.tile === tileIndex && !revealed;
 
-    let tileClass = "relative w-8 h-8 rounded border-2 transition-all duration-500 cursor-pointer flex items-center justify-center text-sm font-bold overflow-hidden ";
+    let tileClass = "relative w-10 h-10 rounded-lg border-2 transition-all duration-500 cursor-pointer flex items-center justify-center text-lg font-bold overflow-hidden ";
     
     if (revealed) {
       if (revealed.safe) {
@@ -561,29 +561,29 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
     const tilesPerRow = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].tilesPerRow;
 
     return (
-      <div key={levelIndex} className={`relative flex items-center gap-2 p-2 rounded border transition-all duration-500 ${
-        isPastLevel ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border-emerald-500/40' :
-        isCurrentLevel ? 'bg-gradient-to-r from-primary/15 to-primary/25 border-primary animate-pulse' :
+      <div key={levelIndex} className={`relative flex items-center gap-3 p-3 rounded-lg border transition-all duration-500 ${
+        isPastLevel ? 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 border-emerald-500/40 shadow-lg shadow-emerald-400/20' :
+        isCurrentLevel ? 'bg-gradient-to-r from-primary/15 to-primary/25 border-primary shadow-lg shadow-primary/30 animate-pulse' :
         'bg-gradient-to-r from-slate-800/20 to-slate-900/20 border-slate-700/30'
       }`}>
         {/* Level indicator */}
-        <div className="flex flex-col items-center gap-1 min-w-[50px]">
+        <div className="flex flex-col items-center gap-1 min-w-[60px]">
           <Badge variant={isPastLevel ? "default" : isCurrentLevel ? "secondary" : "outline"} 
-                 className={`text-xs font-bold px-2 py-0.5 ${
+                 className={`text-sm font-bold px-2 py-1 ${
                    isPastLevel ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400' :
                    isCurrentLevel ? 'bg-primary/20 text-primary border-primary' : ''
                  }`}>
             {levelNum}
           </Badge>
-          <div className={`text-xs font-bold ${
+          <div className={`text-sm font-bold ${
             isPastLevel ? 'text-emerald-300' : isCurrentLevel ? 'text-primary' : 'text-slate-400'
           }`}>
-            {multiplier.toFixed(1)}x
+            {multiplier.toFixed(2)}x
           </div>
         </div>
         
         {/* Tiles */}
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           {Array.from({ length: tilesPerRow }, (_, i) => renderTile(levelIndex, i))}
         </div>
 
@@ -591,6 +591,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
         {isPastLevel && (
           <div className="flex items-center gap-1 text-emerald-300 font-bold text-xs">
             <Crown className="w-3 h-3" />
+            <span>✓</span>
           </div>
         )}
       </div>
@@ -598,27 +599,35 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
   };
 
   return (
-    <div className="w-full h-screen flex flex-col p-2 gap-2">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 flex-1 min-h-0">
+    <div className="max-w-6xl mx-auto p-3 space-y-3 h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full">
         {/* Main Game Area */}
-        <div className="lg:col-span-3 flex flex-col gap-2 min-h-0">
+        <div className="lg:col-span-2 space-y-3 h-full overflow-auto">
           {/* Game Settings */}
-          <Card className="glass border-0 bg-gradient-to-br from-slate-900/50 to-slate-800/50 flex-shrink-0">
-            <CardContent className="p-3">
+          <Card className="glass border-0 bg-gradient-to-br from-slate-900/50 to-slate-800/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building className="h-5 w-5 text-primary" />
+                <span className="gradient-primary bg-clip-text text-transparent">
+                  Mystic Tower Quest
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               {/* Difficulty and Bet Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300 truncate block">Hero</label>
+                  <label className="text-xs font-medium text-slate-300 truncate block">Choose Hero</label>
                   <Select value={difficulty} onValueChange={changeDifficulty}>
-                    <SelectTrigger className="glass border-0 h-8 text-xs">
+                    <SelectTrigger className="glass border-0 h-9">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
                         <SelectItem key={key} value={key}>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
                             <span>{info.character}</span>
-                            <span className="truncate text-xs">{info.name}</span>
+                            <span className="truncate">{info.name}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -633,15 +642,15 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
                     onChange={(e) => setBetAmount(e.target.value)}
                     min="1"
                     disabled={game?.status === 'active'}
-                    className="glass border-0 h-8"
+                    className="glass border-0 h-9"
                   />
                 </div>
-                <div>
+                <div className="flex items-end">
                   {!game || game.status !== 'active' ? (
                     <Button 
                       onClick={startGame} 
                       disabled={loading}
-                      className="w-full gradient-primary hover:glow-primary transition-smooth h-8 text-xs"
+                      className="w-full gradient-primary hover:glow-primary transition-smooth h-9"
                       size="sm"
                     >
                       {loading ? "Starting..." : "Begin"}
@@ -652,60 +661,86 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
                         <Button 
                           onClick={cashOut} 
                           disabled={loading} 
-                          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold shadow-lg shadow-emerald-400/30 h-8 text-xs"
+                          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold shadow-lg shadow-emerald-400/30 h-9"
                           size="sm"
                         >
-                          Cash ${(game.bet_amount * (PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level - 1] || 1)).toFixed(0)}
+                          <Coins className="mr-1 h-3 w-3" />
+                          Cash ${(game.bet_amount * (PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level - 1] || 1)).toFixed(2)}
                         </Button>
                       )}
                     </div>
                   )}
                 </div>
-                {game && (
-                  <div className="text-right">
-                    <div className="text-xs font-bold text-primary">
-                      Floor {game.current_level + 1}/{game.max_level}
-                    </div>
-                    {game.current_level > 0 && (
-                      <div className="text-sm font-bold text-primary">
-                        {game.current_multiplier.toFixed(2)}x
-                      </div>
-                    )}
+              </div>
+
+              {/* Hero Info */}
+              <div className={`p-2 rounded-lg border bg-gradient-to-r ${DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].color}`}>
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl">
+                    {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].character}
                   </div>
-                )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-sm truncate">
+                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name}
+                    </h3>
+                    <p className="text-xs opacity-75 truncate">
+                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].description}
+                    </p>
+                  </div>
+                  {game && (
+                    <div className="text-right">
+                      <div className="text-sm font-bold">
+                        {game.current_level + 1}/{game.max_level}
+                      </div>
+                      {game.current_level > 0 && (
+                        <div className="text-lg font-bold text-primary">
+                          {game.current_multiplier.toFixed(2)}x
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Tower */}
-          <Card className="glass border-0 bg-gradient-to-b from-slate-900/50 to-slate-800/30 flex-1 min-h-0">
-            <CardContent className="p-2 h-full">
-              <div className="space-y-1 h-full overflow-y-auto">
+          <Card className="glass border-0 bg-gradient-to-b from-slate-900/50 to-slate-800/30 flex-1">
+            <CardContent className="p-3">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {game ? (
                   /* Render levels from top to bottom */
                   Array.from({ length: game.max_level }, (_, i) => game.max_level - 1 - i)
                     .map(levelIndex => renderLevel(levelIndex))
                 ) : (
                   /* Show example tower for selected difficulty */
-                  <div className="space-y-1">
+                  <div className="space-y-2">
+                    <div className="text-center space-y-1 mb-4">
+                      <h3 className="text-lg font-bold gradient-primary bg-clip-text text-transparent">
+                        {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].character} {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].theme}
+                      </p>
+                    </div>
                     {PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS].slice().reverse().map((multiplier, index) => {
                       const actualLevel = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS].length - 1 - index;
                       const tilesPerRow = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].tilesPerRow;
                       
                       return (
-                        <div key={actualLevel} className="flex items-center gap-2 p-2 rounded-lg border bg-gradient-to-r from-slate-800/20 to-slate-900/20 border-slate-700/30">
-                          <div className="flex flex-col items-center gap-1 min-w-[50px]">
-                            <Badge variant="outline" className="text-xs font-bold px-2 py-0.5">
+                        <div key={actualLevel} className="flex items-center gap-3 p-3 rounded-lg border bg-gradient-to-r from-slate-800/20 to-slate-900/20 border-slate-700/30">
+                          <div className="flex flex-col items-center gap-1 min-w-[60px]">
+                            <Badge variant="outline" className="text-sm font-bold px-2 py-1">
                               {actualLevel + 1}
                             </Badge>
-                            <div className="text-xs font-bold text-slate-400">
-                              {multiplier.toFixed(1)}x
+                            <div className="text-sm font-bold text-slate-400">
+                              {multiplier.toFixed(2)}x
                             </div>
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-2">
                             {Array.from({ length: tilesPerRow }, (_, i) => (
-                              <div key={i} className="w-8 h-8 rounded border bg-gradient-to-br from-slate-800/30 to-slate-900/30 border-slate-700/50 flex items-center justify-center cursor-not-allowed opacity-60">
-                                <span className="opacity-40 text-slate-500 text-sm">?</span>
+                              <div key={i} className="w-10 h-10 rounded-lg border bg-gradient-to-br from-slate-800/30 to-slate-900/30 border-slate-700/50 flex items-center justify-center cursor-not-allowed opacity-60">
+                                <span className="opacity-40 text-slate-500 text-lg">?</span>
                               </div>
                             ))}
                           </div>
@@ -720,23 +755,27 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
 
           {/* Game End Status */}
           {game?.status !== 'active' && game?.status && (
-            <Card className="glass border-0 bg-gradient-to-br from-slate-900/70 to-slate-800/50 flex-shrink-0">
-              <CardContent className="p-3 text-center">
+            <Card className="glass border-0 bg-gradient-to-br from-slate-900/70 to-slate-800/50">
+              <CardContent className="p-4 text-center">
                 {game.status === 'lost' ? (
-                  <div className="space-y-1">
-                    <div className="text-2xl">{TRAP_TILES[Math.floor(Math.random() * TRAP_TILES.length)]}</div>
-                    <h3 className="text-sm font-bold text-red-400">Quest Failed!</h3>
-                    <p className="text-xs text-slate-300">Hero fell on floor {game.current_level + 1}</p>
-                    <Button onClick={resetGame} variant="outline" size="sm" className="mt-1 h-6 text-xs">
+                  <div className="space-y-2 animate-fade-in">
+                    <div className="text-3xl animate-bounce">{TRAP_TILES[Math.floor(Math.random() * TRAP_TILES.length)]}</div>
+                    <h3 className="text-lg font-bold text-red-400">Quest Failed!</h3>
+                    <p className="text-slate-300 text-sm">
+                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].character} Hero fell on floor {game.current_level + 1}
+                    </p>
+                    <Button onClick={resetGame} variant="outline" size="sm" className="mt-2">
                       Try Again
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-1">
-                    <div className="text-2xl">{SAFE_TILES[Math.floor(Math.random() * SAFE_TILES.length)]}</div>
-                    <h3 className="text-sm font-bold text-emerald-400">Victory!</h3>
-                    <p className="text-xs text-slate-300">Won ${game.final_payout?.toFixed(2)}!</p>
-                    <Button onClick={resetGame} variant="outline" size="sm" className="mt-1 h-6 text-xs">
+                  <div className="space-y-2 animate-fade-in">
+                    <div className="text-3xl animate-bounce">{SAFE_TILES[Math.floor(Math.random() * SAFE_TILES.length)]}</div>
+                    <h3 className="text-lg font-bold text-emerald-400">Victory!</h3>
+                    <p className="text-slate-300 text-sm">
+                      Won ${game.final_payout?.toFixed(2)} from floor {game.current_level}!
+                    </p>
+                    <Button onClick={resetGame} variant="outline" size="sm" className="mt-2">
                       New Quest
                     </Button>
                   </div>
@@ -748,17 +787,17 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
 
         
         {/* Heroes' Chronicle - Compact Live Feed */}
-        <Card className="glass border-0 flex flex-col min-h-0">
-          <CardHeader className="pb-2 flex-shrink-0">
+        <Card className="glass border-0 h-full">
+          <CardHeader className="pb-2">
             <CardTitle className="flex items-center space-x-2 text-sm">
               <Trophy className="w-4 h-4 text-accent" />
               <span>Heroes' Chronicle</span>
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2 flex-1 min-h-0">
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-card/30 border mb-2 flex-shrink-0">
+          <CardContent className="p-2 h-full">
+            <div className="space-y-2 h-full">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-card/30 border">
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
                   <span className="text-xs font-medium">Live Adventures</span>
@@ -769,31 +808,22 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
               </div>
               
               {!isConnected ? (
-                <div className="text-center text-muted-foreground py-4 flex-1 flex items-center justify-center">
-                  <div>
-                    <Building className="w-6 h-6 mx-auto mb-2 animate-pulse" />
-                    <p className="text-xs">Connecting...</p>
-                  </div>
+                <div className="text-center text-muted-foreground py-4">
+                  <Building className="w-6 h-6 mx-auto mb-2 animate-pulse" />
+                  <p className="text-xs">Connecting...</p>
                 </div>
               ) : towerBets.length === 0 ? (
-                <div className="text-center py-6 text-muted-foreground flex-1 flex items-center justify-center">
-                  <div>
-                    <Building className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                    <p className="text-xs">No recent adventures</p>
-                  </div>
+                <div className="text-center py-6 text-muted-foreground">
+                  <Building className="w-6 h-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-xs">No recent adventures</p>
                 </div>
               ) : (
-                <div className="space-y-1 flex-1 overflow-y-auto">
+                <div className="space-y-1 h-full overflow-y-auto">
                   {towerBets.slice(0, 20).map((bet, index) => (
                     <div
                       key={index}
                       className="p-2 rounded-lg border bg-card/20 hover:bg-card/30 transition-colors animate-fade-in cursor-pointer"
-                      onClick={() => {
-                        const event = new CustomEvent('openUserStats', { 
-                          detail: { username: bet.username } 
-                        });
-                        window.dispatchEvent(event);
-                      }}
+                      onClick={() => {/* Will be connected to user stats modal */}}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
@@ -801,7 +831,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
                             {bet.username[0].toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium text-xs text-primary truncate hover:underline">{bet.username}</div>
+                            <div className="font-medium text-xs text-primary truncate">{bet.username}</div>
                             <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
                               <span>{DIFFICULTY_INFO[bet.game_data?.difficulty as keyof typeof DIFFICULTY_INFO]?.character || '🗡️'}</span>
                               <span>Lv{bet.game_data?.level_reached || 1}</span>

@@ -1,214 +1,247 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target, Building } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { Coins, User, Star, TrendingUp, Gift, Gamepad2 } from 'lucide-react';
 import AuthModal from '@/components/AuthModal';
 import UserProfile from '@/components/UserProfile';
-import UserStatsModal from '@/components/UserStatsModal';
-import CoinflipGame from '@/components/CoinflipGame';
-import { TowerGame } from '@/components/TowerGame';
-import { RouletteGame } from '@/components/RouletteGame';
-import { RealtimeChat } from '@/components/RealtimeChat';
-import { LevelUpNotification } from '@/components/LevelUpNotification';
 import RewardsPanel from '@/components/RewardsPanel';
-
+import CoinflipGame from '@/components/CoinflipGame';
+import { RealtimeChat } from '@/components/RealtimeChat';
+import { RouletteGame } from '@/components/RouletteGame';
+import { TowerGame } from '@/components/TowerGame';
 
 export default function Index() {
-  const { user, signOut } = useAuth();
-  const { userData, loading, updateUserProfile } = useUserProfile();
+  const { user, signOut, loading: authLoading } = useAuth();
+  const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [showUserStatsModal, setShowUserStatsModal] = useState(false);
-  const [selectedStatsUser, setSelectedStatsUser] = useState<string | null>(null);
-  const [currentGame, setCurrentGame] = useState<'coinflip' | 'tower' | 'roulette'>('tower');
+  const [showProfile, setShowProfile] = useState(false);
 
-  // Listen for custom events from game components to open user stats
-  useEffect(() => {
-    const handleOpenUserStats = (event: CustomEvent) => {
-      setSelectedStatsUser(event.detail.username);
-      setShowUserStatsModal(true);
-    };
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
-    window.addEventListener('openUserStats', handleOpenUserStats as EventListener);
-    return () => {
-      window.removeEventListener('openUserStats', handleOpenUserStats as EventListener);
-    };
-  }, []);
+  const getXpForNextLevel = (level: number) => level * 100;
+  const xpProgress = userData ? (userData.current_xp / (userData.current_xp + userData.xp_to_next_level)) * 100 : 0;
 
-  if (loading) {
+  if (authLoading || profileLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass p-8 rounded-2xl text-center">
+          <div className="text-2xl mb-4">🎮</div>
+          <p className="text-muted-foreground">Loading ArcadeFinance...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !userData) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="space-y-2">
+            <h1 className="text-5xl font-bold gradient-primary bg-clip-text text-transparent">
+              ArcadeFinance
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              The Future of Digital Gaming
+            </p>
+          </div>
+          
+          <div className="glass p-8 rounded-2xl space-y-4 animate-float">
+            <div className="text-6xl mb-4">🎮</div>
+            <h2 className="text-2xl font-semibold">
+              Welcome to the Arcade
+            </h2>
+            <p className="text-muted-foreground">
+              Experience next-generation gaming with sleek design, 
+              real-time rewards, and immersive gameplay.
+            </p>
+            <Button 
+              onClick={() => setShowAuthModal(true)}
+              className="w-full gradient-primary hover:glow-primary transition-smooth"
+              size="lg"
+            >
+              Enter the Arena
+            </Button>
+          </div>
+        </div>
+
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="h-screen grid grid-cols-1 lg:grid-cols-5 gap-2 p-2">
-        {/* Left Sidebar - User Profile */}
-        <Card className="glass border-0 lg:col-span-1 h-full">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center justify-between">
-              <span className="text-lg font-bold">Profile</span>
-              <User className="w-5 h-5 text-primary" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {user && userData ? (
-              <>
-                <div className="text-center space-y-2">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center border-2 border-primary/50">
-                    <span className="text-xl font-bold text-primary">
-                      {userData.username[0].toUpperCase()}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-lg">{userData.username}</h3>
-                  <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/50">
-                    Level {userData.current_level}
-                  </Badge>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-card/50 border">
-                    <div className="flex items-center gap-2">
-                      <Coins className="w-4 h-4 text-emerald-400" />
-                      <span className="text-sm font-medium">Balance</span>
-                    </div>
-                    <span className="font-bold text-emerald-400">${userData.balance.toFixed(2)}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-card/50 border">
-                    <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-yellow-400" />
-                      <span className="text-sm font-medium">XP</span>
-                    </div>
-                    <span className="font-bold text-yellow-400">{userData.current_xp}/{userData.current_xp + userData.xp_to_next_level}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-card/50 border">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-blue-400" />
-                      <span className="text-sm font-medium">Total P&L</span>
-                    </div>
-                    <span className={`font-bold ${userData.total_profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm flex items-center gap-2">
-                    <Gamepad2 className="w-4 h-4" />
-                    Game Selection
-                  </h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    <Button
-                      variant={currentGame === 'tower' ? 'default' : 'outline'}
-                      onClick={() => setCurrentGame('tower')}
-                      className="justify-start"
-                    >
-                      🏰 Tower Quest
-                    </Button>
-                    <Button
-                      variant={currentGame === 'coinflip' ? 'default' : 'outline'}
-                      onClick={() => setCurrentGame('coinflip')}
-                      className="justify-start"
-                    >
-                      🪙 Coinflip
-                    </Button>
-                    <Button
-                      variant={currentGame === 'roulette' ? 'default' : 'outline'}
-                      onClick={() => setCurrentGame('roulette')}
-                      className="justify-start"
-                    >
-                      🎰 Roulette
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowUserModal(true)}
-                    className="w-full"
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    View Profile
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={signOut}
-                    className="w-full"
-                  >
-                    Logout
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-card/50 flex items-center justify-center">
-                  <User className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <Button
-                  onClick={() => setShowAuthModal(true)}
-                  className="w-full gradient-primary hover:glow-primary"
-                >
-                  Sign In
-                </Button>
+    <div className="min-h-screen p-4">
+      {/* Header */}
+      <header className="mb-6">
+        <div className="glass rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
+                ArcadeFinance
+              </h1>
+              <div className="hidden md:block text-sm text-muted-foreground">
+                The Future of Digital Gaming
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
 
-        {/* Main Game Area */}
-        <div className="lg:col-span-3 h-full">
-          {currentGame === 'tower' && userData && (
-            <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
-          )}
-          {currentGame === 'coinflip' && userData && (
-            <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
-          )}
-          {currentGame === 'roulette' && (
-            <RouletteGame />
-          )}
+            <div className="flex items-center space-x-4">
+              {/* Balance Display */}
+              <div className="flex items-center space-x-2 glass px-3 py-1 rounded-lg">
+                <Wallet className="w-4 h-4 text-primary" />
+                <span className="font-semibold">
+                  ${userData.balance.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Level Display */}
+              <div className="hidden md:flex items-center space-x-2 glass px-3 py-1 rounded-lg">
+                <Trophy className="w-4 h-4 text-accent" />
+                <span className="font-semibold">
+                  Level {userData.current_level}
+                </span>
+              </div>
+
+              {/* User Menu */}
+              <Button
+                variant="ghost"
+                onClick={() => setShowProfile(true)}
+                className="glass border-0 hover:glow-primary transition-smooth"
+              >
+                <User className="w-4 h-4 mr-2" />
+                {userData.username}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="glass border-0 hover:text-destructive"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* XP Progress Bar */}
+          <div className="mt-3 space-y-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Level {userData.current_level} Progress</span>
+              <span>{userData.current_xp} / {userData.current_xp + userData.xp_to_next_level} XP</span>
+            </div>
+            <Progress value={xpProgress} className="h-2" />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+        {/* Left Sidebar */}
+        <div className="lg:col-span-1 space-y-4">
+          <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />
+          
+          <Card className="glass border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Trophy className="w-4 h-4 text-accent" />
+                <span>Quick Stats</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Wagered</span>
+                <span className="font-semibold">${userData.total_wagered.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total P&L</span>
+                <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Games Played</span>
+                <span className="font-semibold">
+                  {userData.gameStats.coinflip.wins + userData.gameStats.coinflip.losses + 
+                   userData.gameStats.crash.wins + userData.gameStats.crash.losses}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Right Sidebar - Chat */}
-        <div className="lg:col-span-1 h-full">
+        {/* Games Area */}
+        <div className="lg:col-span-3">
+          <Tabs defaultValue="coinflip" className="space-y-4">
+            <TabsList className="glass w-full">
+              <TabsTrigger value="coinflip" className="flex-1">
+                <Gamepad2 className="w-4 h-4 mr-2" />
+                Coinflip
+              </TabsTrigger>
+              <TabsTrigger value="roulette" className="flex-1">
+                <Target className="w-4 h-4 mr-2" />
+                Roulette
+              </TabsTrigger>
+              <TabsTrigger value="tower" className="flex-1">
+                <Building className="w-4 h-4 mr-2" />
+                Tower
+              </TabsTrigger>
+              <TabsTrigger value="crash" className="flex-1" disabled>
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Crash (Coming Soon)
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="coinflip">
+              <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
+            </TabsContent>
+
+            <TabsContent value="roulette">
+              <RouletteGame />
+            </TabsContent>
+
+            <TabsContent value="tower">
+              <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
+            </TabsContent>
+
+            <TabsContent value="crash">
+              <Card className="glass border-0 p-12 text-center">
+                <div className="space-y-4">
+                  <div className="text-4xl">🚀</div>
+                  <h3 className="text-xl font-semibold">Crash Game Coming Soon!</h3>
+                  <p className="text-muted-foreground">
+                    We're working on an exciting crash game with live multipliers and real-time action.
+                  </p>
+                </div>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Right Sidebar - Real-time Chat */}
+        <div className="lg:col-span-2 h-[calc(100vh-12rem)]">
           <RealtimeChat />
         </div>
       </div>
 
-      {/* Modals */}
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-      
-      {userData && (
-        <UserProfile
-          isOpen={showUserModal}
-          onClose={() => setShowUserModal(false)}
-          userData={userData}
-        />
-      )}
-
-      <UserStatsModal
-        isOpen={showUserStatsModal}
-        onClose={() => {
-          setShowUserStatsModal(false);
-          setSelectedStatsUser(null);
-        }}
-        username={selectedStatsUser}
+      {/* Profile Modal */}
+      <UserProfile
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        userData={userData}
       />
-
-      
     </div>
   );
 }

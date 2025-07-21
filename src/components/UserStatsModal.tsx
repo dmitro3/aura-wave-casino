@@ -5,19 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Trophy, Target, TrendingUp, Calendar, Star, Gamepad2, Coins, Zap, Gift, Send } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Calendar, Star, Gamepad2, Coins, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 
 interface UserStats {
   id: string;
   username: string;
   registration_date: string;
-  balance: number;
   current_level: number;
   lifetime_xp: number;
   current_xp: number;
@@ -54,13 +49,8 @@ interface UserStatsModalProps {
 }
 
 export default function UserStatsModal({ isOpen, onClose, username }: UserStatsModalProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const [tipAmount, setTipAmount] = useState('');
-  const [tipping, setTipping] = useState(false);
-  const [showTipInput, setShowTipInput] = useState(false);
 
   useEffect(() => {
     if (isOpen && username) {
@@ -131,151 +121,26 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
     return gameType === 'crash' ? <Zap className="w-4 h-4" /> : <Coins className="w-4 h-4" />;
   };
 
-  const sendTip = async () => {
-    if (!tipAmount.trim() || !user || !userStats || tipping) return;
-
-    const amount = parseFloat(tipAmount);
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: "Invalid Amount",
-        description: "Please enter a valid tip amount",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check sender's balance
-    const { data: senderProfile, error: senderError } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', user.id)
-      .single();
-
-    if (senderError || !senderProfile) {
-      toast({
-        title: "Error",
-        description: "Could not verify your balance",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (senderProfile.balance < amount) {
-      toast({
-        title: "Insufficient Balance",
-        description: "You don't have enough balance for this tip",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setTipping(true);
-
-      // Update sender's balance (subtract tip)
-      const { error: senderUpdateError } = await supabase
-        .from('profiles')
-        .update({ 
-          balance: senderProfile.balance - amount 
-        })
-        .eq('id', user.id);
-
-      if (senderUpdateError) throw senderUpdateError;
-
-      // Update receiver's balance (add tip)
-      const { error: receiverUpdateError } = await supabase
-        .from('profiles')
-        .update({ 
-          balance: userStats.balance + amount 
-        })
-        .eq('id', userStats.id);
-
-      if (receiverUpdateError) throw receiverUpdateError;
-
-      // Update local state
-      setUserStats(prev => prev ? { ...prev, balance: prev.balance + amount } : null);
-      setTipAmount('');
-      setShowTipInput(false);
-
-      toast({
-        title: "Tip Sent! 🎉",
-        description: `Successfully sent $${amount.toFixed(2)} to ${username}`,
-      });
-
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send tip",
-        variant: "destructive",
-      });
-    } finally {
-      setTipping(false);
-    }
-  };
-
   if (!username) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} />
-                <AvatarFallback>{username.slice(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h2 className="text-lg font-bold">{username}</h2>
-                {userStats && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="w-4 h-4" />
-                    Joined {formatDistanceToNow(new Date(userStats.registration_date), { addSuffix: true })}
-                  </div>
-                )}
-              </div>
+          <DialogTitle className="flex items-center gap-3">
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} />
+              <AvatarFallback>{username.slice(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-lg font-bold">{username}</h2>
+              {userStats && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  Joined {formatDistanceToNow(new Date(userStats.registration_date), { addSuffix: true })}
+                </div>
+              )}
             </div>
-            {user && userStats && user.id !== userStats.id && (
-              <div className="flex items-center gap-2">
-                {showTipInput ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Amount"
-                      value={tipAmount}
-                      onChange={(e) => setTipAmount(e.target.value)}
-                      className="w-24"
-                      min="0.01"
-                      step="0.01"
-                    />
-                    <Button 
-                      onClick={sendTip} 
-                      disabled={tipping || !tipAmount.trim()}
-                      size="sm"
-                      className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600"
-                    >
-                      <Send className="w-3 h-3" />
-                    </Button>
-                    <Button 
-                      onClick={() => {setShowTipInput(false); setTipAmount('');}} 
-                      variant="outline" 
-                      size="sm"
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    onClick={() => setShowTipInput(true)}
-                    size="sm"
-                    className="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600"
-                  >
-                    <Gift className="w-4 h-4 mr-2" />
-                    Tip
-                  </Button>
-                )}
-              </div>
-            )}
           </DialogTitle>
         </DialogHeader>
 
