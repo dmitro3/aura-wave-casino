@@ -10,6 +10,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import UserStatsModal from '@/components/UserStatsModal';
 
 interface ChatMessage {
   id: string;
@@ -27,6 +28,7 @@ export const RealtimeChat = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{id: string, username: string} | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -125,7 +127,7 @@ export const RealtimeChat = () => {
   };
 
   return (
-    <Card className="w-full h-96 glass border-0">
+    <Card className="w-full h-full glass border-0 flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -156,7 +158,10 @@ export const RealtimeChat = () => {
                 
                 return (
                   <div key={msg.id} className={`flex gap-3 animate-fade-in ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
-                    <Avatar className="w-8 h-8 flex-shrink-0">
+                    <Avatar 
+                      className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                      onClick={() => setSelectedUser({id: msg.user_id, username: msg.username})}
+                    >
                       <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
                       <AvatarFallback className="text-xs">
                         {msg.username.slice(0, 2).toUpperCase()}
@@ -165,7 +170,10 @@ export const RealtimeChat = () => {
                     
                     <div className={`flex-1 min-w-0 ${isOwnMessage ? 'text-right' : ''}`}>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`font-medium text-sm ${isOwnMessage ? 'text-primary' : ''}`}>
+                        <span 
+                          className={`font-medium text-sm cursor-pointer hover:text-primary transition-colors ${isOwnMessage ? 'text-primary' : ''}`}
+                          onClick={() => setSelectedUser({id: msg.user_id, username: msg.username})}
+                        >
                           {msg.username}
                         </span>
                         {badge && (
@@ -224,6 +232,14 @@ export const RealtimeChat = () => {
           )}
         </div>
       </CardContent>
+      
+      {selectedUser && (
+        <UserStatsModal
+          isOpen={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+          username={selectedUser.username}
+        />
+      )}
     </Card>
   );
 };

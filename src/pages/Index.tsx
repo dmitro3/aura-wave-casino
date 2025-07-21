@@ -231,7 +231,7 @@ export default function Index() {
         </div>
 
         {/* Right Sidebar - Real-time Chat */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 h-[calc(100vh-12rem)]">
           <RealtimeChat />
         </div>
       </div>

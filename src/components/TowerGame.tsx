@@ -765,58 +765,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
           )}
         </div>
 
-        {/* Tower Live Feed */}
-        <div className="space-y-4">
-          <Card className="glass border-0 bg-gradient-to-br from-slate-900/50 to-slate-800/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5 text-primary" />
-                <span>Heroes' Chronicle</span>
-                <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 max-h-96 overflow-y-auto">
-              {!isConnected ? (
-                <div className="text-center text-slate-400 py-8">
-                  <Building className="w-8 h-8 mx-auto mb-2 animate-pulse" />
-                  <p>Connecting to the realm...</p>
-                </div>
-              ) : towerBets.length === 0 ? (
-                <div className="text-center text-slate-400 py-8">
-                  <Sword className="w-8 h-8 mx-auto mb-2" />
-                  <p>No recent quests. Be the first hero!</p>
-                </div>
-              ) : (
-                towerBets.slice(0, 20).map((bet) => (
-                  <div key={bet.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/30 to-slate-700/30 rounded-lg border border-slate-600/30 animate-fade-in">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/50 flex items-center justify-center text-lg font-bold border border-primary/50">
-                        {bet.username[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="font-bold text-sm text-slate-200">{bet.username}</div>
-                        <div className="text-xs text-slate-400 flex items-center gap-1">
-                          <span>{DIFFICULTY_INFO[bet.game_data?.difficulty as keyof typeof DIFFICULTY_INFO]?.character || '🗡️'}</span>
-                          <span>{DIFFICULTY_INFO[bet.game_data?.difficulty as keyof typeof DIFFICULTY_INFO]?.name || bet.game_data?.difficulty}</span>
-                          <span>• Floor {bet.game_data?.level_reached}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`font-bold text-sm flex items-center gap-1 ${bet.result === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {bet.result === 'win' ? <Trophy className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                        <span>{bet.result === 'win' ? '+' : '-'}${Math.abs(bet.profit).toFixed(2)}</span>
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {bet.multiplier ? `${bet.multiplier.toFixed(2)}x` : ''}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* This large Tower Live Feed section is removed to make the game more compact */}
       </div>
     </div>
   );
