@@ -40,8 +40,8 @@ export function useUserProfile() {
     fetchUserProfile()
     
     // Set up real-time subscription for profile changes (including balance updates)
-    const channel = supabase
-      .channel('profile_changes')
+    const profileChannel = supabase
+      .channel('user_profile_updates')
       .on(
         'postgres_changes',
         {
@@ -51,15 +51,30 @@ export function useUserProfile() {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('Real-time profile update:', payload.new);
-          // Refresh the full profile data when balance or other fields change
-          fetchUserProfile();
+          console.log('🔄 Real-time profile update received:', payload.new);
+          // Update the user data with the new profile data
+          if (payload.new) {
+            setUserData(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                balance: payload.new.balance,
+                total_profit: payload.new.total_profit,
+                total_wagered: payload.new.total_wagered,
+                current_level: payload.new.current_level,
+                current_xp: payload.new.current_xp,
+                xp_to_next_level: payload.new.xp_to_next_level,
+                lifetime_xp: payload.new.lifetime_xp,
+              };
+            });
+          }
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('🧹 Cleaning up profile subscription');
+      supabase.removeChannel(profileChannel);
     };
   }, [user])
 

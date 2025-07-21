@@ -34,7 +34,7 @@ export default function NotificationsPanel() {
     
     // Set up real-time subscription for new notifications
     const channel = supabase
-      .channel('notifications')
+      .channel('user_notifications')
       .on(
         'postgres_changes',
         {
@@ -44,6 +44,7 @@ export default function NotificationsPanel() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log('🔔 New notification received:', payload.new);
           const newNotification = payload.new as Notification;
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
