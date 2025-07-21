@@ -58,7 +58,9 @@ export default function NotificationsPanel() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔔 Notifications subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

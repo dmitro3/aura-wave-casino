@@ -70,7 +70,9 @@ export function useUserProfile() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('💰 Profile subscription status:', status);
+      });
 
     return () => {
       console.log('🧹 Cleaning up profile subscription');
