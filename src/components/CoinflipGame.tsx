@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { UserProfile } from '@/hooks/useUserProfile';
+import UserStatsModal from './UserStatsModal';
 
 interface CoinflipGameProps {
   userData: UserProfile;
@@ -21,6 +22,8 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const [selectedSide, setSelectedSide] = useState<'heads' | 'tails'>('heads');
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<'heads' | 'tails' | null>(null);
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [showUserStats, setShowUserStats] = useState(false);
   const { addGameRecord } = useGameHistory('coinflip', 10);
   const { liveBetFeed } = useRealtimeFeeds();
   const { toast } = useToast();
@@ -29,6 +32,11 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const coinflipBets = liveBetFeed
     .filter(bet => bet.game_type === 'coinflip')
     .slice(0, 10); // Show last 10 coinflip bets
+
+  const handleUsernameClick = (username: string) => {
+    setSelectedUsername(username);
+    setShowUserStats(true);
+  };
 
   const handleFlip = async () => {
     if (!userData || isFlipping) return;
@@ -210,8 +218,11 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       <Card className="glass border-0">
         <CardHeader>
           <CardTitle className="text-lg flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-glow-pulse" />
             <span>Live Coinflip Feed</span>
+            <Badge variant="secondary" className="text-xs animate-fade-in">
+              Real-time
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -224,7 +235,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
               {coinflipBets.map((bet) => (
                 <div 
                   key={bet.id} 
-                  className="flex items-center justify-between p-3 glass rounded-lg hover:bg-card/80 transition-colors animate-fade-in"
+                  className="flex items-center justify-between p-3 glass rounded-lg hover:bg-card/80 transition-colors animate-new-item"
                 >
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-8 h-8">
@@ -234,7 +245,10 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium text-sm truncate cursor-pointer hover:text-primary">
+                        <span 
+                          className="font-medium text-sm truncate cursor-pointer hover:text-primary transition-colors underline-offset-4 hover:underline"
+                          onClick={() => handleUsernameClick(bet.username)}
+                        >
                           {bet.username}
                         </span>
                         <span className="text-lg">
@@ -264,6 +278,13 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           )}
         </CardContent>
       </Card>
+
+      {/* User Stats Modal */}
+      <UserStatsModal 
+        isOpen={showUserStats}
+        onClose={() => setShowUserStats(false)}
+        username={selectedUsername}
+      />
     </div>
   );
 }

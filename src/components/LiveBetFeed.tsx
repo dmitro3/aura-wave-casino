@@ -67,8 +67,11 @@ export const LiveBetFeedComponent = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-            Live Bet Feed
+            <div className="w-3 h-3 bg-green-500 rounded-full animate-glow-pulse" />
+            <span>Live Bet Feed</span>
+            <Badge variant="secondary" className="text-xs animate-fade-in">
+              Real-time
+            </Badge>
           </CardTitle>
           <div className="flex gap-2">
             <Badge 
@@ -106,7 +109,7 @@ export const LiveBetFeedComponent = () => {
               {filteredFeed.map((bet) => (
                 <div
                   key={bet.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border hover:bg-card/80 transition-colors animate-fade-in"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border hover:bg-card/80 transition-colors animate-new-item"
                 >
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
