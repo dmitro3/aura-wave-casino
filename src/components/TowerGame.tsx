@@ -573,13 +573,16 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
                   ) : (
                     <div className="flex gap-2">
                       {game.current_level > 0 && (
-                        <Button onClick={cashOut} disabled={loading} variant="outline">
-                          Cash Out ${(parseFloat(betAmount) * game.current_multiplier).toFixed(2)}
+                        <Button 
+                          onClick={cashOut} 
+                          disabled={loading} 
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                          size="lg"
+                        >
+                          <Coins className="mr-2 h-4 w-4" />
+                          Cash Out ${(game.bet_amount * (PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level - 1] || 1)).toFixed(2)}
                         </Button>
                       )}
-                      <Button onClick={resetGame} variant="destructive">
-                        End Game
-                      </Button>
                     </div>
                   )}
                 </div>
