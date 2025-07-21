@@ -14,6 +14,7 @@ import CoinflipGame from '@/components/CoinflipGame';
 import { RealtimeChat } from '@/components/RealtimeChat';
 import { RouletteGame } from '@/components/RouletteGame';
 import { TowerGame } from '@/components/TowerGame';
+import NotificationsPanel from '@/components/NotificationsPanel';
 
 export default function Index() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -151,6 +152,7 @@ export default function Index() {
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
         {/* Left Sidebar */}
         <div className="lg:col-span-1 space-y-4">
+          <NotificationsPanel />
           <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />
           
           <Card className="glass border-0">
