@@ -62,13 +62,13 @@ export const RealtimeChat = () => {
   const loadMessages = async () => {
     try {
       const { data, error } = await supabase
-        .from('chat_messages')
+        .from('chat_messages' as any)
         .select('*')
         .order('created_at', { ascending: true })
         .limit(50);
 
       if (error) throw error;
-      setMessages(data || []);
+      setMessages((data as unknown as ChatMessage[]) || []);
       setTimeout(scrollToBottom, 100);
     } catch (error: any) {
       console.error('Error loading messages:', error);
@@ -88,7 +88,7 @@ export const RealtimeChat = () => {
       setLoading(true);
       
       const { error } = await supabase
-        .from('chat_messages')
+        .from('chat_messages' as any)
         .insert({
           user_id: user.id,
           username: userData.username,

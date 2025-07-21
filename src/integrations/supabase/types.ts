@@ -32,6 +32,33 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          user_id: string
+          user_level: number
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          user_id: string
+          user_level?: number
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          user_id?: string
+          user_level?: number
+          username?: string
+        }
+        Relationships: []
+      }
       crash_bets: {
         Row: {
           auto_cashout_at: number | null
