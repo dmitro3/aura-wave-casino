@@ -12,6 +12,7 @@ import ClickableUsername from './ClickableUsername';
 
 interface Notification {
   id: string;
+  user_id: string;
   type: 'tip_sent' | 'tip_received' | 'achievement_unlocked' | 'level_up';
   title: string;
   message: string;
@@ -48,13 +49,16 @@ export default function NotificationsPanel() {
           console.log('🔔 New notification received:', payload.new);
           const newNotification = payload.new as Notification;
           
-          // Prevent duplicate notifications
-          if (processedNotificationIds.has(newNotification.id)) {
-            console.log('🚫 Duplicate notification ignored:', newNotification.id);
+          // Create a unique key based on tip_id and type to prevent duplicates
+          const tipId = newNotification.data?.tip_id;
+          const uniqueKey = `${tipId}-${newNotification.type}-${newNotification.user_id}`;
+          
+          if (processedNotificationIds.has(uniqueKey)) {
+            console.log('🚫 Duplicate notification ignored:', uniqueKey);
             return;
           }
           
-          setProcessedNotificationIds(prev => new Set([...prev, newNotification.id]));
+          setProcessedNotificationIds(prev => new Set([...prev, uniqueKey]));
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
           

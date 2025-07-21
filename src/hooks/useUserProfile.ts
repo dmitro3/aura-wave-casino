@@ -52,8 +52,12 @@ export function useUserProfile() {
         },
         (payload) => {
           console.log('🔄 Real-time profile update received:', payload.new);
+          console.log('🔄 Current user ID:', user.id);
+          console.log('🔄 Updated profile ID:', payload.new?.id);
+          
           // Update the user data with the new profile data
-          if (payload.new) {
+          if (payload.new && payload.new.id === user.id) {
+            console.log('✅ Updating balance from', userData?.balance, 'to', payload.new.balance);
             setUserData(prev => {
               if (!prev) return null;
               return {
@@ -67,6 +71,8 @@ export function useUserProfile() {
                 lifetime_xp: payload.new.lifetime_xp,
               };
             });
+          } else {
+            console.log('❌ Profile update ignored - not for current user');
           }
         }
       )
