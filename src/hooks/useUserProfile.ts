@@ -40,8 +40,10 @@ export function useUserProfile() {
     fetchUserProfile()
     
     // Set up real-time subscription for profile changes (including balance updates)
+    console.log('🔗 Setting up profile subscription for user:', user.id);
+    
     const profileChannel = supabase
-      .channel('user_profile_updates')
+      .channel(`profile_updates_${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -51,15 +53,14 @@ export function useUserProfile() {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🔄 Real-time profile update received:', payload.new);
-          console.log('🔄 Current user ID:', user.id);
-          console.log('🔄 Updated profile ID:', payload.new?.id);
+          console.log('🔄 RECEIVED PROFILE UPDATE:', payload);
+          console.log('🔄 Current balance:', userData?.balance);
+          console.log('🔄 New balance:', payload.new?.balance);
           
-          // Update the user data with the new profile data
-          if (payload.new && payload.new.id === user.id) {
-            console.log('✅ Updating balance from', userData?.balance, 'to', payload.new.balance);
+          if (payload.new) {
             setUserData(prev => {
               if (!prev) return null;
+              console.log('✅ UPDATING BALANCE FROM', prev.balance, 'TO', payload.new.balance);
               return {
                 ...prev,
                 balance: payload.new.balance,
@@ -71,13 +72,14 @@ export function useUserProfile() {
                 lifetime_xp: payload.new.lifetime_xp,
               };
             });
-          } else {
-            console.log('❌ Profile update ignored - not for current user');
           }
         }
       )
       .subscribe((status) => {
         console.log('💰 Profile subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Profile subscription active for user:', user.id);
+        }
       });
 
     return () => {

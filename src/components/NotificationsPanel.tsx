@@ -35,8 +35,10 @@ export default function NotificationsPanel() {
     fetchNotifications();
     
     // Set up real-time subscription for new notifications
+    console.log('🔔 Setting up notifications subscription for user:', user.id);
+    
     const channel = supabase
-      .channel('user_notifications')
+      .channel(`notifications_${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -46,19 +48,22 @@ export default function NotificationsPanel() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🔔 New notification received:', payload.new);
+          console.log('🔔 RECEIVED NOTIFICATION:', payload);
           const newNotification = payload.new as Notification;
           
-          // Create a unique key based on tip_id and type to prevent duplicates
-          const tipId = newNotification.data?.tip_id;
-          const uniqueKey = `${tipId}-${newNotification.type}-${newNotification.user_id}`;
+          // Simple deduplication based on notification content and timestamp
+          const isDuplicate = notifications.some(existing => 
+            existing.type === newNotification.type &&
+            existing.message === newNotification.message &&
+            Math.abs(new Date(existing.created_at).getTime() - new Date(newNotification.created_at).getTime()) < 1000
+          );
           
-          if (processedNotificationIds.has(uniqueKey)) {
-            console.log('🚫 Duplicate notification ignored:', uniqueKey);
+          if (isDuplicate) {
+            console.log('🚫 DUPLICATE NOTIFICATION IGNORED');
             return;
           }
           
-          setProcessedNotificationIds(prev => new Set([...prev, uniqueKey]));
+          console.log('✅ ADDING NEW NOTIFICATION TO UI');
           setNotifications(prev => [newNotification, ...prev]);
           setUnreadCount(prev => prev + 1);
           
@@ -73,6 +78,9 @@ export default function NotificationsPanel() {
       )
       .subscribe((status) => {
         console.log('🔔 Notifications subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Notifications subscription active for user:', user.id);
+        }
       });
 
     return () => {
