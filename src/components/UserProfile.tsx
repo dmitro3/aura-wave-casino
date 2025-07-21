@@ -72,7 +72,7 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
-                Level {userData.level}
+                Level {userData.current_level}
               </div>
               <div className="text-sm text-muted-foreground">
                 {userData.current_xp}/{userData.current_xp + userData.xp_to_next_level} XP
