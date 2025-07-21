@@ -10,6 +10,7 @@ import { Building, Trophy, Zap, AlertTriangle, Coins, Sword, Shield, Crown } fro
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { UserProfile } from '@/hooks/useUserProfile';
+import ClickableUsername from './ClickableUsername';
 
 interface TowerGameProps {
   userData: UserProfile;
@@ -830,9 +831,12 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
                           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/30 to-primary/50 flex items-center justify-center text-xs font-bold border border-primary/50">
                             {bet.username[0].toUpperCase()}
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-xs text-primary truncate">{bet.username}</div>
-                            <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                           <div className="min-w-0 flex-1">
+                             <ClickableUsername 
+                               username={bet.username}
+                               className="font-medium text-xs text-primary truncate"
+                             />
+                             <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
                               <span>{DIFFICULTY_INFO[bet.game_data?.difficulty as keyof typeof DIFFICULTY_INFO]?.character || '🗡️'}</span>
                               <span>Lv{bet.game_data?.level_reached || 1}</span>
                               <span>${bet.bet_amount.toFixed(0)}</span>

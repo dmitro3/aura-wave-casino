@@ -21,6 +21,7 @@ export interface UserProfile {
   gameStats: {
     coinflip: { wins: number; losses: number; profit: number }
     crash: { wins: number; losses: number; profit: number }
+    tower: { wins: number; losses: number; profit: number }
   }
 }
 
@@ -72,6 +73,12 @@ export function useUserProfile() {
         total_profit: 0,
       }
 
+      const towerStats = gameStats.find(stat => stat.game_type === 'tower') || {
+        wins: 0,
+        losses: 0,
+        total_profit: 0,
+      }
+
       const userProfile: UserProfile = {
         ...profile,
         gameStats: {
@@ -84,6 +91,11 @@ export function useUserProfile() {
             wins: crashStats.wins,
             losses: crashStats.losses,
             profit: crashStats.total_profit,
+          },
+          tower: {
+            wins: towerStats.wins,
+            losses: towerStats.losses,
+            profit: towerStats.total_profit,
           },
         },
       }

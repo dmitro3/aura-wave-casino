@@ -3,11 +3,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Trophy, Target, TrendingUp, Calendar, Star, Gamepad2, Coins, Zap } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Calendar, Star, Gamepad2, Coins, Zap, Gift, Award, Users, Heart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  unlocked_at?: string;
+}
 
 interface UserStats {
   id: string;
@@ -31,6 +45,11 @@ interface UserStats {
       losses: number;
       total_profit: number;
     };
+    tower?: {
+      wins: number;
+      losses: number;
+      total_profit: number;
+    };
   };
   recentGames: {
     game_type: string;
@@ -40,6 +59,9 @@ interface UserStats {
     multiplier?: number;
     created_at: string;
   }[];
+  achievements: Achievement[];
+  tipsSent: number;
+  tipsReceived: number;
 }
 
 interface UserStatsModalProps {
@@ -57,6 +79,13 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
       fetchUserStats(username);
     }
   }, [isOpen, username]);
+
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [tipAmount, setTipAmount] = useState('');
+  const [tipMessage, setTipMessage] = useState('');
+  const [showTipForm, setShowTipForm] = useState(false);
+  const [tipping, setTipping] = useState(false);
 
   const fetchUserStats = async (targetUsername: string) => {
     setLoading(true);
@@ -87,10 +116,46 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
         .order('created_at', { ascending: false })
         .limit(10);
 
+      // Fetch achievements
+      const { data: userAchievements, error: achievementsError } = await supabase
+        .from('user_achievements')
+        .select(`
+          unlocked_at,
+          achievement:achievements(*)
+        `)
+        .eq('user_id', profile.id);
+
+      // Fetch tips sent
+      const { data: tipsSentData, error: tipsSentError } = await supabase
+        .from('tips')
+        .select('amount')
+        .eq('from_user_id', profile.id);
+
+      // Fetch tips received
+      const { data: tipsReceivedData, error: tipsReceivedError } = await supabase
+        .from('tips')
+        .select('amount')
+        .eq('to_user_id', profile.id);
+
+      const tipsSent = tipsSentData?.reduce((sum, tip) => sum + Number(tip.amount), 0) || 0;
+      const tipsReceived = tipsReceivedData?.reduce((sum, tip) => sum + Number(tip.amount), 0) || 0;
+
+      const achievements: Achievement[] = userAchievements?.map(ua => ({
+        id: ua.achievement.id,
+        name: ua.achievement.name,
+        description: ua.achievement.description,
+        icon: ua.achievement.icon,
+        category: ua.achievement.category,
+        unlocked_at: ua.unlocked_at
+      })) || [];
+
       const stats: UserStats = {
         ...profile,
         gameStats: {},
-        recentGames: recentGames || []
+        recentGames: recentGames || [],
+        achievements,
+        tipsSent,
+        tipsReceived
       };
 
       // Process game stats
@@ -110,6 +175,54 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
     }
   };
 
+  const handleTip = async () => {
+    if (!user || !userStats || !tipAmount) return;
+
+    const amount = parseFloat(tipAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid tip amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setTipping(true);
+      
+      const { data, error } = await supabase.functions.invoke('process-tip', {
+        body: {
+          to_user_id: userStats.id,
+          amount: amount,
+          message: tipMessage || null
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Tip Sent! 🎁",
+        description: `Successfully sent $${amount.toFixed(2)} to ${userStats.username}`,
+      });
+
+      setTipAmount('');
+      setTipMessage('');
+      setShowTipForm(false);
+      
+      // Refresh stats to show updated tip data
+      await fetchUserStats(userStats.username);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send tip",
+        variant: "destructive",
+      });
+    } finally {
+      setTipping(false);
+    }
+  };
+
   const getWinRate = (gameType: keyof typeof userStats.gameStats) => {
     if (!userStats?.gameStats[gameType]) return 0;
     const { wins, losses } = userStats.gameStats[gameType]!;
@@ -118,7 +231,9 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
   };
 
   const getGameIcon = (gameType: string) => {
-    return gameType === 'crash' ? <Zap className="w-4 h-4" /> : <Coins className="w-4 h-4" />;
+    if (gameType === 'crash') return <Zap className="w-4 h-4" />;
+    if (gameType === 'tower') return <TrendingUp className="w-4 h-4" />;
+    return <Coins className="w-4 h-4" />;
   };
 
   if (!username) return null;
@@ -206,6 +321,115 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
                       </div>
                       <div className="text-sm text-muted-foreground">Total Profit</div>
                     </div>
+                  </div>
+                  
+                  {/* Social Stats */}
+                  <Separator className="my-4" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-blue-400">${userStats.tipsSent.toFixed(2)}</div>
+                      <div className="text-sm text-muted-foreground">Tips Sent</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold text-green-400">${userStats.tipsReceived.toFixed(2)}</div>
+                      <div className="text-sm text-muted-foreground">Tips Received</div>
+                    </div>
+                  </div>
+                  
+                  {/* Tip Button */}
+                  {user && user.id !== userStats.id && (
+                    <div className="mt-4">
+                      {!showTipForm ? (
+                        <Button 
+                          onClick={() => setShowTipForm(true)}
+                          className="w-full gradient-primary hover:glow-primary transition-smooth"
+                        >
+                          <Gift className="w-4 h-4 mr-2" />
+                          Send Tip
+                        </Button>
+                      ) : (
+                        <div className="space-y-3 p-4 border rounded-lg bg-card/30">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Amount ($)</label>
+                            <Input
+                              type="number"
+                              placeholder="10.00"
+                              value={tipAmount}
+                              onChange={(e) => setTipAmount(e.target.value)}
+                              min="0.01"
+                              step="0.01"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Message (optional)</label>
+                            <Textarea
+                              placeholder="Great play!"
+                              value={tipMessage}
+                              onChange={(e) => setTipMessage(e.target.value)}
+                              rows={2}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleTip}
+                              disabled={tipping || !tipAmount}
+                              className="flex-1"
+                            >
+                              {tipping ? 'Sending...' : `Send $${tipAmount || '0'}`}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setShowTipForm(false);
+                                setTipAmount('');
+                                setTipMessage('');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Achievements */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5" />
+                    Achievements ({userStats.achievements.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3">
+                    {userStats.achievements.map((achievement) => (
+                      <div
+                        key={achievement.id}
+                        className="p-3 rounded-lg border bg-card/30 hover:bg-card/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="text-2xl">{achievement.icon}</div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-sm truncate">{achievement.name}</h4>
+                            <p className="text-xs text-muted-foreground">{achievement.description}</p>
+                            {achievement.unlocked_at && (
+                              <p className="text-xs text-green-400 mt-1">
+                                Unlocked {formatDistanceToNow(new Date(achievement.unlocked_at), { addSuffix: true })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {userStats.achievements.length === 0 && (
+                      <div className="col-span-2 text-center text-muted-foreground py-8">
+                        <Award className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No achievements unlocked yet</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

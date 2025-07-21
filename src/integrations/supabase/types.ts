@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          name: string
+          unlock_criteria: Json
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          name: string
+          unlock_criteria: Json
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          unlock_criteria?: Json
+        }
+        Relationships: []
+      }
       admin_users: {
         Row: {
           created_at: string
@@ -432,6 +462,48 @@ export type Database = {
         }
         Relationships: []
       }
+      tips: {
+        Row: {
+          amount: number
+          created_at: string
+          from_user_id: string
+          id: string
+          message: string | null
+          to_user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          from_user_id: string
+          id?: string
+          message?: string | null
+          to_user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          message?: string | null
+          to_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tips_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tips_to_user_id_fkey"
+            columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tower_games: {
         Row: {
           bet_amount: number
@@ -515,6 +587,42 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -547,6 +655,15 @@ export type Database = {
           current_level_xp: number
           xp_to_next: number
         }[]
+      }
+      process_tip: {
+        Args: {
+          p_from_user_id: string
+          p_to_user_id: string
+          p_amount: number
+          p_message?: string
+        }
+        Returns: boolean
       }
       test_realtime_feed: {
         Args: Record<PropertyKey, never>
