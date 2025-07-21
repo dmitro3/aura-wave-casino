@@ -6,14 +6,22 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, TrendingDown, Coins, Zap } from 'lucide-react';
 import { useRealtimeFeeds, LiveBetFeed } from '@/hooks/useRealtimeFeeds';
 import { formatDistanceToNow } from 'date-fns';
+import UserStatsModal from './UserStatsModal';
 
 export const LiveBetFeedComponent = () => {
   const { liveBetFeed, loading } = useRealtimeFeeds();
   const [selectedGame, setSelectedGame] = useState<'all' | 'crash' | 'coinflip'>('all');
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [showUserStats, setShowUserStats] = useState(false);
 
   const filteredFeed = liveBetFeed.filter(bet => 
     selectedGame === 'all' || bet.game_type === selectedGame
   );
+
+  const handleUsernameClick = (username: string) => {
+    setSelectedUsername(username);
+    setShowUserStats(true);
+  };
 
   const formatProfit = (profit: number) => {
     const isProfit = profit > 0;
@@ -107,7 +115,10 @@ export const LiveBetFeedComponent = () => {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm truncate cursor-pointer hover:text-primary">
+                      <span 
+                        className="font-medium text-sm truncate cursor-pointer hover:text-primary transition-colors underline-offset-4 hover:underline"
+                        onClick={() => handleUsernameClick(bet.username)}
+                      >
                         {bet.username}
                       </span>
                       <Badge variant="secondary" className="text-xs">
@@ -135,6 +146,13 @@ export const LiveBetFeedComponent = () => {
           )}
         </ScrollArea>
       </CardContent>
+      
+      {/* User Stats Modal */}
+      <UserStatsModal 
+        isOpen={showUserStats}
+        onClose={() => setShowUserStats(false)}
+        username={selectedUsername}
+      />
     </Card>
   );
 };
