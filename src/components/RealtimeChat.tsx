@@ -49,7 +49,8 @@ export const RealtimeChat = () => {
         (payload) => {
           const newMsg = payload.new as ChatMessage;
           setMessages(prev => [...prev, newMsg]);
-          scrollToBottom();
+          // Auto scroll after a slight delay to ensure DOM is updated
+          setTimeout(scrollToBottom, 100);
         }
       )
       .subscribe((status) => {
@@ -60,6 +61,11 @@ export const RealtimeChat = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Auto scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const loadMessages = async () => {
     try {
@@ -79,7 +85,10 @@ export const RealtimeChat = () => {
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+      const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
+      }
     }
   };
 
