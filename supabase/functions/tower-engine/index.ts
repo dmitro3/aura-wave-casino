@@ -270,48 +270,48 @@ serve(async (req) => {
               balance: (currentProfile?.balance || 0) + finalPayout
             })
             .eq('id', user.id);
-
-          // Add to game history
-          await supabase
-            .from('game_history')
-            .insert({
-              user_id: user.id,
-              game_type: 'tower',
-              bet_amount: game.bet_amount,
-              profit: finalPayout - game.bet_amount,
-              result: newStatus === 'cashed_out' ? 'win' : 'lose',
-              game_data: {
-                difficulty: game.difficulty,
-                level_reached: nextLevel,
-                multiplier: newMultiplier
-              }
-            });
-
-          // Add to live feed for big wins (5x+ multiplier)
-          if (newMultiplier >= 5) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('username')
-              .eq('id', user.id)
-              .single();
-
-            await supabase
-              .from('live_bet_feed')
-              .insert({
-                user_id: user.id,
-                username: profile?.username || 'Unknown',
-                game_type: 'tower',
-                bet_amount: game.bet_amount,
-                result: 'win',
-                profit: finalPayout - game.bet_amount,
-                multiplier: newMultiplier,
-                game_data: {
-                  difficulty: game.difficulty,
-                  level_reached: nextLevel
-                }
-              });
-          }
         }
+
+        // Add to game history for all outcomes
+        await supabase
+          .from('game_history')
+          .insert({
+            user_id: user.id,
+            game_type: 'tower',
+            bet_amount: game.bet_amount,
+            profit: (finalPayout || 0) - game.bet_amount,
+            result: newStatus === 'cashed_out' ? 'win' : 'lose',
+            game_data: {
+              difficulty: game.difficulty,
+              level_reached: isMine ? game.current_level + 1 : nextLevel,
+              multiplier: newMultiplier,
+              hit_mine: isMine
+            }
+          });
+
+        // Add to live feed for ALL outcomes (not just big wins)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+
+        await supabase
+          .from('live_bet_feed')
+          .insert({
+            user_id: user.id,
+            username: profile?.username || 'Unknown',
+            game_type: 'tower',
+            bet_amount: game.bet_amount,
+            result: newStatus === 'cashed_out' ? 'win' : 'lose',
+            profit: (finalPayout || 0) - game.bet_amount,
+            multiplier: newMultiplier > 1 ? newMultiplier : null,
+            game_data: {
+              difficulty: game.difficulty,
+              level_reached: isMine ? game.current_level + 1 : nextLevel,
+              hit_mine: isMine
+            }
+          });
 
         return new Response(JSON.stringify({
           success: true,
@@ -397,6 +397,30 @@ serve(async (req) => {
               difficulty: game.difficulty,
               level_reached: game.current_level,
               multiplier
+            }
+          });
+
+        // Add to live feed for cash out
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+
+        await supabase
+          .from('live_bet_feed')
+          .insert({
+            user_id: user.id,
+            username: profile?.username || 'Unknown',
+            game_type: 'tower',
+            bet_amount: game.bet_amount,
+            result: 'win',
+            profit: payout - game.bet_amount,
+            multiplier,
+            game_data: {
+              difficulty: game.difficulty,
+              level_reached: game.current_level,
+              cashed_out: true
             }
           });
 
