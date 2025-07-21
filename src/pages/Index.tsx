@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target } from 'lucide-react';
+import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target, Building } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import AuthModal from '@/components/AuthModal';
@@ -13,6 +13,7 @@ import RewardsPanel from '@/components/RewardsPanel';
 import CoinflipGame from '@/components/CoinflipGame';
 import { LiveBetFeedComponent } from '@/components/LiveBetFeed';
 import { RouletteGame } from '@/components/RouletteGame';
+import { TowerGame } from '@/components/TowerGame';
 
 export default function Index() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -193,6 +194,10 @@ export default function Index() {
                 <Target className="w-4 h-4 mr-2" />
                 Roulette
               </TabsTrigger>
+              <TabsTrigger value="tower" className="flex-1">
+                <Building className="w-4 h-4 mr-2" />
+                Tower
+              </TabsTrigger>
               <TabsTrigger value="crash" className="flex-1" disabled>
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Crash (Coming Soon)
@@ -205,6 +210,10 @@ export default function Index() {
 
             <TabsContent value="roulette">
               <RouletteGame />
+            </TabsContent>
+
+            <TabsContent value="tower">
+              <TowerGame />
             </TabsContent>
 
             <TabsContent value="crash">

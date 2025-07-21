@@ -405,6 +405,89 @@ export type Database = {
         }
         Relationships: []
       }
+      tower_games: {
+        Row: {
+          bet_amount: number
+          created_at: string
+          current_level: number
+          current_multiplier: number
+          difficulty: string
+          final_payout: number | null
+          id: string
+          max_level: number
+          mine_positions: Json
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bet_amount: number
+          created_at?: string
+          current_level?: number
+          current_multiplier?: number
+          difficulty: string
+          final_payout?: number | null
+          id?: string
+          max_level: number
+          mine_positions: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bet_amount?: number
+          created_at?: string
+          current_level?: number
+          current_multiplier?: number
+          difficulty?: string
+          final_payout?: number | null
+          id?: string
+          max_level?: number
+          mine_positions?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tower_levels: {
+        Row: {
+          created_at: string
+          game_id: string
+          id: string
+          level_number: number
+          multiplier_at_level: number
+          tile_selected: number
+          was_safe: boolean
+        }
+        Insert: {
+          created_at?: string
+          game_id: string
+          id?: string
+          level_number: number
+          multiplier_at_level: number
+          tile_selected: number
+          was_safe: boolean
+        }
+        Update: {
+          created_at?: string
+          game_id?: string
+          id?: string
+          level_number?: number
+          multiplier_at_level?: number
+          tile_selected?: number
+          was_safe?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tower_levels_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "tower_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

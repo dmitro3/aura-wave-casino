@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.roulette-engine]
 verify_jwt = false
+
+[functions.tower-engine]
+verify_jwt = false
