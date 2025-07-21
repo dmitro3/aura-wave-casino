@@ -302,10 +302,10 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
           }
         });
 
-        // Update user balance if won
+        // Update user balance if won (add payout to current balance since bet was already deducted)
         if (finalPayout > 0) {
           await onUpdateUser({
-            balance: userData.balance - game.bet_amount + finalPayout,
+            balance: userData.balance + finalPayout,
             total_profit: userData.total_profit + profit
           });
         } else {
@@ -393,9 +393,9 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
         }
       });
 
-      // Update user balance
+      // Update user balance (add payout to current balance since bet was already deducted)
       await onUpdateUser({
-        balance: userData.balance - game.bet_amount + payout,
+        balance: userData.balance + payout,
         total_profit: userData.total_profit + profit
       });
 
