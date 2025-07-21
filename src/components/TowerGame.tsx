@@ -302,16 +302,25 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
           }
         });
 
-        // Update user balance if won (add payout to current balance since bet was already deducted)
+        // Get current balance from database for accurate updates
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('balance, total_profit')
+          .eq('id', userData.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        // Update user balance if won (add payout to current balance)
         if (finalPayout > 0) {
           await onUpdateUser({
-            balance: userData.balance + finalPayout,
-            total_profit: userData.total_profit + profit
+            balance: profileData.balance + finalPayout,
+            total_profit: profileData.total_profit + profit
           });
         } else {
           // Just update total_profit for losses
           await onUpdateUser({
-            total_profit: userData.total_profit + profit
+            total_profit: profileData.total_profit + profit
           });
         }
       }
@@ -361,6 +370,15 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
       const multiplier = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level - 1];
       const payout = game.bet_amount * multiplier;
 
+      // Get current balance from database
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('balance, total_profit')
+        .eq('id', userData.id)
+        .single();
+
+      if (profileError) throw profileError;
+
       // Update game status in database
       await supabase
         .from('tower_games')
@@ -393,10 +411,10 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
         }
       });
 
-      // Update user balance (add payout to current balance since bet was already deducted)
+      // Update user balance (add payout to current balance)
       await onUpdateUser({
-        balance: userData.balance + payout,
-        total_profit: userData.total_profit + profit
+        balance: profileData.balance + payout,
+        total_profit: profileData.total_profit + profit
       });
 
       toast({
