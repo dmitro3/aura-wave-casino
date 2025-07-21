@@ -258,10 +258,16 @@ serve(async (req) => {
 
         // If game ended with payout, credit user balance and add to feeds
         if (finalPayout > 0) {
+          const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('balance')
+            .eq('id', user.id)
+            .single();
+
           await supabase
             .from('profiles')
             .update({ 
-              balance: supabase.raw(`balance + ${finalPayout}`)
+              balance: (currentProfile?.balance || 0) + finalPayout
             })
             .eq('id', user.id);
 
@@ -365,10 +371,16 @@ serve(async (req) => {
           .eq('id', gameId);
 
         // Credit user balance
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('balance')
+          .eq('id', user.id)
+          .single();
+
         await supabase
           .from('profiles')
           .update({ 
-            balance: supabase.raw(`balance + ${payout}`)
+            balance: (currentProfile?.balance || 0) + payout
           })
           .eq('id', user.id);
 

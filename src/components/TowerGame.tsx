@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Building, Trophy, Zap, AlertTriangle, Coins } from 'lucide-react';
+import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 
 interface TowerGame {
   id: string;
@@ -72,6 +73,10 @@ export const TowerGame = () => {
   const [selectedTile, setSelectedTile] = useState<number | null>(null);
   const [animatingLevel, setAnimatingLevel] = useState<number | null>(null);
   const { toast } = useToast();
+  const { liveBetFeed, isConnected } = useRealtimeFeeds();
+
+  // Filter tower bets from live feed
+  const towerBets = liveBetFeed.filter(bet => bet.game_type === 'tower');
 
   const startGame = async () => {
     try {
@@ -234,6 +239,19 @@ export const TowerGame = () => {
     setAnimatingLevel(null);
   };
 
+  const changeDifficulty = (newDifficulty: string) => {
+    if (game?.status === 'active') {
+      toast({
+        title: "Game in Progress",
+        description: "Finish your current game before changing difficulty",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDifficulty(newDifficulty);
+    resetGame();
+  };
+
   const renderTile = (levelIndex: number, tileIndex: number) => {
     const tileKey = `${levelIndex}-${tileIndex}`;
     const revealed = revealedTiles[tileKey];
@@ -278,6 +296,9 @@ export const TowerGame = () => {
     const isCurrentLevel = game && levelIndex === game.current_level;
     const levelNum = levelIndex + 1;
     const multiplier = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][levelIndex];
+    const tilesPerRow = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name === 'Easy' ? 4 : 
+                       DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name === 'Medium' ? 3 : 
+                       DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name === 'Hard' ? 2 : 3;
 
     return (
       <div key={levelIndex} className={`flex items-center gap-4 p-4 rounded-lg border transition-all duration-300 ${
@@ -293,7 +314,7 @@ export const TowerGame = () => {
         </div>
         
         <div className="flex gap-2">
-          {Array.from({ length: config?.tilesPerRow || 4 }, (_, i) => renderTile(levelIndex, i))}
+          {Array.from({ length: tilesPerRow }, (_, i) => renderTile(levelIndex, i))}
         </div>
 
         {isPastLevel && (
@@ -303,162 +324,200 @@ export const TowerGame = () => {
     );
   };
 
-  if (!game) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building className="h-6 w-6" />
-              Tower Game
-            </CardTitle>
-            <p className="text-muted-foreground">
-              Climb the tower by selecting safe tiles. Cash out anytime or reach the top for maximum rewards!
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Difficulty Selection */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Choose Difficulty</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
-                  <button
-                    key={key}
-                    onClick={() => setDifficulty(key)}
-                    className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
-                      difficulty === key ? info.color : 'border-border hover:border-primary/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-lg">{info.icon}</span>
-                      <span className="font-semibold">{info.name}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-1">{info.description}</p>
-                    <p className="text-sm font-medium text-primary">Max: {info.maxMultiplier}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Bet Amount */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Bet Amount</label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(e.target.value)}
-                  placeholder="Enter bet amount"
-                  min="1"
-                  className="flex-1"
-                />
-                <Button onClick={startGame} disabled={loading} className="px-8">
-                  {loading ? "Starting..." : "Start Game"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Payout Table */}
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Payout Table</h3>
-              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 text-sm">
-                {PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS].map((multiplier, index) => (
-                  <div key={index} className="bg-muted p-2 rounded text-center">
-                    <div className="font-medium">L{index + 1}</div>
-                    <div className="text-primary">{multiplier.toFixed(2)}x</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Game Header */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Badge className={DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].color}>
-                {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].icon} {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name}
-              </Badge>
-              <div className="flex items-center gap-2">
-                <Coins className="h-4 w-4" />
-                <span className="font-medium">${betAmount}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                <span>Level {game.current_level + 1}/{game.max_level}</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              {game.current_level > 0 && game.status === 'active' && (
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-primary">
-                    {game.current_multiplier.toFixed(2)}x
-                  </span>
-                  <Button onClick={cashOut} disabled={loading} variant="outline">
-                    Cash Out ${(parseFloat(betAmount) * game.current_multiplier).toFixed(2)}
-                  </Button>
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Game Area */}
+        <div className="lg:col-span-2 space-y-6">{/* Game Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-6 w-6" />
+                Tower Game
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Difficulty and Bet Controls */}
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">Difficulty</label>
+                  <Select value={difficulty} onValueChange={changeDifficulty}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
+                        <SelectItem key={key} value={key}>
+                          {info.icon} {info.name} - {info.maxMultiplier}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-              
-              {game.status !== 'active' && (
-                <div className="flex items-center gap-4">
-                  {game.final_payout && (
-                    <div className="text-right">
-                      <div className="text-sm text-muted-foreground">Final Payout</div>
-                      <div className="text-xl font-bold text-green-400">
-                        ${game.final_payout.toFixed(2)}
-                      </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">Bet Amount</label>
+                  <Input
+                    type="number"
+                    value={betAmount}
+                    onChange={(e) => setBetAmount(e.target.value)}
+                    min="1"
+                    disabled={game?.status === 'active'}
+                  />
+                </div>
+                <div className="flex items-end">
+                  {!game || game.status !== 'active' ? (
+                    <Button onClick={startGame} disabled={loading}>
+                      {loading ? "Starting..." : "Start Game"}
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      {game.current_level > 0 && (
+                        <Button onClick={cashOut} disabled={loading} variant="outline">
+                          Cash Out ${(parseFloat(betAmount) * game.current_multiplier).toFixed(2)}
+                        </Button>
+                      )}
+                      <Button onClick={resetGame} variant="destructive">
+                        End Game
+                      </Button>
                     </div>
                   )}
-                  <Button onClick={resetGame}>Play Again</Button>
+                </div>
+              </div>
+
+              {/* Game Status */}
+              {game && (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <Badge className={DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].color}>
+                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].icon} {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4" />
+                      <span>Level {game.current_level + 1}/{game.max_level}</span>
+                    </div>
+                  </div>
+                  {game.current_level > 0 && (
+                    <div className="text-2xl font-bold text-primary">
+                      {game.current_multiplier.toFixed(2)}x
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Tower */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="space-y-3">
-            {/* Render levels from top to bottom */}
-            {Array.from({ length: game.max_level }, (_, i) => game.max_level - 1 - i)
-              .map(levelIndex => renderLevel(levelIndex))}
-          </div>
-        </CardContent>
-      </Card>
+          {/* Tower */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {game ? (
+                  /* Render levels from top to bottom */
+                  Array.from({ length: game.max_level }, (_, i) => game.max_level - 1 - i)
+                    .map(levelIndex => renderLevel(levelIndex))
+                ) : (
+                  /* Show example tower for selected difficulty */
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold mb-4">
+                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].icon} {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name} Mode Preview
+                    </h3>
+                    {PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS].slice().reverse().map((multiplier, index) => {
+                      const actualLevel = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS].length - 1 - index;
+                      const tilesPerRow = difficulty === 'easy' ? 4 : difficulty === 'medium' ? 3 : difficulty === 'hard' ? 2 : 3;
+                      
+                      return (
+                        <div key={actualLevel} className="flex items-center gap-4 p-4 rounded-lg border bg-muted/20 border-muted-foreground/20">
+                          <div className="flex items-center gap-2 min-w-[80px]">
+                            <Badge variant="outline">L{actualLevel + 1}</Badge>
+                            <span className="text-sm font-medium">{multiplier.toFixed(2)}x</span>
+                          </div>
+                          <div className="flex gap-2">
+                            {Array.from({ length: tilesPerRow }, (_, i) => (
+                              <div key={i} className="w-12 h-12 rounded-lg border-2 bg-muted border-muted-foreground/20 flex items-center justify-center cursor-not-allowed">
+                                ?
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Game Status */}
-      {game.status !== 'active' && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            {game.status === 'lost' ? (
-              <div className="space-y-2">
-                <AlertTriangle className="h-12 w-12 text-red-400 mx-auto" />
-                <h3 className="text-xl font-bold text-red-400">Game Over!</h3>
-                <p className="text-muted-foreground">You hit a mine at level {game.current_level + 1}</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Trophy className="h-12 w-12 text-green-400 mx-auto" />
-                <h3 className="text-xl font-bold text-green-400">Congratulations!</h3>
-                <p className="text-muted-foreground">
-                  You successfully cashed out at level {game.current_level}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+          {/* Game End Status */}
+          {game?.status !== 'active' && game?.status && (
+            <Card>
+              <CardContent className="p-6 text-center">
+                {game.status === 'lost' ? (
+                  <div className="space-y-2">
+                    <AlertTriangle className="h-12 w-12 text-red-400 mx-auto" />
+                    <h3 className="text-xl font-bold text-red-400">Game Over!</h3>
+                    <p className="text-muted-foreground">You hit a mine at level {game.current_level + 1}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Trophy className="h-12 w-12 text-green-400 mx-auto" />
+                    <h3 className="text-xl font-bold text-green-400">Congratulations!</h3>
+                    <p className="text-muted-foreground">
+                      You cashed out at level {game.current_level} for ${game.final_payout?.toFixed(2)}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Tower Live Feed */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                Tower Live Feed
+                <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-yellow-400'}`} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 max-h-96 overflow-y-auto">
+              {!isConnected ? (
+                <div className="text-center text-muted-foreground py-4">
+                  Connecting to live feed...
+                </div>
+              ) : towerBets.length === 0 ? (
+                <div className="text-center text-muted-foreground py-4">
+                  No recent Tower bets. Be the first!
+                </div>
+              ) : (
+                towerBets.slice(0, 20).map((bet) => (
+                  <div key={bet.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">
+                        {bet.username[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{bet.username}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {bet.game_data?.difficulty} - Level {bet.game_data?.level_reached}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-bold text-sm ${bet.result === 'win' ? 'text-green-400' : 'text-red-400'}`}>
+                        {bet.result === 'win' ? '+' : '-'}${Math.abs(bet.profit).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {bet.multiplier ? `${bet.multiplier.toFixed(2)}x` : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
