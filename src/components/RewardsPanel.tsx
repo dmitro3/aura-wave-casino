@@ -1,18 +1,21 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Gift, Clock, Coins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { UserProfile } from '@/hooks/useUserProfile';
 
 interface RewardsPanelProps {
-  userData: any;
-  onUpdateUser: (updatedData: any) => void;
+  userData: UserProfile;
+  onUpdateUser: (updatedData: Partial<UserProfile>) => Promise<void>;
 }
 
 export default function RewardsPanel({ userData, onUpdateUser }: RewardsPanelProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [canClaim, setCanClaim] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
   const CLAIM_COOLDOWN = 20000; // 20 seconds
@@ -23,7 +26,7 @@ export default function RewardsPanel({ userData, onUpdateUser }: RewardsPanelPro
       if (!userData) return;
 
       const now = Date.now();
-      const lastClaim = userData.lastClaimTime || 0;
+      const lastClaim = new Date(userData.last_claim_time).getTime();
       const timeSinceClaim = now - lastClaim;
       
       if (timeSinceClaim >= CLAIM_COOLDOWN) {
@@ -40,8 +43,8 @@ export default function RewardsPanel({ userData, onUpdateUser }: RewardsPanelPro
     return () => clearInterval(interval);
   }, [userData]);
 
-  const handleClaim = () => {
-    if (!canClaim || !userData) return;
+  const handleClaim = async () => {
+    if (!canClaim || !userData || isUpdating) return;
 
     const bonusMessages = [
       "You've earned your coffee bonus! ☕",
@@ -53,19 +56,27 @@ export default function RewardsPanel({ userData, onUpdateUser }: RewardsPanelPro
 
     const randomMessage = bonusMessages[Math.floor(Math.random() * bonusMessages.length)];
 
-    const updatedUser = {
-      ...userData,
-      balance: userData.balance + CLAIM_AMOUNT,
-      lastClaimTime: Date.now(),
-      xp: userData.xp + 10 // Small XP bonus for claiming
-    };
+    setIsUpdating(true);
+    try {
+      await onUpdateUser({
+        balance: userData.balance + CLAIM_AMOUNT,
+        last_claim_time: new Date().toISOString(),
+        xp: userData.xp + 10 // Small XP bonus for claiming
+      });
 
-    onUpdateUser(updatedUser);
-
-    toast({
-      title: "Reward Claimed!",
-      description: `${randomMessage} +$${CLAIM_AMOUNT}`,
-    });
+      toast({
+        title: "Reward Claimed!",
+        description: `${randomMessage} +$${CLAIM_AMOUNT}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to claim reward. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const formatTime = (ms: number) => {
@@ -108,15 +119,15 @@ export default function RewardsPanel({ userData, onUpdateUser }: RewardsPanelPro
 
         <Button
           onClick={handleClaim}
-          disabled={!canClaim}
+          disabled={!canClaim || isUpdating}
           className={`w-full transition-smooth ${
-            canClaim
+            canClaim && !isUpdating
               ? 'gradient-primary hover:glow-primary animate-pulse-glow'
               : 'opacity-50 cursor-not-allowed'
           }`}
         >
           <Coins className="w-4 h-4 mr-2" />
-          {canClaim ? 'Claim Reward' : `Wait ${formatTime(timeLeft)}`}
+          {isUpdating ? 'Claiming...' : canClaim ? 'Claim Reward' : `Wait ${formatTime(timeLeft)}`}
         </Button>
 
         <div className="text-xs text-center text-muted-foreground">

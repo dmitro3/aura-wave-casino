@@ -1,58 +1,46 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import AuthModal from '@/components/AuthModal';
 import UserProfile from '@/components/UserProfile';
 import RewardsPanel from '@/components/RewardsPanel';
 import CoinflipGame from '@/components/CoinflipGame';
 
 export default function Index() {
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [userData, setUserData] = useState<any>(null);
+  const { user, signOut, loading: authLoading } = useAuth();
+  const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('currentGamblingUser');
-    if (savedUser) {
-      setCurrentUser(savedUser);
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
     }
-  }, []);
-
-  useEffect(() => {
-    if (currentUser) {
-      const users = JSON.parse(localStorage.getItem('gamblingUsers') || '{}');
-      setUserData(users[currentUser] || null);
-    } else {
-      setUserData(null);
-    }
-  }, [currentUser]);
-
-  const handleLogin = (username: string) => {
-    setCurrentUser(username);
-    localStorage.setItem('currentGamblingUser', username);
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setUserData(null);
-    localStorage.removeItem('currentGamblingUser');
-  };
-
-  const updateUserData = (newData: any) => {
-    const users = JSON.parse(localStorage.getItem('gamblingUsers') || '{}');
-    users[currentUser!] = newData;
-    localStorage.setItem('gamblingUsers', JSON.stringify(users));
-    setUserData(newData);
   };
 
   const getXpForNextLevel = (level: number) => level * 100;
   const xpProgress = userData ? (userData.xp / getXpForNextLevel(userData.level)) * 100 : 0;
 
-  if (!currentUser) {
+  if (authLoading || profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass p-8 rounded-2xl text-center">
+          <div className="text-2xl mb-4">🎮</div>
+          <p className="text-muted-foreground">Loading ArcadeFinance...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || !userData) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
         <div className="text-center space-y-6 max-w-md">
@@ -87,7 +75,6 @@ export default function Index() {
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
-          onLogin={handleLogin}
         />
       </div>
     );
@@ -113,7 +100,7 @@ export default function Index() {
               <div className="flex items-center space-x-2 glass px-3 py-1 rounded-lg">
                 <Wallet className="w-4 h-4 text-primary" />
                 <span className="font-semibold">
-                  ${userData?.balance?.toFixed(2) || '0.00'}
+                  ${userData.balance.toFixed(2)}
                 </span>
               </div>
 
@@ -121,7 +108,7 @@ export default function Index() {
               <div className="hidden md:flex items-center space-x-2 glass px-3 py-1 rounded-lg">
                 <Trophy className="w-4 h-4 text-accent" />
                 <span className="font-semibold">
-                  Level {userData?.level || 1}
+                  Level {userData.level}
                 </span>
               </div>
 
@@ -132,7 +119,7 @@ export default function Index() {
                 className="glass border-0 hover:glow-primary transition-smooth"
               >
                 <User className="w-4 h-4 mr-2" />
-                {userData?.username}
+                {userData.username}
               </Button>
 
               <Button
@@ -149,8 +136,8 @@ export default function Index() {
           {/* XP Progress Bar */}
           <div className="mt-3 space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Level {userData?.level || 1} Progress</span>
-              <span>{userData?.xp || 0} / {getXpForNextLevel(userData?.level || 1)} XP</span>
+              <span>Level {userData.level} Progress</span>
+              <span>{userData.xp} / {getXpForNextLevel(userData.level)} XP</span>
             </div>
             <Progress value={xpProgress} className="h-2" />
           </div>
@@ -161,7 +148,7 @@ export default function Index() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-4">
-          <RewardsPanel userData={userData} onUpdateUser={updateUserData} />
+          <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />
           
           <Card className="glass border-0">
             <CardHeader>
@@ -173,19 +160,19 @@ export default function Index() {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Wagered</span>
-                <span className="font-semibold">${userData?.totalWagered?.toFixed(2) || '0.00'}</span>
+                <span className="font-semibold">${userData.total_wagered.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total P&L</span>
-                <span className={`font-semibold ${(userData?.totalProfit || 0) >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {(userData?.totalProfit || 0) >= 0 ? '+' : ''}${userData?.totalProfit?.toFixed(2) || '0.00'}
+                <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Games Played</span>
                 <span className="font-semibold">
-                  {((userData?.gameStats?.coinflip?.wins || 0) + (userData?.gameStats?.coinflip?.losses || 0) + 
-                    (userData?.gameStats?.crash?.wins || 0) + (userData?.gameStats?.crash?.losses || 0))}
+                  {userData.gameStats.coinflip.wins + userData.gameStats.coinflip.losses + 
+                   userData.gameStats.crash.wins + userData.gameStats.crash.losses}
                 </span>
               </div>
             </CardContent>
@@ -207,7 +194,7 @@ export default function Index() {
             </TabsList>
 
             <TabsContent value="coinflip">
-              <CoinflipGame userData={userData} onUpdateUser={updateUserData} />
+              <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
             </TabsContent>
 
             <TabsContent value="crash">

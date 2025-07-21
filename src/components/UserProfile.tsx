@@ -1,31 +1,17 @@
+
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Trophy, Target, TrendingUp, Calendar, Star } from 'lucide-react';
-
-interface UserData {
-  username: string;
-  registrationDate: string;
-  balance: number;
-  level: number;
-  xp: number;
-  totalWagered: number;
-  totalProfit: number;
-  gameStats: {
-    coinflip: { wins: number; losses: number; profit: number };
-    crash: { wins: number; losses: number; profit: number };
-  };
-  badges: string[];
-}
+import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
 
 interface UserProfileProps {
   isOpen: boolean;
   onClose: () => void;
-  userData: UserData | null;
+  userData: UserProfileType | null;
 }
 
 const avatars = [
@@ -52,7 +38,7 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
   const xpForNext = getXpForNextLevel(userData.level);
   const xpProgress = (userData.xp / xpForNext) * 100;
 
-  const registrationDate = new Date(userData.registrationDate).toLocaleDateString('en-US', {
+  const registrationDate = new Date(userData.registration_date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -123,7 +109,7 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Wagered</span>
-                  <span className="font-semibold">${userData.totalWagered.toFixed(2)}</span>
+                  <span className="font-semibold">${userData.total_wagered.toFixed(2)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -142,14 +128,14 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total P&L</span>
-                  <span className={`font-semibold ${userData.totalProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {userData.totalProfit >= 0 ? '+' : ''}${userData.totalProfit.toFixed(2)}
+                  <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">ROI</span>
-                  <span className={`font-semibold ${userData.totalProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {userData.totalWagered > 0 ? ((userData.totalProfit / userData.totalWagered) * 100).toFixed(1) : '0'}%
+                  <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                    {userData.total_wagered > 0 ? ((userData.total_profit / userData.total_wagered) * 100).toFixed(1) : '0'}%
                   </span>
                 </div>
               </CardContent>

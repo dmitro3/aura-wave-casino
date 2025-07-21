@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,47 +6,66 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (username: string) => void;
 }
 
-export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) {
-  const [loginData, setLoginData] = useState({ username: '', password: '' });
-  const [registerData, setRegisterData] = useState({ username: '', password: '', confirmPassword: '' });
+export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [registerData, setRegisterData] = useState({ 
+    username: '', 
+    email: '', 
+    password: '', 
+    confirmPassword: '' 
+  });
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
-  const handleLogin = () => {
-    if (!loginData.username || !loginData.password) {
+  const handleLogin = async () => {
+    if (!loginData.email || !loginData.password) {
       toast({
         title: "Missing Fields",
-        description: "Please enter both username and password",
+        description: "Please enter both email and password",
         variant: "destructive",
       });
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('gamblingUsers') || '{}');
-    if (users[loginData.username] && users[loginData.username].password === loginData.password) {
-      onLogin(loginData.username);
+    setLoading(true);
+    try {
+      const { error } = await signIn(loginData.email, loginData.password);
+      
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       onClose();
       toast({
         title: "Welcome back!",
-        description: `Logged in as ${loginData.username}`,
+        description: "Successfully logged in",
       });
-    } else {
+    } catch (error) {
       toast({
         title: "Login Failed",
-        description: "Invalid username or password",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRegister = () => {
-    if (!registerData.username || !registerData.password || !registerData.confirmPassword) {
+  const handleRegister = async () => {
+    if (!registerData.username || !registerData.email || !registerData.password || !registerData.confirmPassword) {
       toast({
         title: "Missing Fields",
         description: "Please fill in all fields",
@@ -63,42 +83,42 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem('gamblingUsers') || '{}');
-    if (users[registerData.username]) {
+    if (registerData.password.length < 6) {
       toast({
-        title: "Username Taken",
-        description: "This username is already taken",
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long",
         variant: "destructive",
       });
       return;
     }
 
-    const newUser = {
-      username: registerData.username,
-      password: registerData.password,
-      registrationDate: new Date().toISOString(),
-      balance: 0,
-      level: 1,
-      xp: 0,
-      totalWagered: 0,
-      totalProfit: 0,
-      lastClaimTime: 0,
-      gameStats: {
-        coinflip: { wins: 0, losses: 0, profit: 0 },
-        crash: { wins: 0, losses: 0, profit: 0 }
-      },
-      badges: ['welcome']
-    };
+    setLoading(true);
+    try {
+      const { error } = await signUp(registerData.email, registerData.password, registerData.username);
+      
+      if (error) {
+        toast({
+          title: "Registration Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
 
-    users[registerData.username] = newUser;
-    localStorage.setItem('gamblingUsers', JSON.stringify(users));
-    
-    onLogin(registerData.username);
-    onClose();
-    toast({
-      title: "Account Created!",
-      description: `Welcome to the platform, ${registerData.username}!`,
-    });
+      onClose();
+      toast({
+        title: "Account Created!",
+        description: `Welcome to ArcadeFinance, ${registerData.username}!`,
+      });
+    } catch (error) {
+      toast({
+        title: "Registration Failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -118,13 +138,15 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
           
           <TabsContent value="login" className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login-username">Username</Label>
+              <Label htmlFor="login-email">Email</Label>
               <Input
-                id="login-username"
-                value={loginData.username}
-                onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
+                id="login-email"
+                type="email"
+                value={loginData.email}
+                onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                 className="glass border-0"
-                placeholder="Enter your username"
+                placeholder="Enter your email"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -136,10 +158,15 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
                 onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                 className="glass border-0"
                 placeholder="Enter your password"
+                disabled={loading}
               />
             </div>
-            <Button onClick={handleLogin} className="w-full gradient-primary hover:glow-primary transition-smooth">
-              Login
+            <Button 
+              onClick={handleLogin} 
+              className="w-full gradient-primary hover:glow-primary transition-smooth"
+              disabled={loading}
+            >
+              {loading ? 'Logging in...' : 'Login'}
             </Button>
           </TabsContent>
           
@@ -152,6 +179,19 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
                 onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
                 className="glass border-0"
                 placeholder="Choose a username"
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="register-email">Email</Label>
+              <Input
+                id="register-email"
+                type="email"
+                value={registerData.email}
+                onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                className="glass border-0"
+                placeholder="Enter your email"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -162,7 +202,8 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
                 value={registerData.password}
                 onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                 className="glass border-0"
-                placeholder="Choose a password"
+                placeholder="Choose a password (min 6 characters)"
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -174,10 +215,15 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
                 onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
                 className="glass border-0"
                 placeholder="Confirm your password"
+                disabled={loading}
               />
             </div>
-            <Button onClick={handleRegister} className="w-full gradient-primary hover:glow-primary transition-smooth">
-              Create Account
+            <Button 
+              onClick={handleRegister} 
+              className="w-full gradient-primary hover:glow-primary transition-smooth"
+              disabled={loading}
+            >
+              {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </TabsContent>
         </Tabs>

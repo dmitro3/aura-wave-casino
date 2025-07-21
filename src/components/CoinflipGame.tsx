@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,19 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Coins, TrendingUp, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useGameHistory } from '@/hooks/useGameHistory';
+import { UserProfile } from '@/hooks/useUserProfile';
 
 interface CoinflipGameProps {
-  userData: any;
-  onUpdateUser: (updatedData: any) => void;
-}
-
-interface GameResult {
-  choice: 'heads' | 'tails';
-  result: 'heads' | 'tails';
-  bet: number;
-  won: boolean;
-  profit: number;
-  timestamp: number;
+  userData: UserProfile;
+  onUpdateUser: (updatedData: Partial<UserProfile>) => Promise<void>;
 }
 
 export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGameProps) {
@@ -25,10 +19,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const [selectedSide, setSelectedSide] = useState<'heads' | 'tails'>('heads');
   const [isFlipping, setIsFlipping] = useState(false);
   const [coinResult, setCoinResult] = useState<'heads' | 'tails' | null>(null);
-  const [gameHistory, setGameHistory] = useState<GameResult[]>(() => {
-    const saved = localStorage.getItem(`coinflip_history_${userData?.username}`);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { history, addGameRecord } = useGameHistory('coinflip', 10);
   const { toast } = useToast();
 
   const handleFlip = async () => {
@@ -56,49 +47,57 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
     setIsFlipping(true);
     
     // Simulate coin flip delay
-    setTimeout(() => {
+    setTimeout(async () => {
       const result = Math.random() < 0.5 ? 'heads' : 'tails';
       const won = result === selectedSide;
       const profit = won ? bet : -bet;
       
       setCoinResult(result);
-      
-      const gameResult: GameResult = {
-        choice: selectedSide,
-        result,
-        bet,
-        won,
-        profit,
-        timestamp: Date.now()
-      };
 
-      const newHistory = [gameResult, ...gameHistory.slice(0, 9)];
-      setGameHistory(newHistory);
-      localStorage.setItem(`coinflip_history_${userData.username}`, JSON.stringify(newHistory));
+      try {
+        // Add game record to history
+        await addGameRecord({
+          game_type: 'coinflip',
+          bet_amount: bet,
+          result: won ? 'win' : 'lose',
+          profit,
+          game_data: {
+            choice: selectedSide,
+            coinResult: result,
+            won
+          }
+        });
 
-      const updatedUser = {
-        ...userData,
-        balance: userData.balance + profit,
-        totalWagered: userData.totalWagered + bet,
-        totalProfit: userData.totalProfit + profit,
-        xp: userData.xp + Math.floor(bet / 10), // XP based on bet size
-        gameStats: {
+        // Update user profile
+        const updatedGameStats = {
           ...userData.gameStats,
           coinflip: {
             wins: userData.gameStats.coinflip.wins + (won ? 1 : 0),
             losses: userData.gameStats.coinflip.losses + (won ? 0 : 1),
             profit: userData.gameStats.coinflip.profit + profit
           }
-        }
-      };
+        };
 
-      onUpdateUser(updatedUser);
+        await onUpdateUser({
+          balance: userData.balance + profit,
+          total_wagered: userData.total_wagered + bet,
+          total_profit: userData.total_profit + profit,
+          xp: userData.xp + Math.floor(bet / 10), // XP based on bet size
+          gameStats: updatedGameStats
+        });
 
-      toast({
-        title: won ? "You Won!" : "You Lost!",
-        description: `The coin landed on ${result}. ${won ? `+$${bet}` : `-$${bet}`}`,
-        variant: won ? "default" : "destructive",
-      });
+        toast({
+          title: won ? "You Won!" : "You Lost!",
+          description: `The coin landed on ${result}. ${won ? `+$${bet}` : `-$${bet}`}`,
+          variant: won ? "default" : "destructive",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to process game result",
+          variant: "destructive",
+        });
+      }
 
       setIsFlipping(false);
       setBetAmount('');
@@ -206,30 +205,30 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           <CardTitle className="text-lg">Recent Flips</CardTitle>
         </CardHeader>
         <CardContent>
-          {gameHistory.length === 0 ? (
+          {history.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">
               No games played yet. Make your first flip!
             </p>
           ) : (
             <div className="space-y-2">
-              {gameHistory.map((game, index) => (
-                <div key={index} className="flex items-center justify-between p-2 glass rounded">
+              {history.map((game) => (
+                <div key={game.id} className="flex items-center justify-between p-2 glass rounded">
                   <div className="flex items-center space-x-2">
                     <span className="text-lg">
-                      {game.result === 'heads' ? '👑' : '⚡'}
+                      {game.game_data?.coinResult === 'heads' ? '👑' : '⚡'}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      Chose {game.choice}
+                      Chose {game.game_data?.choice}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant={game.won ? 'default' : 'destructive'} className="glass">
-                      ${game.bet.toFixed(2)}
+                    <Badge variant={game.result === 'win' ? 'default' : 'destructive'} className="glass">
+                      ${game.bet_amount.toFixed(2)}
                     </Badge>
-                    <div className={`flex items-center space-x-1 ${game.won ? 'text-success' : 'text-destructive'}`}>
-                      {game.won ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    <div className={`flex items-center space-x-1 ${game.profit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {game.profit >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                       <span className="text-sm font-medium">
-                        {game.won ? '+' : ''}${game.profit.toFixed(2)}
+                        {game.profit >= 0 ? '+' : ''}${game.profit.toFixed(2)}
                       </span>
                     </div>
                   </div>
