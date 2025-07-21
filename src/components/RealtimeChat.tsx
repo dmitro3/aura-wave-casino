@@ -169,7 +169,12 @@ export const RealtimeChat = () => {
                   <div key={msg.id} className={`flex gap-3 animate-fade-in ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
                     <Avatar 
                       className="w-8 h-8 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-                      onClick={() => setSelectedUser({id: msg.user_id, username: msg.username})}
+                      onClick={() => {
+                        const event = new CustomEvent('openUserStats', { 
+                          detail: { username: msg.username } 
+                        });
+                        window.dispatchEvent(event);
+                      }}
                     >
                       <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
                       <AvatarFallback className="text-xs">
@@ -180,8 +185,13 @@ export const RealtimeChat = () => {
                     <div className={`flex-1 min-w-0 ${isOwnMessage ? 'text-right' : ''}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <span 
-                          className={`font-medium text-sm cursor-pointer hover:text-primary transition-colors ${isOwnMessage ? 'text-primary' : ''}`}
-                          onClick={() => setSelectedUser({id: msg.user_id, username: msg.username})}
+                          className={`font-medium text-sm cursor-pointer hover:text-primary hover:underline transition-colors ${isOwnMessage ? 'text-primary' : ''}`}
+                          onClick={() => {
+                            const event = new CustomEvent('openUserStats', { 
+                              detail: { username: msg.username } 
+                            });
+                            window.dispatchEvent(event);
+                          }}
                         >
                           {msg.username}
                         </span>
