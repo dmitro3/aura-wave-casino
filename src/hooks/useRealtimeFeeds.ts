@@ -6,7 +6,7 @@ export interface LiveBetFeed {
   id: string;
   user_id: string;
   username: string;
-  game_type: 'crash' | 'coinflip' | 'roulette';
+  game_type: 'crash' | 'coinflip' | 'roulette' | 'tower';
   bet_amount: number;
   result: string;
   profit: number;
