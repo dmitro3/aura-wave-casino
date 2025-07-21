@@ -2,41 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Futuristic Gambling Platform Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Base Colors - Deep Space Theme */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Glass Morphism Cards */
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --glass: 222 47% 11% / 0.6;
+    --glass-border: 210 40% 98% / 0.1;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    /* Popover */
+    --popover: 222 84% 5%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
+    /* Primary - Electric Blue/Purple */
+    --primary: 239 84% 67%;
     --primary-foreground: 210 40% 98%;
+    --primary-glow: 239 84% 67% / 0.3;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - Subtle Purple */
+    --secondary: 222 47% 15%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted Elements */
+    --muted: 222 47% 15%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - Cyan */
+    --accent: 188 95% 52%;
+    --accent-foreground: 222 47% 11%;
+    --accent-glow: 188 95% 52% / 0.3;
 
-    --destructive: 0 84.2% 60.2%;
+    /* Success/Win - Green */
+    --success: 142 76% 36%;
+    --success-foreground: 210 40% 98%;
+    --success-glow: 142 76% 36% / 0.3;
+
+    /* Destructive/Loss - Red */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
+    --destructive-glow: 0 72% 51% / 0.3;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Warning - Orange */
+    --warning: 25 95% 53%;
+    --warning-foreground: 222 47% 11%;
+    --warning-glow: 25 95% 53% / 0.3;
 
-    --radius: 0.5rem;
+    /* Borders and Inputs */
+    --border: 222 47% 15%;
+    --input: 222 47% 15%;
+    --ring: 239 84% 67%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%), hsl(188 95% 52%));
+    --gradient-glass: linear-gradient(135deg, hsl(222 47% 11% / 0.8), hsl(222 47% 15% / 0.6));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(120 100% 25%));
+    --gradient-destructive: linear-gradient(135deg, hsl(0 72% 51%), hsl(350 89% 60%));
+
+    /* Shadows */
+    --shadow-glow: 0 0 30px hsl(var(--primary-glow));
+    --shadow-success: 0 0 20px hsl(var(--success-glow));
+    --shadow-destructive: 0 0 20px hsl(var(--destructive-glow));
+    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -100,6 +139,101 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(ellipse at top, hsl(222 47% 15%) 0%, hsl(222 47% 11%) 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Glass Morphism Effect */
+  .glass {
+    background: hsl(var(--glass));
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--shadow-glass);
+  }
+
+  /* Gradient Backgrounds */
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-glass {
+    background: var(--gradient-glass);
+  }
+
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+
+  .gradient-destructive {
+    background: var(--gradient-destructive);
+  }
+
+  /* Glow Effects */
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .glow-success {
+    box-shadow: var(--shadow-success);
+  }
+
+  .glow-destructive {
+    box-shadow: var(--shadow-destructive);
+  }
+
+  /* Smooth Animations */
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
+  .transition-bounce {
+    transition: var(--transition-bounce);
+  }
+
+  /* Floating Animation */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  /* Pulse Glow Animation */
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--primary-glow)); }
+    50% { box-shadow: 0 0 40px hsl(var(--primary-glow)); }
+  }
+
+  /* Coin Flip Animation */
+  .animate-coin-flip {
+    animation: coin-flip 2s ease-in-out;
+  }
+
+  @keyframes coin-flip {
+    0% { transform: rotateY(0deg) rotateX(0deg); }
+    25% { transform: rotateY(450deg) rotateX(180deg) scale(1.2); }
+    50% { transform: rotateY(900deg) rotateX(360deg) scale(1.1); }
+    75% { transform: rotateY(1350deg) rotateX(540deg) scale(1.1); }
+    100% { transform: rotateY(1800deg) rotateX(720deg) scale(1); }
+  }
+
+  /* Slide In Animation */
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+
+  @keyframes slide-in {
+    0% { transform: translateX(100%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
   }
 }
