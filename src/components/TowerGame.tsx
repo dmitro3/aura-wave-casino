@@ -766,7 +766,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
         </div>
 
         
-        {/* Heroes' Chronicle - Compact Live Feed */}
+        {/* Heroes' Chronicle - Expanded Live Feed */}
         <Card className="glass border-0">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center space-x-2 text-lg">
@@ -777,47 +777,58 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-card/30 border">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-card/30 border">
                 <div className="flex items-center space-x-2">
                   <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
-                  <span className="text-xs font-medium">Live Feed</span>
+                  <span className="text-sm font-medium">Live Tower Adventures</span>
                 </div>
                 <Badge variant="secondary" className="text-xs">
-                  {towerBets.length} quests
+                  {towerBets.length} recent quests
                 </Badge>
               </div>
               
-              {towerBets.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Building className="w-6 h-6 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">No recent adventures</p>
-                  <p className="text-xs">Be the first hero!</p>
+              {!isConnected ? (
+                <div className="text-center text-muted-foreground py-6">
+                  <Building className="w-8 h-8 mx-auto mb-2 animate-pulse" />
+                  <p className="text-sm">Connecting to the realm...</p>
+                </div>
+              ) : towerBets.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Building className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No recent tower adventures</p>
+                  <p className="text-xs">Be the first brave hero!</p>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {towerBets.slice(0, 4).map((bet, index) => (
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                  {towerBets.slice(0, 15).map((bet, index) => (
                     <div
                       key={index}
-                      className="p-2 rounded-lg border bg-card/20 text-xs animate-fade-in"
+                      className="p-3 rounded-lg border bg-card/20 hover:bg-card/30 transition-colors animate-fade-in"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1">
-                          <span className="font-medium text-primary truncate max-w-20">{bet.username}</span>
-                          <span className="text-muted-foreground">•</span>
-                          <span>${bet.bet_amount.toFixed(0)}</span>
-                          <span className="text-muted-foreground">•</span>
-                          <span>Lv{bet.game_data?.level_reached || 1}</span>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-primary/50 flex items-center justify-center text-sm font-bold border border-primary/50">
+                            {bet.username[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm text-primary">{bet.username}</div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                              <span>{DIFFICULTY_INFO[bet.game_data?.difficulty as keyof typeof DIFFICULTY_INFO]?.character || '🗡️'}</span>
+                              <span>{DIFFICULTY_INFO[bet.game_data?.difficulty as keyof typeof DIFFICULTY_INFO]?.name || bet.game_data?.difficulty}</span>
+                              <span>• Floor {bet.game_data?.level_reached || 1}</span>
+                              <span>• ${bet.bet_amount.toFixed(2)}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          {bet.result === 'win' ? (
-                            <span className="text-success">+${bet.profit.toFixed(0)}</span>
-                          ) : (
-                            <span className="text-destructive">-${bet.bet_amount.toFixed(0)}</span>
-                          )}
+                        <div className="text-right">
+                          <div className={`font-bold text-sm flex items-center gap-1 ${bet.result === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {bet.result === 'win' ? <Trophy className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                            <span>{bet.result === 'win' ? '+' : '-'}${Math.abs(bet.profit).toFixed(2)}</span>
+                          </div>
                           {bet.multiplier && (
-                            <Badge variant="secondary" className="text-xs h-4 px-1">
-                              {bet.multiplier.toFixed(1)}x
-                            </Badge>
+                            <div className="text-xs text-muted-foreground">
+                              {bet.multiplier.toFixed(2)}x
+                            </div>
                           )}
                         </div>
                       </div>
