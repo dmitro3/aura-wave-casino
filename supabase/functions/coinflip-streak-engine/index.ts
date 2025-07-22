@@ -98,8 +98,12 @@ serve(async (req) => {
       throw new Error('User profile not found')
     }
 
-    // Validate bet amount (allow for floating point precision issues)
-    if (bet_amount <= 0 || bet_amount > profile.balance + 0.01) {
+    // Validate bet amount with better precision handling
+    const roundedBetAmount = Math.round(bet_amount * 100) / 100;
+    const roundedBalance = Math.round(profile.balance * 100) / 100;
+    
+    if (bet_amount <= 0 || roundedBetAmount > roundedBalance) {
+      console.log(`❌ Bet validation failed - Amount: ${bet_amount}, Rounded: ${roundedBetAmount}, Balance: ${profile.balance}, Rounded Balance: ${roundedBalance}`);
       throw new Error('Invalid bet amount')
     }
 
