@@ -32,17 +32,32 @@ export function useLevelUpNotifications() {
         (payload) => {
           const notification = payload.new;
           
-          // Check if this is a level-up notification with case rewards
-          if (notification.type === 'level_reward_case' && notification.data) {
+          // Handle both level-up notification types
+          if ((notification.type === 'level_reward_case' || notification.type === 'level_up') && notification.data) {
             const data = notification.data;
-            setNotification({
-              id: notification.id,
-              oldLevel: data.level - 1, // Approximate old level
-              newLevel: data.level,
-              casesEarned: data.cases_earned || 0,
-              borderTierChanged: data.border_changed || false,
-              newBorderTier: data.border_tier || 1
-            });
+            
+            // For level_reward_case, we have case data
+            if (notification.type === 'level_reward_case') {
+              setNotification({
+                id: notification.id,
+                oldLevel: data.old_level || (data.new_level - 1),
+                newLevel: data.new_level,
+                casesEarned: data.cases_earned || 0,
+                borderTierChanged: data.border_changed || false,
+                newBorderTier: data.new_border_tier || 1
+              });
+            }
+            // For general level_up, we don't have cases but still show celebration
+            else if (notification.type === 'level_up') {
+              setNotification({
+                id: notification.id,
+                oldLevel: data.old_level || (data.new_level - 1),
+                newLevel: data.new_level,
+                casesEarned: 0,
+                borderTierChanged: data.border_changed || false,
+                newBorderTier: data.new_border_tier || 1
+              });
+            }
           }
         }
       )
