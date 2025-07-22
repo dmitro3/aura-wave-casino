@@ -10,12 +10,19 @@ interface StreakTrackerProps {
   streak: StreakResult[];
   maxStreak?: number;
   isAnimating?: boolean;
+  betAmount?: number;
 }
+
+// Calculate multiplier with 1% house edge (1.98^n)
+const calculateMultiplier = (streakLength: number): number => {
+  return Math.pow(1.98, streakLength + 1);
+};
 
 export default function StreakTracker({ 
   streak, 
   maxStreak = 9, 
-  isAnimating = false 
+  isAnimating = false,
+  betAmount = 0
 }: StreakTrackerProps) {
   return (
     <div className="w-full">
@@ -33,6 +40,8 @@ export default function StreakTracker({
           const isWon = index < streak.length;
           const streakResult = streak[index];
           const isLatest = index === streak.length - 1;
+          const multiplier = calculateMultiplier(index);
+          const potentialPayout = betAmount * multiplier;
           
           return (
             <div
@@ -55,17 +64,22 @@ export default function StreakTracker({
                   />
                 </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-bold">
                   {index + 1}
                 </div>
               )}
               
-              {/* Multiplier display */}
-              {isWon && streakResult && (
-                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-medium text-primary">
-                  {streakResult.multiplier.toFixed(2)}x
+              {/* Multiplier and potential payout display */}
+              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+                <div className="text-xs font-medium text-primary">
+                  {multiplier.toFixed(2)}x
                 </div>
-              )}
+                {betAmount > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    ${potentialPayout.toFixed(2)}
+                  </div>
+                )}
+              </div>
               
               {/* Connecting line */}
               {index < maxStreak - 1 && (

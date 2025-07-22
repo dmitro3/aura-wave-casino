@@ -24,15 +24,15 @@ interface StreakResult {
 }
 
 interface GameState {
-  isPlaying: boolean;
+  gamePhase: 'setup' | 'betting' | 'flipping' | 'result' | 'choice';
   betAmount: number;
-  selectedSide: 'heads' | 'tails';
+  selectedSide: 'heads' | 'tails' | null;
   streak: StreakResult[];
   currentMultiplier: number;
   currentPayout: number;
   isFlipping: boolean;
   lastResult: 'heads' | 'tails' | null;
-  gamePhase: 'betting' | 'flipping' | 'result' | 'choice';
+  hasActiveBet: boolean;
 }
 
 // Calculate multiplier with 1% house edge (1.98^n)
@@ -49,22 +49,22 @@ const generateClientSeed = (): string => {
 
 export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGameProps) {
   const [gameState, setGameState] = useState<GameState>({
-    isPlaying: false,
+    gamePhase: 'setup',
     betAmount: 0,
-    selectedSide: 'heads',
+    selectedSide: null,
     streak: [],
     currentMultiplier: 1.98,
     currentPayout: 0,
     isFlipping: false,
     lastResult: null,
-    gamePhase: 'betting'
+    hasActiveBet: false
   });
   
   const [betInput, setBetInput] = useState('');
   const { addGameRecord } = useGameHistory('coinflip', 10);
   const { toast } = useToast();
 
-  const handleStartGame = () => {
+  const handlePlaceBet = async () => {
     const bet = parseFloat(betInput);
     if (isNaN(bet) || bet <= 0) {
       toast({
@@ -84,11 +84,24 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       return;
     }
 
+    // Update balance immediately and set game to betting phase
+    await onUpdateUser({ balance: userData.balance - bet });
+    
     setGameState(prev => ({
       ...prev,
-      isPlaying: true,
       betAmount: bet,
-      currentPayout: bet * 1.98,
+      gamePhase: 'betting',
+      hasActiveBet: true,
+      currentPayout: bet * 1.98
+    }));
+
+    setBetInput('');
+  };
+
+  const handleSideSelection = (side: 'heads' | 'tails') => {
+    setGameState(prev => ({
+      ...prev,
+      selectedSide: side,
       gamePhase: 'flipping'
     }));
 
@@ -96,12 +109,13 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   };
 
   const handleFlip = async () => {
+    if (!gameState.selectedSide) return;
+    
     setGameState(prev => ({
       ...prev,
-      isFlipping: true,
-      gamePhase: 'flipping'
+      isFlipping: true
     }));
-
+      
     try {
       const clientSeed = generateClientSeed();
       
@@ -234,15 +248,15 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
 
   const handleGameEnd = (reason: 'lost' | 'cashed_out', profit: number) => {
     setGameState({
-      isPlaying: false,
+      gamePhase: 'setup',
       betAmount: 0,
-      selectedSide: 'heads',
+      selectedSide: null,
       streak: [],
       currentMultiplier: 1.98,
       currentPayout: 0,
       isFlipping: false,
       lastResult: null,
-      gamePhase: 'betting'
+      hasActiveBet: false
     });
     setBetInput('');
   };
@@ -259,10 +273,10 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           <CardTitle className="flex items-center space-x-2">
             <Coins className="w-5 h-5 text-primary" />
             <span>Coinflip Streak</span>
-            {gameState.isPlaying && (
+            {gameState.hasActiveBet && (
               <div className="ml-auto flex items-center space-x-2">
                 <Zap className="w-4 h-4 text-warning" />
-                <span className="text-sm font-medium">Live Game</span>
+                <span className="text-sm font-medium">Active Bet: ${gameState.betAmount}</span>
               </div>
             )}
           </CardTitle>
@@ -276,34 +290,18 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           />
 
           {/* Streak Tracker */}
-          {gameState.isPlaying && (
+          {gameState.hasActiveBet && (
             <StreakTracker
               streak={gameState.streak}
               maxStreak={9}
               isAnimating={gameState.isFlipping}
+              betAmount={gameState.betAmount}
             />
           )}
 
-          {/* Game Phase: Betting */}
-          {gameState.gamePhase === 'betting' && (
+          {/* Game Phase: Setup */}
+          {gameState.gamePhase === 'setup' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={gameState.selectedSide === 'heads' ? 'default' : 'outline'}
-                  onClick={() => setGameState(prev => ({ ...prev, selectedSide: 'heads' }))}
-                  className={gameState.selectedSide === 'heads' ? 'gradient-primary' : 'glass border-0'}
-                >
-                  👑 Heads
-                </Button>
-                <Button
-                  variant={gameState.selectedSide === 'tails' ? 'default' : 'outline'}
-                  onClick={() => setGameState(prev => ({ ...prev, selectedSide: 'tails' }))}
-                  className={gameState.selectedSide === 'tails' ? 'gradient-primary' : 'glass border-0'}
-                >
-                  ⚡ Tails
-                </Button>
-              </div>
-
               <div className="space-y-2">
                 <label className="text-sm font-medium">Bet Amount</label>
                 <Input
@@ -345,12 +343,45 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
               </div>
 
               <Button
-                onClick={handleStartGame}
+                onClick={handlePlaceBet}
                 disabled={!betInput || parseFloat(betInput) <= 0}
                 className="w-full gradient-primary hover:glow-primary transition-smooth"
               >
-                Start Streak Game
+                Place Bet ${betInput || '0'}
               </Button>
+            </div>
+          )}
+
+          {/* Game Phase: Betting (Choose Side) */}
+          {gameState.gamePhase === 'betting' && (
+            <div className="space-y-4">
+              <div className="text-center glass rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-2">Choose Your Side</h3>
+                <p className="text-muted-foreground">
+                  Bet placed: ${gameState.betAmount} • Potential win: ${gameState.currentPayout.toFixed(2)}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => handleSideSelection('heads')}
+                  className="glass border-0 hover:gradient-primary transition-all duration-300 h-16"
+                >
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">👑</div>
+                    <div>Heads</div>
+                  </div>
+                </Button>
+                <Button
+                  onClick={() => handleSideSelection('tails')}
+                  className="glass border-0 hover:gradient-primary transition-all duration-300 h-16"
+                >
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">⚡</div>
+                    <div>Tails</div>
+                  </div>
+                </Button>
+              </div>
             </div>
           )}
 
@@ -360,7 +391,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
               <div className="glass rounded-lg p-4">
                 <h3 className="text-lg font-semibold">Flipping...</h3>
                 <p className="text-muted-foreground">
-                  Betting on {gameState.selectedSide} for ${gameState.betAmount}
+                  You chose {gameState.selectedSide} for ${gameState.betAmount}
                 </p>
               </div>
             </div>
@@ -417,7 +448,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
               </div>
 
               <Button
-                onClick={() => setGameState(prev => ({ ...prev, gamePhase: 'betting' }))}
+                onClick={() => setGameState(prev => ({ ...prev, gamePhase: 'setup' }))}
                 className="w-full gradient-primary"
               >
                 Play Again
@@ -427,8 +458,8 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
         </CardContent>
       </Card>
 
-      {/* Multiplier Display - Only show during active game */}
-      {gameState.isPlaying && (
+      {/* Multiplier Display - Only show during active bet */}
+      {gameState.hasActiveBet && (
         <MultiplierDisplay
           currentMultiplier={gameState.currentMultiplier}
           nextMultiplier={nextMultiplier}

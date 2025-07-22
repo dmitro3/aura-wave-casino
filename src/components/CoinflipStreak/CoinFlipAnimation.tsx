@@ -13,8 +13,8 @@ export default function CoinFlipAnimation({
   onAnimationComplete, 
   size = 'large' 
 }: CoinFlipAnimationProps) {
-  const [currentRotation, setCurrentRotation] = useState(0);
-  const [animationPhase, setAnimationPhase] = useState<'idle' | 'flipping' | 'landing' | 'complete'>('idle');
+  const [animationState, setAnimationState] = useState<'idle' | 'flipping' | 'landing' | 'complete'>('idle');
+  const [displayResult, setDisplayResult] = useState<'heads' | 'tails' | null>(null);
 
   const sizeClasses = {
     small: 'w-8 h-8 text-lg',
@@ -23,60 +23,59 @@ export default function CoinFlipAnimation({
   };
 
   useEffect(() => {
-    if (isFlipping && animationPhase === 'idle') {
-      setAnimationPhase('flipping');
-      setCurrentRotation(0);
+    if (isFlipping && animationState === 'idle') {
+      setAnimationState('flipping');
+      setDisplayResult(null);
       
-      // Start the flipping animation
-      const flipInterval = setInterval(() => {
-        setCurrentRotation(prev => prev + 180);
-      }, 100);
-
-      // After 2 seconds, start landing animation
+      // After 2 seconds of flipping, start landing sequence
       setTimeout(() => {
-        clearInterval(flipInterval);
-        setAnimationPhase('landing');
-        
-        // Calculate final rotation to show correct result
-        const targetRotation = result === 'heads' ? 0 : 180;
-        const currentMod = currentRotation % 360;
-        let finalRotation = targetRotation;
-        
-        if (Math.abs(currentMod - targetRotation) > 180) {
-          finalRotation = targetRotation + (currentMod > targetRotation ? 360 : -360);
-        } else {
-          finalRotation = targetRotation;
-        }
-        
-        setCurrentRotation(finalRotation);
+        setAnimationState('landing');
+        setDisplayResult(result);
         
         // Complete animation after landing
         setTimeout(() => {
-          setAnimationPhase('complete');
+          setAnimationState('complete');
           onAnimationComplete?.();
-        }, 500);
-      }, 1800);
-
-      return () => clearInterval(flipInterval);
+        }, 600);
+      }, 2000);
     }
-  }, [isFlipping, result, animationPhase, currentRotation, onAnimationComplete]);
+  }, [isFlipping, result, animationState, onAnimationComplete]);
 
   useEffect(() => {
-    if (!isFlipping && animationPhase !== 'idle') {
-      setAnimationPhase('idle');
-      setCurrentRotation(0);
+    if (!isFlipping && animationState !== 'idle') {
+      setAnimationState('idle');
+      setDisplayResult(null);
     }
   }, [isFlipping]);
 
-  const getCoinFace = (rotation: number) => {
-    const normalizedRotation = ((rotation % 360) + 360) % 360;
-    return normalizedRotation > 90 && normalizedRotation < 270 ? 'tails' : 'heads';
+  const getAnimationClass = () => {
+    switch (animationState) {
+      case 'flipping':
+        return 'animate-coin-flip';
+      case 'landing':
+        return 'animate-pulse';
+      case 'complete':
+        return 'animate-bounce';
+      default:
+        return '';
+    }
   };
 
-  const currentFace = animationPhase === 'complete' ? result : getCoinFace(currentRotation);
+  const getCoinContent = () => {
+    if (animationState === 'flipping') {
+      return '🪙';
+    }
+    if (displayResult === 'heads') {
+      return '👑';
+    }
+    if (displayResult === 'tails') {
+      return '⚡';
+    }
+    return '🪙';
+  };
 
   return (
-    <div className="flex justify-center items-center">
+    <div className="flex justify-center items-center perspective-1000">
       <div className="relative">
         {/* Coin shadow */}
         <div className={`absolute top-2 ${sizeClasses[size]} rounded-full bg-black/20 blur-sm scale-75`} />
@@ -91,35 +90,18 @@ export default function CoinFlipAnimation({
             font-bold text-white 
             shadow-2xl 
             relative z-10
-            transform-gpu
-            ${animationPhase === 'flipping' ? 'animate-bounce' : ''}
-            ${animationPhase === 'landing' ? 'transition-transform duration-500 ease-out' : ''}
-            ${animationPhase === 'complete' ? 'shadow-glow' : ''}
+            ${getAnimationClass()}
+            ${animationState === 'complete' ? 'shadow-glow' : ''}
           `}
           style={{
-            transform: `rotateY(${currentRotation}deg) ${animationPhase === 'flipping' ? 'translateY(-10px)' : ''}`,
             transformStyle: 'preserve-3d',
           }}
         >
-          {/* Heads side */}
-          <div 
-            className="absolute inset-0 flex items-center justify-center backface-hidden"
-            style={{ transform: 'rotateY(0deg)' }}
-          >
-            👑
-          </div>
-          
-          {/* Tails side */}
-          <div 
-            className="absolute inset-0 flex items-center justify-center backface-hidden"
-            style={{ transform: 'rotateY(180deg)' }}
-          >
-            ⚡
-          </div>
+          {getCoinContent()}
         </div>
 
         {/* Glow effect when complete */}
-        {animationPhase === 'complete' && (
+        {animationState === 'complete' && (
           <div className={`
             absolute inset-0 ${sizeClasses[size]} 
             rounded-full 

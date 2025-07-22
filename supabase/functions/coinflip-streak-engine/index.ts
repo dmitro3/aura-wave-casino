@@ -138,18 +138,8 @@ serve(async (req) => {
       .from('profiles')
       .update({ 
         balance: newBalance,
-        total_wagered: supabase.rpc('increment_numeric', { 
-          table_name: 'profiles',
-          column_name: 'total_wagered',
-          row_id: user.id,
-          increment_by: bet_amount
-        }),
-        total_profit: supabase.rpc('increment_numeric', { 
-          table_name: 'profiles',
-          column_name: 'total_profit', 
-          row_id: user.id,
-          increment_by: profit
-        })
+        total_wagered: profile.total_wagered + bet_amount,
+        total_profit: profile.total_profit + profit
       })
       .eq('id', user.id)
 
@@ -188,18 +178,27 @@ serve(async (req) => {
     }
 
     // Update game stats
-    const { error: statsError } = await supabase
+    const existingStats = await supabase
       .from('game_stats')
-      .upsert({
-        user_id: user.id,
-        game_type: 'coinflip',
-        wins: supabase.rpc('increment_if_true', { condition: won }),
-        losses: supabase.rpc('increment_if_true', { condition: !won }),
-        total_profit: supabase.rpc('increment_numeric', { increment_by: profit })
-      })
+      .select('wins, losses, total_profit')
+      .eq('user_id', user.id)
+      .eq('game_type', 'coinflip')
+      .single()
 
-    if (statsError) {
-      console.error('❌ Error updating game stats:', statsError)
+    if (existingStats.data) {
+      const { error: statsError } = await supabase
+        .from('game_stats')
+        .update({
+          wins: existingStats.data.wins + (won ? 1 : 0),
+          losses: existingStats.data.losses + (won ? 0 : 1),
+          total_profit: existingStats.data.total_profit + profit
+        })
+        .eq('user_id', user.id)
+        .eq('game_type', 'coinflip')
+
+      if (statsError) {
+        console.error('❌ Error updating game stats:', statsError)
+      }
     }
 
     const response: CoinflipResponse = {
