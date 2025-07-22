@@ -5,8 +5,11 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Trophy, Target, TrendingUp, Calendar, Star } from 'lucide-react';
+import { Trophy, Target, TrendingUp, Calendar, Star, DollarSign } from 'lucide-react';
 import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
+import { UserProgressSection } from './UserProgressSection';
+import { ProfileBorder } from './ProfileBorder';
+import { useUserLevelStats } from '@/hooks/useUserLevelStats';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -27,6 +30,8 @@ const badgeIcons: Record<string, { icon: string; name: string; description: stri
 };
 
 export default function UserProfile({ isOpen, onClose, userData }: UserProfileProps) {
+  const { stats } = useUserLevelStats();
+  
   if (!userData) return null;
 
   const getAvatar = (username: string) => {
@@ -60,9 +65,13 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* User Header */}
+          {/* User Header with Enhanced Border */}
           <div className="flex items-center space-x-4 p-4 glass rounded-lg">
-            <div className="text-4xl">{getAvatar(userData.username)}</div>
+            <ProfileBorder level={stats?.current_level || 1} size="lg">
+              <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-2xl">
+                {getAvatar(userData.username)}
+              </div>
+            </ProfileBorder>
             <div className="flex-1">
               <h3 className="text-xl font-bold">{userData.username}</h3>
               <div className="flex items-center space-x-2 text-muted-foreground">
@@ -72,75 +81,31 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
-                Level {userData.current_level}
+                Level {stats?.current_level || userData.current_level}
               </div>
               <div className="text-sm text-muted-foreground">
-                {userData.current_xp}/{userData.current_xp + userData.xp_to_next_level} XP
+                {stats?.current_level_xp || userData.current_xp}/{(stats?.current_level_xp || userData.current_xp) + (stats?.xp_to_next_level || userData.xp_to_next_level)} XP
               </div>
             </div>
           </div>
 
-          {/* XP Progress */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Experience Progress</span>
-              <span>{xpProgress.toFixed(1)}%</span>
-            </div>
-            <Progress value={xpProgress} className="h-3" />
-          </div>
+          {/* Enhanced Progress Section */}
+          <UserProgressSection />
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="glass border-0">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center space-x-2 text-sm">
-                  <Target className="w-4 h-4" />
-                  <span>Gaming Stats</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Games</span>
-                  <span className="font-semibold">{totalGames}</span>
+          {/* Quick Balance Display */}
+          <Card className="glass border-0">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <DollarSign className="w-5 h-5 text-primary" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Win Rate</span>
-                  <span className="font-semibold text-success">{winRate}%</span>
+                <div>
+                  <p className="text-sm text-muted-foreground">Current Balance</p>
+                  <p className="text-2xl font-bold">${userData.balance?.toFixed(2) || '0.00'}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Wagered</span>
-                  <span className="font-semibold">${userData.total_wagered.toFixed(2)}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass border-0">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center space-x-2 text-sm">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Profit & Loss</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Current Balance</span>
-                  <span className="font-semibold">${userData.balance.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total P&L</span>
-                  <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">ROI</span>
-                  <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {userData.total_wagered > 0 ? ((userData.total_profit / userData.total_wagered) * 100).toFixed(1) : '0'}%
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Game-specific Stats */}
           <div className="space-y-4">

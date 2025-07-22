@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import ClickableUsername from '@/components/ClickableUsername';
+import { ProfileBorder } from '@/components/ProfileBorder';
+import { Badge } from '@/components/ui/badge';
 
 interface ChatMessage {
   id: string;
@@ -167,28 +169,30 @@ export const RealtimeChat = () => {
                 
                 return (
                   <div key={msg.id} className={`flex gap-3 animate-fade-in ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
-                     <Avatar className="w-8 h-8 flex-shrink-0">
-                       <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
-                      <AvatarFallback className="text-xs">
-                        {msg.username.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <ProfileBorder level={msg.user_level} size="sm">
+                      <Avatar className="w-full h-full">
+                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
+                        <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-blue-500 text-white">
+                          {msg.username.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </ProfileBorder>
                     
                     <div className={`flex-1 min-w-0 ${isOwnMessage ? 'text-right' : ''}`}>
-                       <div className="flex items-center gap-2 mb-1">
+                       <div className={`flex items-center gap-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
                          <ClickableUsername 
                            username={msg.username}
                            className={`font-medium text-sm ${isOwnMessage ? 'text-primary' : ''}`}
                          />
+                        <Badge variant="outline" className="text-xs px-1 py-0">
+                          LVL {msg.user_level}
+                        </Badge>
                         {badge && (
                           <div className={`flex items-center gap-1 text-xs ${badge.color}`}>
                             <badge.icon className="w-3 h-3" />
                             <span>{badge.label}</span>
                           </div>
                         )}
-                        <span className="text-xs text-muted-foreground">
-                          Lv.{msg.user_level}
-                        </span>
                       </div>
                       
                       <div className={`p-2 rounded-lg text-sm break-words max-w-xs ${

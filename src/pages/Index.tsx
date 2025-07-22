@@ -15,6 +15,7 @@ import { RealtimeChat } from '@/components/RealtimeChat';
 import { RouletteGame } from '@/components/RouletteGame';
 import { TowerGame } from '@/components/TowerGame';
 import NotificationsPanel from '@/components/NotificationsPanel';
+import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 
 export default function Index() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -108,13 +109,13 @@ export default function Index() {
                 </span>
               </div>
 
-              {/* Level Display */}
-              <div className="hidden md:flex items-center space-x-2 glass px-3 py-1 rounded-lg">
-                <Trophy className="w-4 h-4 text-accent" />
-                <span className="font-semibold">
-                  Level {userData.current_level}
-                </span>
-              </div>
+              {/* Enhanced Level Display */}
+              <UserLevelDisplay 
+                username={userData.username}
+                showXP={true}
+                size="md"
+                className="hidden md:flex"
+              />
 
               {/* User Menu */}
               <Button

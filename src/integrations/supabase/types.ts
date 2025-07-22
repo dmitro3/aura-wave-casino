@@ -748,6 +748,126 @@ export type Database = {
           },
         ]
       }
+      user_level_stats: {
+        Row: {
+          available_cases: number
+          best_coinflip_streak: number
+          biggest_loss: number
+          biggest_win: number
+          border_tier: number
+          border_unlocked_at: string | null
+          coinflip_games: number
+          coinflip_profit: number
+          coinflip_wagered: number
+          coinflip_wins: number
+          crash_games: number
+          crash_profit: number
+          crash_wagered: number
+          crash_wins: number
+          created_at: string
+          current_coinflip_streak: number
+          current_level: number
+          current_level_xp: number
+          id: string
+          lifetime_xp: number
+          roulette_games: number
+          roulette_profit: number
+          roulette_wagered: number
+          roulette_wins: number
+          total_case_value: number
+          total_cases_opened: number
+          total_games: number
+          total_profit: number
+          total_wagered: number
+          total_wins: number
+          tower_games: number
+          tower_profit: number
+          tower_wagered: number
+          tower_wins: number
+          updated_at: string
+          user_id: string
+          xp_to_next_level: number
+        }
+        Insert: {
+          available_cases?: number
+          best_coinflip_streak?: number
+          biggest_loss?: number
+          biggest_win?: number
+          border_tier?: number
+          border_unlocked_at?: string | null
+          coinflip_games?: number
+          coinflip_profit?: number
+          coinflip_wagered?: number
+          coinflip_wins?: number
+          crash_games?: number
+          crash_profit?: number
+          crash_wagered?: number
+          crash_wins?: number
+          created_at?: string
+          current_coinflip_streak?: number
+          current_level?: number
+          current_level_xp?: number
+          id?: string
+          lifetime_xp?: number
+          roulette_games?: number
+          roulette_profit?: number
+          roulette_wagered?: number
+          roulette_wins?: number
+          total_case_value?: number
+          total_cases_opened?: number
+          total_games?: number
+          total_profit?: number
+          total_wagered?: number
+          total_wins?: number
+          tower_games?: number
+          tower_profit?: number
+          tower_wagered?: number
+          tower_wins?: number
+          updated_at?: string
+          user_id: string
+          xp_to_next_level?: number
+        }
+        Update: {
+          available_cases?: number
+          best_coinflip_streak?: number
+          biggest_loss?: number
+          biggest_win?: number
+          border_tier?: number
+          border_unlocked_at?: string | null
+          coinflip_games?: number
+          coinflip_profit?: number
+          coinflip_wagered?: number
+          coinflip_wins?: number
+          crash_games?: number
+          crash_profit?: number
+          crash_wagered?: number
+          crash_wins?: number
+          created_at?: string
+          current_coinflip_streak?: number
+          current_level?: number
+          current_level_xp?: number
+          id?: string
+          lifetime_xp?: number
+          roulette_games?: number
+          roulette_profit?: number
+          roulette_wagered?: number
+          roulette_wins?: number
+          total_case_value?: number
+          total_cases_opened?: number
+          total_games?: number
+          total_profit?: number
+          total_wagered?: number
+          total_wins?: number
+          tower_games?: number
+          tower_profit?: number
+          tower_wagered?: number
+          tower_wins?: number
+          updated_at?: string
+          user_id?: string
+          xp_to_next_level?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -782,11 +902,23 @@ export type Database = {
           xp_to_next: number
         }[]
       }
+      calculate_level_from_xp_new: {
+        Args: { total_xp: number }
+        Returns: {
+          level: number
+          current_level_xp: number
+          xp_to_next: number
+        }[]
+      }
       calculate_total_xp_for_level: {
         Args: { target_level: number }
         Returns: number
       }
       calculate_xp_for_level: {
+        Args: { target_level: number }
+        Returns: number
+      }
+      calculate_xp_for_level_new: {
         Args: { target_level: number }
         Returns: number
       }
@@ -802,6 +934,24 @@ export type Database = {
       test_realtime_feed: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      update_user_stats_and_level: {
+        Args: {
+          p_user_id: string
+          p_game_type: string
+          p_bet_amount: number
+          p_result: string
+          p_profit: number
+          p_streak_length?: number
+        }
+        Returns: {
+          leveled_up: boolean
+          new_level: number
+          old_level: number
+          cases_earned: number
+          border_tier_changed: boolean
+          new_border_tier: number
+        }[]
       }
     }
     Enums: {

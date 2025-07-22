@@ -1,0 +1,160 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+export interface UserLevelStats {
+  id: string;
+  user_id: string;
+  
+  // Core leveling
+  current_level: number;
+  lifetime_xp: number;
+  current_level_xp: number;
+  xp_to_next_level: number;
+  
+  // Border system
+  border_tier: number;
+  border_unlocked_at: string | null;
+  
+  // Case system
+  available_cases: number;
+  total_cases_opened: number;
+  total_case_value: number;
+  
+  // Game statistics per game type
+  coinflip_games: number;
+  coinflip_wins: number;
+  coinflip_wagered: number;
+  coinflip_profit: number;
+  
+  crash_games: number;
+  crash_wins: number;
+  crash_wagered: number;
+  crash_profit: number;
+  
+  roulette_games: number;
+  roulette_wins: number;
+  roulette_wagered: number;
+  roulette_profit: number;
+  
+  tower_games: number;
+  tower_wins: number;
+  tower_wagered: number;
+  tower_profit: number;
+  
+  // Overall statistics
+  total_games: number;
+  total_wins: number;
+  total_wagered: number;
+  total_profit: number;
+  
+  // Streaks and achievements
+  best_coinflip_streak: number;
+  current_coinflip_streak: number;
+  biggest_win: number;
+  biggest_loss: number;
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+}
+
+export function useUserLevelStats() {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<UserLevelStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
+    fetchStats();
+    
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel('user_level_stats_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_level_stats',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [user]);
+
+  const fetchStats = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_level_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (!data) {
+        // Create initial stats if they don't exist
+        const { data: newStats, error: insertError } = await supabase
+          .from('user_level_stats')
+          .insert({ user_id: user.id })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        setStats(newStats);
+      } else {
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user level stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getWinRate = (wins: number, games: number) => {
+    return games > 0 ? (wins / games) * 100 : 0;
+  };
+
+  const getGameStats = (gameType: 'coinflip' | 'crash' | 'roulette' | 'tower') => {
+    if (!stats) return { games: 0, wins: 0, wagered: 0, profit: 0, winRate: 0 };
+    
+    const games = stats[`${gameType}_games`];
+    const wins = stats[`${gameType}_wins`];
+    const wagered = stats[`${gameType}_wagered`];
+    const profit = stats[`${gameType}_profit`];
+    
+    return {
+      games,
+      wins,
+      wagered,
+      profit,
+      winRate: getWinRate(wins, games)
+    };
+  };
+
+  return {
+    stats,
+    loading,
+    getWinRate,
+    getGameStats,
+    refetch: fetchStats
+  };
+}
