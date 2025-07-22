@@ -12,6 +12,9 @@ export interface GameHistoryRecord {
   profit: number
   game_data: any
   created_at: string
+  streak_length?: number
+  final_multiplier?: number
+  action?: string
 }
 
 export function useGameHistory(gameType?: string, limit = 10) {
