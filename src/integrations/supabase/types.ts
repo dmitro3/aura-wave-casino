@@ -702,6 +702,7 @@ export type Database = {
           leveled_up: boolean
           new_level: number
           bonus_earned: number
+          cases_earned: number
         }[]
       }
       calculate_level_from_xp: {
