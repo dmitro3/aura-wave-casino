@@ -98,8 +98,8 @@ serve(async (req) => {
       throw new Error('User profile not found')
     }
 
-    // Validate bet amount
-    if (bet_amount <= 0 || bet_amount > profile.balance) {
+    // Validate bet amount (allow for floating point precision issues)
+    if (bet_amount <= 0 || bet_amount > profile.balance + 0.01) {
       throw new Error('Invalid bet amount')
     }
 

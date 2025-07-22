@@ -193,30 +193,30 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           onUpdateUser({ balance: data.new_balance });
         }
 
-        // Add to live feed after animation completes (for coinflip games)
-        if (userData?.username) {
+        // Add to live feed after animation completes (only for losses, not wins)
+        if (userData?.username && !won) {
           try {
             await supabase.from('live_bet_feed').insert({
               user_id: userData.id,
               username: userData.username,
               game_type: 'coinflip',
               bet_amount: gameState.betAmount,
-              result: won ? 'win' : 'lose',
+              result: 'lose',
               profit: data.profit,
-              multiplier: won ? data.multiplier : null,
+              multiplier: null,
               game_data: {
                 choice: side,
                 coinResult: result,
-                won,
+                won: false,
                 server_seed: data.server_seed,
                 client_seed: clientSeed,
                 combined_hash: data.combined_hash,
-                streak_length: won ? newStreak.length : 0,
-                multiplier: won ? data.multiplier : 1,
-                action: won ? 'continue' : 'lost'
+                streak_length: 0,
+                multiplier: 1,
+                action: 'lost'
               },
-              streak_length: won ? newStreak.length : 0,
-              action: won ? 'continue' : 'lost'
+              streak_length: 0,
+              action: 'lost'
             });
           } catch (feedError) {
             console.error('Failed to add to live feed:', feedError);
@@ -264,6 +264,30 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       });
 
       handleGameEnd('cashed_out', profit);
+
+      // Add cash out to live feed
+      if (userData?.username) {
+        try {
+          await supabase.from('live_bet_feed').insert({
+            user_id: userData.id,
+            username: userData.username,
+            game_type: 'coinflip',
+            bet_amount: gameState.betAmount,
+            result: 'win',
+            profit: profit,
+            multiplier: gameState.currentMultiplier,
+            game_data: {
+              streak_length: gameState.streak.length,
+              multiplier: gameState.currentMultiplier,
+              action: 'cash_out'
+            },
+            streak_length: gameState.streak.length,
+            action: 'cash_out'
+          });
+        } catch (feedError) {
+          console.error('Failed to add cash out to live feed:', feedError);
+        }
+      }
       
       toast({
         title: "Cashed Out!",
