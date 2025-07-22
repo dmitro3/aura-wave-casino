@@ -150,7 +150,9 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       const won = data.won;
       
       // Wait for animation to complete
-      setTimeout(() => {
+      setTimeout(async () => {
+        let newStreak = gameState.streak;
+        
         setGameState(prev => ({
           ...prev,
           lastResult: result,
@@ -160,7 +162,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
 
         if (won) {
           // Add to streak
-          const newStreak = [...gameState.streak, { result, multiplier: data.multiplier }];
+          newStreak = [...gameState.streak, { result, multiplier: data.multiplier }];
           const nextMultiplier = calculateMultiplier(newStreak.length);
           
           setGameState(prev => ({
@@ -189,6 +191,36 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
         // Update balance from server response if available
         if (data.new_balance !== undefined) {
           onUpdateUser({ balance: data.new_balance });
+        }
+
+        // Add to live feed after animation completes (for coinflip games)
+        if (userData?.username) {
+          try {
+            await supabase.from('live_bet_feed').insert({
+              user_id: userData.id,
+              username: userData.username,
+              game_type: 'coinflip',
+              bet_amount: gameState.betAmount,
+              result: won ? 'win' : 'lose',
+              profit: data.profit,
+              multiplier: won ? data.multiplier : null,
+              game_data: {
+                choice: side,
+                coinResult: result,
+                won,
+                server_seed: data.server_seed,
+                client_seed: clientSeed,
+                combined_hash: data.combined_hash,
+                streak_length: won ? newStreak.length : 0,
+                multiplier: won ? data.multiplier : 1,
+                action: won ? 'continue' : 'lost'
+              },
+              streak_length: won ? newStreak.length : 0,
+              action: won ? 'continue' : 'lost'
+            });
+          } catch (feedError) {
+            console.error('Failed to add to live feed:', feedError);
+          }
         }
         
       }, 2500); // Wait for coin animation
