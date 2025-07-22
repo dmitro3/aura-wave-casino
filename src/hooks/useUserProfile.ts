@@ -40,10 +40,10 @@ export function useUserProfile() {
     fetchUserProfile()
     
     // Set up real-time subscription for profile changes (including balance updates)
-    console.log('🔗 Setting up profile subscription for user:', user.id);
+    console.log('🔗 Setting up balance subscription for user:', user.id);
     
-    const profileChannel = supabase
-      .channel(`profile_updates_${user.id}`)
+    const balanceChannel = supabase
+      .channel(`balance_updates_${user.id}_${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -53,38 +53,45 @@ export function useUserProfile() {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🔄 RECEIVED PROFILE UPDATE:', payload);
-          console.log('🔄 Current balance:', userData?.balance);
-          console.log('🔄 New balance:', payload.new?.balance);
+          console.log('💰 BALANCE UPDATE RECEIVED:', payload);
+          console.log('💰 Old balance:', payload.old?.balance);
+          console.log('💰 New balance:', payload.new?.balance);
           
-          if (payload.new) {
-            setUserData(prev => {
-              if (!prev) return null;
-              console.log('✅ UPDATING BALANCE FROM', prev.balance, 'TO', payload.new.balance);
-              return {
-                ...prev,
-                balance: payload.new.balance,
-                total_profit: payload.new.total_profit,
-                total_wagered: payload.new.total_wagered,
-                current_level: payload.new.current_level,
-                current_xp: payload.new.current_xp,
-                xp_to_next_level: payload.new.xp_to_next_level,
-                lifetime_xp: payload.new.lifetime_xp,
-              };
-            });
+          if (payload.new && payload.old) {
+            // Only update if balance actually changed
+            if (payload.new.balance !== payload.old.balance) {
+              console.log('✅ UPDATING BALANCE FROM', payload.old.balance, 'TO', payload.new.balance);
+              setUserData(prev => {
+                if (!prev) return null;
+                return {
+                  ...prev,
+                  balance: payload.new.balance,
+                  total_profit: payload.new.total_profit,
+                  total_wagered: payload.new.total_wagered,
+                  current_level: payload.new.current_level,
+                  current_xp: payload.new.current_xp,
+                  xp_to_next_level: payload.new.xp_to_next_level,
+                  lifetime_xp: payload.new.lifetime_xp,
+                };
+              });
+            } else {
+              console.log('💰 Balance unchanged, skipping update');
+            }
           }
         }
       )
       .subscribe((status) => {
-        console.log('💰 Profile subscription status:', status);
+        console.log('💰 Balance subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Profile subscription active for user:', user.id);
+          console.log('✅ Balance subscription active for user:', user.id);
+        } else {
+          console.error('❌ Balance subscription error:', status);
         }
       });
 
     return () => {
-      console.log('🧹 Cleaning up profile subscription');
-      supabase.removeChannel(profileChannel);
+      console.log('🧹 Cleaning up balance subscription');
+      supabase.removeChannel(balanceChannel);
     };
   }, [user])
 
