@@ -246,8 +246,7 @@ export default function NotificationsPanel() {
                     <CaseNotification
                       key={notification.id}
                       notification={notification}
-                      onDismiss={() => deleteNotification(notification.id)}
-                      onMarkRead={() => markAsRead(notification.id)}
+                      onRefresh={fetchNotifications}
                     />
                   );
                 }

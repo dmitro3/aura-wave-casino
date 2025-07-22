@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface LevelUpNotification {
   id: string;
@@ -11,16 +12,26 @@ interface LevelUpNotification {
   newBorderTier: number;
 }
 
+interface CaseReward {
+  id: string;
+  level_unlocked: number;
+  rarity: string;
+  reward_amount: number;
+  opened_at: string | null;
+}
+
 export function useLevelUpNotifications() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [notification, setNotification] = useState<LevelUpNotification | null>(null);
+  const [processedIds, setProcessedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!user) return;
 
     // Listen for level-up notifications
     const subscription = supabase
-      .channel('level_up_notifications')
+      .channel(`level_up_live_${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -30,43 +41,43 @@ export function useLevelUpNotifications() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🔔 LEVEL UP NOTIFICATION RECEIVED:', payload);
           const notification = payload.new;
           
-          // Handle both level-up notification types
-          if ((notification.type === 'level_reward_case' || notification.type === 'level_up') && notification.data) {
-            const data = notification.data;
-            console.log('🎉 Processing level-up notification:', {
-              type: notification.type,
-              data: data
-            });
+          // Avoid duplicate processing
+          if (processedIds.has(notification.id)) return;
+          
+          if (notification.type === 'level_up' || notification.type === 'level_reward_case') {
+            setProcessedIds(prev => new Set([...prev, notification.id]));
             
-            // For level_reward_case, we have case data
+            const data = notification.data || {};
+            
+            // Show live toast notification for level up
+            if (notification.type === 'level_up') {
+              toast({
+                title: `🎉 Level Up!`,
+                description: `Congratulations! You reached level ${data.new_level}!`,
+                duration: 4000,
+              });
+            }
+            
+            // Show live toast notification for case rewards
             if (notification.type === 'level_reward_case') {
-              console.log('📦 Setting case reward notification');
+              toast({
+                title: `📦 Case Reward!`,
+                description: `You earned a Level ${data.new_level} reward case! Check your notifications to open it.`,
+                duration: 5000,
+              });
+              
+              // Set notification for modal display
               setNotification({
                 id: notification.id,
                 oldLevel: data.old_level || (data.new_level - 1),
                 newLevel: data.new_level,
-                casesEarned: data.cases_earned || 0,
+                casesEarned: data.cases_earned || 1,
                 borderTierChanged: data.border_changed || false,
                 newBorderTier: data.new_border_tier || 1
               });
             }
-            // For general level_up, we don't have cases but still show celebration
-            else if (notification.type === 'level_up') {
-              console.log('🎊 Setting level up notification');
-              setNotification({
-                id: notification.id,
-                oldLevel: data.old_level || (data.new_level - 1),
-                newLevel: data.new_level,
-                casesEarned: 0,
-                borderTierChanged: data.border_changed || false,
-                newBorderTier: data.new_border_tier || 1
-              });
-            }
-          } else {
-            console.log('❌ Notification not processed:', notification.type, notification.data);
           }
         }
       )
@@ -75,7 +86,7 @@ export function useLevelUpNotifications() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, [user]);
+  }, [user, toast, processedIds]);
 
   const dismissNotification = () => {
     setNotification(null);

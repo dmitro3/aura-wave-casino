@@ -1,114 +1,248 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Gift, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Gift, Sparkles, Star } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { CaseOpeningModal } from './CaseOpeningModal';
-import { useCaseRewards } from '@/hooks/useCaseRewards';
-
-interface CaseReward {
-  id: string;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  reward_amount: number;
-  level_unlocked: number;
-}
+import { useToast } from '@/hooks/use-toast';
 
 interface CaseNotificationProps {
   notification: {
     id: string;
+    type: string;
     title: string;
     message: string;
-    data: {
-      old_level?: number;
-      new_level: number;
-      cases_earned: number;
-      border_changed?: boolean;
-      new_border_tier?: number;
-    };
+    data: any;
     created_at: string;
+    is_read: boolean;
   };
-  onDismiss: () => void;
-  onMarkRead: () => void;
+  onRefresh: () => void;
 }
 
-export const CaseNotification = ({ notification, onDismiss, onMarkRead }: CaseNotificationProps) => {
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [showCaseModal, setShowCaseModal] = useState(false);
-  const { availableCases, refetch } = useCaseRewards();
+interface CaseReward {
+  id: string;
+  level_unlocked: number;
+  rarity: string;
+  reward_amount: number;
+  opened_at: string | null;
+  user_id: string;
+}
 
-  const handleOpenCase = () => {
-    if (!notification.data?.new_level) return;
-    
-    const availableCase = availableCases.find(c => c.level_unlocked === notification.data.new_level);
-    if (availableCase) {
-      setSelectedCaseId(availableCase.id);
-      setShowCaseModal(true);
-      onMarkRead();
+export function CaseNotification({ notification, onRefresh }: CaseNotificationProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [availableCases, setAvailableCases] = useState<CaseReward[]>([]);
+  const [showCaseModal, setShowCaseModal] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<CaseReward | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchAvailableCases = async () => {
+    if (!user || !notification.data?.new_level) return;
+
+    try {
+      const { data: cases, error } = await supabase
+        .from('case_rewards')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('level_unlocked', notification.data.new_level)
+        .is('opened_at', null)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setAvailableCases(cases || []);
+    } catch (error) {
+      console.error('Error fetching available cases:', error);
     }
   };
 
-  const handleCaseOpened = (reward: CaseReward) => {
-    setShowCaseModal(false);
-    setSelectedCaseId(null);
-    // Refresh available cases after opening
-    refetch();
+  useEffect(() => {
+    fetchAvailableCases();
+  }, [user, notification]);
+
+  const handleOpenCase = (caseReward: CaseReward) => {
+    setSelectedCase(caseReward);
+    setShowCaseModal(true);
   };
 
-  const hasAvailableCases = availableCases.some(c => c.level_unlocked === notification.data?.new_level);
+  const handleCaseOpened = async () => {
+    // Refresh the available cases and notification list
+    await fetchAvailableCases();
+    onRefresh();
+    setShowCaseModal(false);
+    setSelectedCase(null);
+    
+    toast({
+      title: "Case Opened!",
+      description: "Your reward has been added to your balance.",
+    });
+  };
+
+  const handleOpenAllCases = async () => {
+    if (availableCases.length === 0) return;
+    
+    setLoading(true);
+    try {
+      let totalReward = 0;
+      const openedCases = [];
+
+      for (const caseReward of availableCases) {
+        // Generate random reward for each case
+        const rarityRandom = Math.random() * 100;
+        let rarity = 'common';
+        let rewardRange = { min: 2, max: 5 };
+
+        if (rarityRandom <= 3) {
+          rarity = 'legendary';
+          rewardRange = { min: 101, max: 500 };
+        } else if (rarityRandom <= 15) {
+          rarity = 'epic';
+          rewardRange = { min: 21, max: 100 };
+        } else if (rarityRandom <= 40) {
+          rarity = 'rare';
+          rewardRange = { min: 6, max: 20 };
+        }
+
+        const amount = Math.floor(Math.random() * (rewardRange.max - rewardRange.min + 1)) + rewardRange.min;
+        totalReward += amount;
+
+        // Update case in database
+        const { error: updateError } = await supabase
+          .from('case_rewards')
+          .update({
+            rarity,
+            reward_amount: amount,
+            opened_at: new Date().toISOString()
+          })
+          .eq('id', caseReward.id);
+
+        if (updateError) throw updateError;
+        openedCases.push({ ...caseReward, rarity, reward_amount: amount });
+      }
+
+      // Update user balance
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('balance, total_cases_opened, available_cases')
+        .eq('id', user!.id)
+        .single();
+
+      if (profile) {
+        await supabase
+          .from('profiles')
+          .update({ 
+            balance: profile.balance + totalReward,
+            total_cases_opened: profile.total_cases_opened + availableCases.length,
+            available_cases: Math.max(0, profile.available_cases - availableCases.length)
+          })
+          .eq('id', user!.id);
+      }
+
+      await fetchAvailableCases();
+      onRefresh();
+
+      toast({
+        title: `All Cases Opened! 🎉`,
+        description: `You won a total of $${totalReward} from ${availableCases.length} cases!`,
+        duration: 5000,
+      });
+
+    } catch (error) {
+      console.error('Error opening all cases:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to open cases. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (notification.type !== 'level_reward_case') return null;
+
+  const levelData = notification.data;
+  const hasAvailableCases = availableCases.length > 0;
 
   return (
     <>
-      <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20">
-        <CardHeader className="pb-2">
+      <Card className="glass border-primary/20 bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+        <CardContent className="p-4 space-y-3">
           <div className="flex items-start justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <Gift className="w-4 h-4 text-orange-500" />
-              {notification.title}
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onDismiss}
-              className="h-8 w-8 p-0"
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              <div className="p-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
+                <Gift className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="font-medium flex items-center gap-1">
+                  {notification.title}
+                  <Sparkles className="w-4 h-4 text-yellow-500" />
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {notification.message}
+                </p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+              Level {levelData.new_level}
+            </Badge>
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm text-muted-foreground mb-3">
-            {notification.message}
-          </p>
-          
+
           {hasAvailableCases ? (
-            <Button
-              onClick={handleOpenCase}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
-              size="sm"
-            >
-              <Gift className="w-4 h-4 mr-2" />
-              Open Case
-            </Button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Available cases: {availableCases.length}
+                </span>
+                <Badge variant="outline" className="border-green-500 text-green-700">
+                  <Star className="w-3 h-3 mr-1" />
+                  Ready to open
+                </Badge>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleOpenCase(availableCases[0])}
+                  size="sm"
+                  className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                >
+                  <Gift className="w-4 h-4 mr-1" />
+                  Open Case
+                </Button>
+                
+                {availableCases.length > 1 && (
+                  <Button
+                    onClick={handleOpenAllCases}
+                    size="sm"
+                    variant="outline"
+                    disabled={loading}
+                    className="border-purple-500 text-purple-700 hover:bg-purple-50"
+                  >
+                    Open All ({availableCases.length})
+                  </Button>
+                )}
+              </div>
+            </div>
           ) : (
-            <div className="text-sm text-muted-foreground">
-              All cases for this level have been opened.
+            <div className="text-center py-2">
+              <Badge variant="outline" className="border-gray-400 text-gray-600">
+                All cases opened
+              </Badge>
             </div>
           )}
-          
-          <div className="text-xs text-muted-foreground mt-2">
-            {new Date(notification.created_at).toLocaleString()}
-          </div>
         </CardContent>
       </Card>
 
-      {selectedCaseId && (
+      {showCaseModal && selectedCase && (
         <CaseOpeningModal
           isOpen={showCaseModal}
           onClose={() => setShowCaseModal(false)}
-          caseId={selectedCaseId}
-          level={notification.data.new_level}
+          caseId={selectedCase.id}
+          level={selectedCase.level_unlocked}
           onCaseOpened={handleCaseOpened}
         />
       )}
     </>
   );
-};
+}
