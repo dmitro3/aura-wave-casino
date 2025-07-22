@@ -102,26 +102,24 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
     setGameState(prev => ({
       ...prev,
       selectedSide: side,
-      gamePhase: 'flipping'
-    }));
-
-    handleFlip();
-  };
-
-  const handleFlip = async () => {
-    if (!gameState.selectedSide) return;
-    
-    setGameState(prev => ({
-      ...prev,
+      gamePhase: 'flipping',
       isFlipping: true
     }));
+
+    // Pass the side directly to avoid stale state issues
+    handleFlip(side);
+  };
+
+  const handleFlip = async (selectedSide?: 'heads' | 'tails') => {
+    const side = selectedSide || gameState.selectedSide;
+    if (!side) return;
       
     try {
       const clientSeed = generateClientSeed();
       
-      console.log('Calling coinflip engine with:', {
+      console.log('🎲 Calling coinflip engine with:', {
         bet_amount: gameState.betAmount,
-        selected_side: gameState.selectedSide,
+        selected_side: side,
         client_seed: clientSeed,
         streak: gameState.streak.length,
         current_multiplier: gameState.currentMultiplier
@@ -131,16 +129,22 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       const { data, error } = await supabase.functions.invoke('coinflip-streak-engine', {
         body: {
           bet_amount: gameState.betAmount,
-          selected_side: gameState.selectedSide,
+          selected_side: side,
           client_seed: clientSeed,
           streak: gameState.streak.length,
           current_multiplier: gameState.currentMultiplier
         }
       });
 
-      console.log('Coinflip engine response:', { data, error });
+      console.log('🎲 Coinflip engine response:', { data, error });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message || 'Edge function error');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Invalid response from server');
+      }
 
       const result = data.result;
       const won = data.won;
@@ -167,7 +171,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           }));
 
           toast({
-            title: "You Won!",
+            title: "🎉 You Won!",
             description: `The coin landed on ${result}! Current streak: ${newStreak.length}`,
             variant: "default",
           });
@@ -176,7 +180,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           handleGameEnd('lost', data.profit || -gameState.betAmount);
           
           toast({
-            title: "You Lost!",
+            title: "💥 You Lost!",
             description: `The coin landed on ${result}. Streak reset!`,
             variant: "destructive",
           });
@@ -200,7 +204,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       
       toast({
         title: "Error",
-        description: "Failed to process coinflip. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to process coinflip. Please try again.",
         variant: "destructive",
       });
     }
@@ -398,10 +402,15 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           {gameState.gamePhase === 'flipping' && (
             <div className="text-center space-y-4">
               <div className="glass rounded-lg p-4">
-                <h3 className="text-lg font-semibold">Flipping...</h3>
+                <h3 className="text-lg font-semibold">Flipping the coin...</h3>
                 <p className="text-muted-foreground">
                   You chose {gameState.selectedSide} for ${gameState.betAmount}
                 </p>
+                <div className="flex items-center justify-center space-x-2 mt-2">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                </div>
               </div>
             </div>
           )}
