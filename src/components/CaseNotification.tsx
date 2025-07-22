@@ -18,8 +18,11 @@ interface CaseNotificationProps {
     title: string;
     message: string;
     data: {
-      level: number;
+      old_level?: number;
+      new_level: number;
       cases_earned: number;
+      border_changed?: boolean;
+      new_border_tier?: number;
     };
     created_at: string;
   };
@@ -30,11 +33,12 @@ interface CaseNotificationProps {
 export const CaseNotification = ({ notification, onDismiss, onMarkRead }: CaseNotificationProps) => {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [showCaseModal, setShowCaseModal] = useState(false);
-  const { availableCases } = useCaseRewards();
+  const { availableCases, refetch } = useCaseRewards();
 
   const handleOpenCase = () => {
-    // Find the first available case for this level
-    const availableCase = availableCases.find(c => c.level_unlocked === notification.data.level);
+    if (!notification.data?.new_level) return;
+    
+    const availableCase = availableCases.find(c => c.level_unlocked === notification.data.new_level);
     if (availableCase) {
       setSelectedCaseId(availableCase.id);
       setShowCaseModal(true);
@@ -45,9 +49,11 @@ export const CaseNotification = ({ notification, onDismiss, onMarkRead }: CaseNo
   const handleCaseOpened = (reward: CaseReward) => {
     setShowCaseModal(false);
     setSelectedCaseId(null);
+    // Refresh available cases after opening
+    refetch();
   };
 
-  const hasAvailableCases = availableCases.some(c => c.level_unlocked === notification.data.level);
+  const hasAvailableCases = availableCases.some(c => c.level_unlocked === notification.data?.new_level);
 
   return (
     <>
@@ -99,7 +105,7 @@ export const CaseNotification = ({ notification, onDismiss, onMarkRead }: CaseNo
           isOpen={showCaseModal}
           onClose={() => setShowCaseModal(false)}
           caseId={selectedCaseId}
-          level={notification.data.level}
+          level={notification.data.new_level}
           onCaseOpened={handleCaseOpened}
         />
       )}

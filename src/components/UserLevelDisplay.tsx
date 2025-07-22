@@ -1,4 +1,4 @@
-import { useUserLevelStats } from '@/hooks/useUserLevelStats';
+import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { ProfileBorder } from './ProfileBorder';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
@@ -11,9 +11,9 @@ interface UserLevelDisplayProps {
 }
 
 export function UserLevelDisplay({ username, showXP = false, size = 'sm', className = '' }: UserLevelDisplayProps) {
-  const { stats, loading } = useUserLevelStats();
+  const { levelStats, loading } = useLevelSync();
 
-  if (loading || !stats) {
+  if (loading || !levelStats) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
         <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
@@ -37,7 +37,7 @@ export function UserLevelDisplay({ username, showXP = false, size = 'sm', classN
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div className="relative">
-        <ProfileBorder level={stats.current_level} size={size}>
+        <ProfileBorder level={levelStats.current_level} size={size}>
           <div className={`${sizeClasses[size]} rounded-full overflow-hidden relative`}>
             {/* Avatar with proper sizing */}
             <img 
@@ -48,7 +48,7 @@ export function UserLevelDisplay({ username, showXP = false, size = 'sm', classN
             {/* Level overlay */}
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-1 py-0.5">
               <span className="text-white text-xs font-bold block text-center leading-none">
-                {stats.current_level >= 100 ? <Crown className="w-3 h-3 mx-auto" /> : stats.current_level}
+                {levelStats.current_level >= 100 ? <Crown className="w-3 h-3 mx-auto" /> : levelStats.current_level}
               </span>
             </div>
           </div>
@@ -59,13 +59,13 @@ export function UserLevelDisplay({ username, showXP = false, size = 'sm', classN
         <div className="flex items-center gap-2">
           <span className={`font-semibold ${textSizes[size]}`}>{username}</span>
           <Badge variant="outline" className="text-xs px-1 py-0">
-            LVL {stats.current_level}
+            LVL {levelStats.current_level}
           </Badge>
         </div>
         
         {showXP && (
           <div className="text-xs text-muted-foreground">
-            {stats.current_level_xp.toLocaleString()} / {(stats.current_level_xp + stats.xp_to_next_level).toLocaleString()} XP
+            {levelStats.current_level_xp.toLocaleString()} / {(levelStats.current_level_xp + levelStats.xp_to_next_level).toLocaleString()} XP
           </div>
         )}
       </div>

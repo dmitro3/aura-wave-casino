@@ -3,14 +3,16 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Trophy, Target, TrendingUp, TrendingDown, Gift, Crown } from 'lucide-react';
+import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
 import { ProfileBorder } from './ProfileBorder';
 import { EnhancedLevelBadge } from './EnhancedLevelBadge';
 
 export function UserProgressSection() {
-  const { stats, loading, getGameStats } = useUserLevelStats();
+  const { levelStats, loading: levelLoading } = useLevelSync();
+  const { stats, loading: statsLoading, getGameStats } = useUserLevelStats();
 
-  if (loading) {
+  if (levelLoading || statsLoading) {
     return (
       <Card>
         <CardHeader>
@@ -30,7 +32,7 @@ export function UserProgressSection() {
     );
   }
 
-  if (!stats) {
+  if (!levelStats || !stats) {
     return (
       <Card>
         <CardHeader>
@@ -46,8 +48,8 @@ export function UserProgressSection() {
     );
   }
 
-  const progressPercentage = stats.xp_to_next_level > 0 
-    ? (stats.current_level_xp / (stats.current_level_xp + stats.xp_to_next_level)) * 100 
+  const progressPercentage = levelStats.xp_to_next_level > 0 
+    ? (levelStats.current_level_xp / (levelStats.current_level_xp + levelStats.xp_to_next_level)) * 100 
     : 0;
 
   const overallWinRate = stats.total_games > 0 ? (stats.total_wins / stats.total_games) * 100 : 0;
@@ -65,18 +67,18 @@ export function UserProgressSection() {
         <CardContent className="space-y-6">
           {/* Profile with Border */}
           <div className="flex items-center gap-4">
-            <ProfileBorder level={stats.current_level} size="lg">
+            <ProfileBorder level={levelStats.current_level} size="lg">
               <div className="w-full h-full bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                {stats.current_level}
+                {levelStats.current_level}
               </div>
             </ProfileBorder>
             <div className="flex-1">
               <EnhancedLevelBadge 
-                level={stats.current_level} 
+                level={levelStats.current_level} 
                 size="lg" 
                 showProgress={true}
-                currentXP={stats.current_level_xp}
-                xpToNext={stats.xp_to_next_level}
+                currentXP={levelStats.current_level_xp}
+                xpToNext={levelStats.xp_to_next_level}
               />
             </div>
           </div>
@@ -85,23 +87,23 @@ export function UserProgressSection() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>XP Progress</span>
-              <span>{stats.current_level_xp.toLocaleString()} / {(stats.current_level_xp + stats.xp_to_next_level).toLocaleString()}</span>
+              <span>{levelStats.current_level_xp.toLocaleString()} / {(levelStats.current_level_xp + levelStats.xp_to_next_level).toLocaleString()}</span>
             </div>
             <Progress value={progressPercentage} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Level {stats.current_level}</span>
-              <span>{stats.xp_to_next_level.toLocaleString()} XP to next level</span>
+              <span>Level {levelStats.current_level}</span>
+              <span>{levelStats.xp_to_next_level.toLocaleString()} XP to next level</span>
             </div>
           </div>
 
           {/* Key Stats */}
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-3 bg-card/30 rounded-lg">
-              <div className="text-2xl font-bold text-purple-400">{stats.lifetime_xp.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-purple-400">{levelStats.lifetime_xp.toLocaleString()}</div>
               <div className="text-xs text-muted-foreground">Total XP</div>
             </div>
             <div className="text-center p-3 bg-card/30 rounded-lg">
-              <div className="text-2xl font-bold text-blue-400">{stats.border_tier}</div>
+              <div className="text-2xl font-bold text-blue-400">{levelStats.border_tier}</div>
               <div className="text-xs text-muted-foreground">Border Tier</div>
             </div>
           </div>

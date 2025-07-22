@@ -17,6 +17,7 @@ import { TowerGame } from '@/components/TowerGame';
 import NotificationsPanel from '@/components/NotificationsPanel';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
+import { useLevelSync } from '@/contexts/LevelSyncContext';
 
 export default function Index() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -32,8 +33,10 @@ export default function Index() {
     }
   };
 
+  const { levelStats } = useLevelSync();
+
   const getXpForNextLevel = (level: number) => level * 100;
-  const xpProgress = userData ? (userData.current_xp / (userData.current_xp + userData.xp_to_next_level)) * 100 : 0;
+  const xpProgress = levelStats ? (levelStats.current_level_xp / (levelStats.current_level_xp + levelStats.xp_to_next_level)) * 100 : 0;
 
   if (authLoading || profileLoading) {
     return (
@@ -140,13 +143,15 @@ export default function Index() {
           </div>
 
           {/* XP Progress Bar */}
-          <div className="mt-3 space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Level {userData.current_level} Progress</span>
-              <span>{userData.current_xp} / {userData.current_xp + userData.xp_to_next_level} XP</span>
+          {levelStats && (
+            <div className="mt-3 space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Level {levelStats.current_level} Progress</span>
+                <span>{levelStats.current_level_xp} / {levelStats.current_level_xp + levelStats.xp_to_next_level} XP</span>
+              </div>
+              <Progress value={xpProgress} className="h-2" />
             </div>
-            <Progress value={xpProgress} className="h-2" />
-          </div>
+          )}
         </div>
       </header>
 
