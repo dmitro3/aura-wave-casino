@@ -62,6 +62,66 @@ export type Database = {
         }
         Relationships: []
       }
+      border_tiers: {
+        Row: {
+          animation_type: string | null
+          css_classes: string
+          description: string
+          max_level: number
+          min_level: number
+          name: string
+          tier: number
+        }
+        Insert: {
+          animation_type?: string | null
+          css_classes: string
+          description: string
+          max_level: number
+          min_level: number
+          name: string
+          tier: number
+        }
+        Update: {
+          animation_type?: string | null
+          css_classes?: string
+          description?: string
+          max_level?: number
+          min_level?: number
+          name?: string
+          tier?: number
+        }
+        Relationships: []
+      }
+      case_rewards: {
+        Row: {
+          created_at: string
+          id: string
+          level_unlocked: number
+          opened_at: string | null
+          rarity: string
+          reward_amount: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level_unlocked: number
+          opened_at?: string | null
+          rarity: string
+          reward_amount?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level_unlocked?: number
+          opened_at?: string | null
+          rarity?: string
+          reward_amount?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           created_at: string
@@ -356,8 +416,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          available_cases: number | null
           badges: string[]
           balance: number
+          border_tier: number | null
           created_at: string
           current_level: number
           current_xp: number
@@ -366,6 +428,7 @@ export type Database = {
           level: number
           lifetime_xp: number
           registration_date: string
+          total_cases_opened: number | null
           total_profit: number
           total_wagered: number
           updated_at: string
@@ -374,8 +437,10 @@ export type Database = {
           xp_to_next_level: number
         }
         Insert: {
+          available_cases?: number | null
           badges?: string[]
           balance?: number
+          border_tier?: number | null
           created_at?: string
           current_level?: number
           current_xp?: number
@@ -384,6 +449,7 @@ export type Database = {
           level?: number
           lifetime_xp?: number
           registration_date?: string
+          total_cases_opened?: number | null
           total_profit?: number
           total_wagered?: number
           updated_at?: string
@@ -392,8 +458,10 @@ export type Database = {
           xp_to_next_level?: number
         }
         Update: {
+          available_cases?: number | null
           badges?: string[]
           balance?: number
+          border_tier?: number | null
           created_at?: string
           current_level?: number
           current_xp?: number
@@ -402,6 +470,7 @@ export type Database = {
           level?: number
           lifetime_xp?: number
           registration_date?: string
+          total_cases_opened?: number | null
           total_profit?: number
           total_wagered?: number
           updated_at?: string
@@ -712,6 +781,14 @@ export type Database = {
           current_level_xp: number
           xp_to_next: number
         }[]
+      }
+      calculate_total_xp_for_level: {
+        Args: { target_level: number }
+        Returns: number
+      }
+      calculate_xp_for_level: {
+        Args: { target_level: number }
+        Returns: number
       }
       process_tip: {
         Args: {

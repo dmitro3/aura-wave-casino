@@ -9,11 +9,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import ClickableUsername from './ClickableUsername';
+import { CaseNotification } from './CaseNotification';
 
 interface Notification {
   id: string;
   user_id: string;
-  type: 'tip_sent' | 'tip_received' | 'achievement_unlocked' | 'level_up';
+  type: 'tip_sent' | 'tip_received' | 'achievement_unlocked' | 'level_up' | 'level_reward_case';
   title: string;
   message: string;
   data: any;
@@ -173,6 +174,8 @@ export default function NotificationsPanel() {
         return <Award className="w-4 h-4" />;
       case 'level_up':
         return <Star className="w-4 h-4" />;
+      case 'level_reward_case':
+        return <Gift className="w-4 h-4" />;
       default:
         return <Bell className="w-4 h-4" />;
     }
@@ -188,6 +191,8 @@ export default function NotificationsPanel() {
         return 'text-purple-400';
       case 'level_up':
         return 'text-yellow-400';
+      case 'level_reward_case':
+        return 'text-orange-400';
       default:
         return 'text-gray-400';
     }
@@ -234,15 +239,29 @@ export default function NotificationsPanel() {
             </div>
           ) : (
             <div className="space-y-2">
-              {notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-3 rounded-lg border transition-all ${
-                    notification.is_read
-                      ? 'bg-card/20 border-border/50'
-                      : 'bg-card/40 border-primary/30 shadow-sm'
-                  }`}
-                >
+              {notifications.map((notification) => {
+                // Special handling for case notifications
+                if (notification.type === 'level_reward_case') {
+                  return (
+                    <CaseNotification
+                      key={notification.id}
+                      notification={notification}
+                      onDismiss={() => deleteNotification(notification.id)}
+                      onMarkRead={() => markAsRead(notification.id)}
+                    />
+                  );
+                }
+
+                // Regular notification display
+                return (
+                  <div
+                    key={notification.id}
+                    className={`p-3 rounded-lg border transition-all ${
+                      notification.is_read
+                        ? 'bg-card/20 border-border/50'
+                        : 'bg-card/40 border-primary/30 shadow-sm'
+                    }`}
+                  >
                   <div className="flex items-start gap-3">
                     <div className={`flex-shrink-0 ${getNotificationColor(notification.type)}`}>
                       {getNotificationIcon(notification.type)}
@@ -317,7 +336,8 @@ export default function NotificationsPanel() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>
