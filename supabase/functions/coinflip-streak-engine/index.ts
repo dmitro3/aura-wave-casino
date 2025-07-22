@@ -98,17 +98,23 @@ serve(async (req) => {
       throw new Error('User profile not found')
     }
 
-    // Validate bet amount with better precision handling for all-in bets
+    // Validate bet amount with proper handling for all-in bets
     if (bet_amount <= 0) {
       console.log(`❌ Bet validation failed - Amount must be positive: ${bet_amount}`);
       throw new Error('Invalid bet amount')
     }
     
-    // Allow slight overage for floating point precision issues (up to 1 cent)
-    if (bet_amount > profile.balance + 0.01) {
-      console.log(`❌ Bet validation failed - Amount: ${bet_amount}, Balance: ${profile.balance}, Difference: ${bet_amount - profile.balance}`);
+    // Round both values to 2 decimal places to handle floating point precision
+    const roundedBetAmount = Math.round(bet_amount * 100) / 100;
+    const roundedBalance = Math.round(profile.balance * 100) / 100;
+    
+    // Check if bet amount exceeds balance (allow exact match for all-in)
+    if (roundedBetAmount > roundedBalance) {
+      console.log(`❌ Insufficient balance - Bet: $${roundedBetAmount}, Balance: $${roundedBalance}, Difference: $${roundedBetAmount - roundedBalance}`);
       throw new Error('Insufficient balance')
     }
+    
+    console.log(`✅ Bet validation passed - Bet: $${roundedBetAmount}, Balance: $${roundedBalance}`);
 
     // Generate provably fair result
     const serverSeed = generateServerSeed()
