@@ -140,6 +140,7 @@ serve(async (req) => {
       .single()
 
     if (userError || !userData) {
+      console.error('❌ Failed to get user data:', userError)
       throw new Error('Failed to get user data')
     }
 
@@ -150,7 +151,8 @@ serve(async (req) => {
       .update({ 
         balance: newBalance,
         total_wagered: userData.total_wagered + bet_amount,
-        total_profit: userData.total_profit + profit
+        total_profit: userData.total_profit + profit,
+        updated_at: new Date().toISOString()
       })
       .eq('id', user.id)
 
@@ -234,6 +236,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Coinflip engine error:', error)
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    })
     
     const errorResponse: CoinflipResponse = {
       success: false,
@@ -247,11 +254,11 @@ serve(async (req) => {
       combined_hash: '',
       streak_length: 0,
       action: 'lost',
-      error: error.message
+      error: error.message || 'Unknown error occurred'
     }
 
     return new Response(JSON.stringify(errorResponse), {
-      status: 400,
+      status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
