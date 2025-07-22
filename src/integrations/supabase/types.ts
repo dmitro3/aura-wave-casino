@@ -177,33 +177,42 @@ export type Database = {
       }
       game_history: {
         Row: {
+          action: string | null
           bet_amount: number
           created_at: string
+          final_multiplier: number | null
           game_data: Json | null
           game_type: string
           id: string
           profit: number
           result: string
+          streak_length: number | null
           user_id: string
         }
         Insert: {
+          action?: string | null
           bet_amount: number
           created_at?: string
+          final_multiplier?: number | null
           game_data?: Json | null
           game_type: string
           id?: string
           profit: number
           result: string
+          streak_length?: number | null
           user_id: string
         }
         Update: {
+          action?: string | null
           bet_amount?: number
           created_at?: string
+          final_multiplier?: number | null
           game_data?: Json | null
           game_type?: string
           id?: string
           profit?: number
           result?: string
+          streak_length?: number | null
           user_id?: string
         }
         Relationships: []
@@ -261,6 +270,7 @@ export type Database = {
       }
       live_bet_feed: {
         Row: {
+          action: string | null
           bet_amount: number
           created_at: string
           game_data: Json | null
@@ -269,10 +279,12 @@ export type Database = {
           multiplier: number | null
           profit: number
           result: string
+          streak_length: number | null
           user_id: string
           username: string
         }
         Insert: {
+          action?: string | null
           bet_amount: number
           created_at?: string
           game_data?: Json | null
@@ -281,10 +293,12 @@ export type Database = {
           multiplier?: number | null
           profit: number
           result: string
+          streak_length?: number | null
           user_id: string
           username: string
         }
         Update: {
+          action?: string | null
           bet_amount?: number
           created_at?: string
           game_data?: Json | null
@@ -293,6 +307,7 @@ export type Database = {
           multiplier?: number | null
           profit?: number
           result?: string
+          streak_length?: number | null
           user_id?: string
           username?: string
         }
