@@ -39,11 +39,57 @@ export function useUserProfile() {
 
     fetchUserProfile()
     
-    // Set up real-time subscription for profile changes (including balance updates)
-    console.log('🔗 Setting up balance subscription for user:', user.id);
+    // Set up real-time subscription for user_level_stats (primary data source)
+    console.log('🔗 Setting up comprehensive stats subscription for user:', user.id);
     
-    const balanceChannel = supabase
-      .channel(`balance_updates_${user.id}_${Date.now()}`)
+    const statsChannel = supabase
+      .channel(`user_stats_${user.id}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_level_stats',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('📊 USER STATS UPDATE RECEIVED:', payload);
+          
+          if (payload.new) {
+            const newStats = payload.new as any;
+            setUserData(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                // Update all level/XP/stats data from user_level_stats
+                current_level: newStats.current_level,
+                current_xp: newStats.current_level_xp,
+                xp_to_next_level: newStats.xp_to_next_level,
+                lifetime_xp: newStats.lifetime_xp,
+                total_wagered: newStats.total_wagered,
+                total_profit: newStats.total_profit,
+                gameStats: {
+                  coinflip: {
+                    wins: newStats.coinflip_wins,
+                    losses: Math.max(0, newStats.coinflip_games - newStats.coinflip_wins),
+                    profit: newStats.coinflip_profit,
+                  },
+                  crash: {
+                    wins: newStats.crash_wins,
+                    losses: Math.max(0, newStats.crash_games - newStats.crash_wins),
+                    profit: newStats.crash_profit,
+                  },
+                  tower: {
+                    wins: newStats.tower_wins,
+                    losses: Math.max(0, newStats.tower_games - newStats.tower_wins),
+                    profit: newStats.tower_profit,
+                  },
+                },
+              };
+            });
+          }
+        }
+      )
       .on(
         'postgres_changes',
         {
@@ -53,12 +99,10 @@ export function useUserProfile() {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('💰 BALANCE UPDATE RECEIVED:', payload);
-          console.log('💰 Old balance:', payload.old?.balance);
-          console.log('💰 New balance:', payload.new?.balance);
+          console.log('👤 PROFILE UPDATE RECEIVED:', payload);
           
           if (payload.new && payload.old) {
-            // Only update if balance actually changed
+            // Only update profile-specific data (balance, username, etc.)
             if (payload.new.balance !== payload.old.balance) {
               console.log('✅ UPDATING BALANCE FROM', payload.old.balance, 'TO', payload.new.balance);
               setUserData(prev => {
@@ -66,32 +110,21 @@ export function useUserProfile() {
                 return {
                   ...prev,
                   balance: payload.new.balance,
-                  total_profit: payload.new.total_profit,
-                  total_wagered: payload.new.total_wagered,
-                  current_level: payload.new.current_level,
-                  current_xp: payload.new.current_xp,
-                  xp_to_next_level: payload.new.xp_to_next_level,
-                  lifetime_xp: payload.new.lifetime_xp,
+                  username: payload.new.username,
+                  badges: payload.new.badges,
                 };
               });
-            } else {
-              console.log('💰 Balance unchanged, skipping update');
             }
           }
         }
       )
       .subscribe((status) => {
-        console.log('💰 Balance subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Balance subscription active for user:', user.id);
-        } else {
-          console.error('❌ Balance subscription error:', status);
-        }
+        console.log('📊 Comprehensive stats subscription status:', status);
       });
 
     return () => {
-      console.log('🧹 Cleaning up balance subscription');
-      supabase.removeChannel(balanceChannel);
+      console.log('🧹 Cleaning up comprehensive stats subscription');
+      supabase.removeChannel(statsChannel);
     };
   }, [user])
 
@@ -99,7 +132,7 @@ export function useUserProfile() {
     if (!user) return
 
     try {
-      // Fetch profile
+      // Fetch profile for basic info and balance
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -108,54 +141,92 @@ export function useUserProfile() {
 
       if (profileError) throw profileError
 
-      // Fetch game stats
-      const { data: gameStats, error: gameStatsError } = await supabase
-        .from('game_stats')
+      // Fetch comprehensive level stats from user_level_stats (primary source of truth)
+      const { data: levelStats, error: levelStatsError } = await supabase
+        .from('user_level_stats')
         .select('*')
         .eq('user_id', user.id)
+        .single()
 
-      if (gameStatsError) throw gameStatsError
-
-      const coinflipStats = gameStats.find(stat => stat.game_type === 'coinflip') || {
-        wins: 0,
-        losses: 0,
-        total_profit: 0,
+      // If no level stats exist, create them
+      if (levelStatsError && levelStatsError.code === 'PGRST116') {
+        console.log('🆕 Creating initial user level stats for user:', user.id);
+        const { data: newLevelStats, error: createError } = await supabase
+          .from('user_level_stats')
+          .insert({ user_id: user.id })
+          .select('*')
+          .single();
+        
+        if (createError) {
+          console.error('Error creating level stats:', createError);
+          throw createError;
+        }
+        
+        // Use the newly created stats
+        const userProfile: UserProfile = {
+          ...profile,
+          // Use level stats as primary source for level/XP data
+          current_level: newLevelStats.current_level,
+          current_xp: newLevelStats.current_level_xp,
+          xp_to_next_level: newLevelStats.xp_to_next_level,
+          lifetime_xp: newLevelStats.lifetime_xp,
+          total_wagered: newLevelStats.total_wagered,
+          total_profit: newLevelStats.total_profit,
+          gameStats: {
+            coinflip: {
+              wins: newLevelStats.coinflip_wins,
+              losses: Math.max(0, newLevelStats.coinflip_games - newLevelStats.coinflip_wins),
+              profit: newLevelStats.coinflip_profit,
+            },
+            crash: {
+              wins: newLevelStats.crash_wins,
+              losses: Math.max(0, newLevelStats.crash_games - newLevelStats.crash_wins),
+              profit: newLevelStats.crash_profit,
+            },
+            tower: {
+              wins: newLevelStats.tower_wins,
+              losses: Math.max(0, newLevelStats.tower_games - newLevelStats.tower_wins),
+              profit: newLevelStats.tower_profit,
+            },
+          },
+        };
+        
+        setUserData(userProfile);
+        return;
       }
 
-      const crashStats = gameStats.find(stat => stat.game_type === 'crash') || {
-        wins: 0,
-        losses: 0,
-        total_profit: 0,
-      }
+      if (levelStatsError) throw levelStatsError;
 
-      const towerStats = gameStats.find(stat => stat.game_type === 'tower') || {
-        wins: 0,
-        losses: 0,
-        total_profit: 0,
-      }
-
+      // Combine profile data with level stats (level stats takes precedence)
       const userProfile: UserProfile = {
         ...profile,
+        // Use level stats as primary source for level/XP data
+        current_level: levelStats.current_level,
+        current_xp: levelStats.current_level_xp,
+        xp_to_next_level: levelStats.xp_to_next_level,
+        lifetime_xp: levelStats.lifetime_xp,
+        total_wagered: levelStats.total_wagered,
+        total_profit: levelStats.total_profit,
         gameStats: {
           coinflip: {
-            wins: coinflipStats.wins,
-            losses: coinflipStats.losses,
-            profit: coinflipStats.total_profit,
+            wins: levelStats.coinflip_wins,
+            losses: Math.max(0, levelStats.coinflip_games - levelStats.coinflip_wins),
+            profit: levelStats.coinflip_profit,
           },
           crash: {
-            wins: crashStats.wins,
-            losses: crashStats.losses,
-            profit: crashStats.total_profit,
+            wins: levelStats.crash_wins,
+            losses: Math.max(0, levelStats.crash_games - levelStats.crash_wins),
+            profit: levelStats.crash_profit,
           },
           tower: {
-            wins: towerStats.wins,
-            losses: towerStats.losses,
-            profit: towerStats.total_profit,
+            wins: levelStats.tower_wins,
+            losses: Math.max(0, levelStats.tower_games - levelStats.tower_wins),
+            profit: levelStats.tower_profit,
           },
         },
-      }
+      };
 
-      setUserData(userProfile)
+      setUserData(userProfile);
     } catch (error) {
       console.error('Error fetching user profile:', error)
     } finally {
@@ -167,44 +238,33 @@ export function useUserProfile() {
     if (!user || !userData) return
 
     try {
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          balance: updates.balance,
-          level: updates.level,
-          xp: updates.xp,
-          total_wagered: updates.total_wagered,
-          total_profit: updates.total_profit,
-          last_claim_time: updates.last_claim_time,
-          badges: updates.badges,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id)
+      // Only update profile table for profile-specific data (balance, username, badges)
+      const profileUpdates: any = {};
+      if (updates.balance !== undefined) profileUpdates.balance = updates.balance;
+      if (updates.username !== undefined) profileUpdates.username = updates.username;
+      if (updates.badges !== undefined) profileUpdates.badges = updates.badges;
+      if (updates.last_claim_time !== undefined) profileUpdates.last_claim_time = updates.last_claim_time;
+      
+      if (Object.keys(profileUpdates).length > 0) {
+        profileUpdates.updated_at = new Date().toISOString();
+        
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(profileUpdates)
+          .eq('id', user.id);
 
-      if (profileError) throw profileError
-
-      // Update game stats if provided
-      if (updates.gameStats) {
-        for (const [gameType, stats] of Object.entries(updates.gameStats)) {
-          await supabase
-            .from('game_stats')
-            .upsert({
-              user_id: user.id,
-              game_type: gameType,
-              wins: stats.wins,
-              losses: stats.losses,
-              total_profit: stats.profit,
-              updated_at: new Date().toISOString(),
-            })
-        }
+        if (profileError) throw profileError;
       }
 
-      // Refresh profile data
-      await fetchUserProfile()
+      // Note: Level, XP, and game stats are now managed by the trigger system
+      // They are automatically updated in user_level_stats when games are played
+      // No manual updates needed here
+
+      // Refresh profile data to get latest state
+      await fetchUserProfile();
     } catch (error) {
-      console.error('Error updating user profile:', error)
-      throw error
+      console.error('Error updating user profile:', error);
+      throw error;
     }
   }
 
