@@ -30,14 +30,20 @@ export function useLevelUpNotifications() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
+          console.log('🔔 LEVEL UP NOTIFICATION RECEIVED:', payload);
           const notification = payload.new;
           
           // Handle both level-up notification types
           if ((notification.type === 'level_reward_case' || notification.type === 'level_up') && notification.data) {
             const data = notification.data;
+            console.log('🎉 Processing level-up notification:', {
+              type: notification.type,
+              data: data
+            });
             
             // For level_reward_case, we have case data
             if (notification.type === 'level_reward_case') {
+              console.log('📦 Setting case reward notification');
               setNotification({
                 id: notification.id,
                 oldLevel: data.old_level || (data.new_level - 1),
@@ -49,6 +55,7 @@ export function useLevelUpNotifications() {
             }
             // For general level_up, we don't have cases but still show celebration
             else if (notification.type === 'level_up') {
+              console.log('🎊 Setting level up notification');
               setNotification({
                 id: notification.id,
                 oldLevel: data.old_level || (data.new_level - 1),
@@ -58,6 +65,8 @@ export function useLevelUpNotifications() {
                 newBorderTier: data.new_border_tier || 1
               });
             }
+          } else {
+            console.log('❌ Notification not processed:', notification.type, notification.data);
           }
         }
       )
