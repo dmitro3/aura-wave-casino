@@ -36,17 +36,22 @@ interface UserStats {
   total_wagered: number;
   total_profit: number;
   gameStats: {
-    crash?: {
+    crash: {
       wins: number;
       losses: number;
       total_profit: number;
     };
-    coinflip?: {
+    coinflip: {
       wins: number;
       losses: number;
       total_profit: number;
     };
-    tower?: {
+    tower: {
+      wins: number;
+      losses: number;
+      total_profit: number;
+    };
+    roulette: {
       wins: number;
       losses: number;
       total_profit: number;
@@ -164,21 +169,26 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
         total_wagered: levelStats?.total_wagered || profile.total_wagered || 0,
         total_profit: levelStats?.total_profit || profile.total_profit || 0,
         gameStats: {
-          coinflip: levelStats ? {
-            wins: levelStats.coinflip_wins,
-            losses: levelStats.coinflip_games - levelStats.coinflip_wins,
-            total_profit: levelStats.coinflip_profit
-          } : undefined,
-          crash: levelStats ? {
-            wins: levelStats.crash_wins,
-            losses: levelStats.crash_games - levelStats.crash_wins,
-            total_profit: levelStats.crash_profit
-          } : undefined,
-          tower: levelStats ? {
-            wins: levelStats.tower_wins,
-            losses: levelStats.tower_games - levelStats.tower_wins,
-            total_profit: levelStats.tower_profit
-          } : undefined
+          coinflip: {
+            wins: levelStats?.coinflip_wins || 0,
+            losses: Math.max(0, (levelStats?.coinflip_games || 0) - (levelStats?.coinflip_wins || 0)),
+            total_profit: levelStats?.coinflip_profit || 0
+          },
+          crash: {
+            wins: levelStats?.crash_wins || 0,
+            losses: Math.max(0, (levelStats?.crash_games || 0) - (levelStats?.crash_wins || 0)),
+            total_profit: levelStats?.crash_profit || 0
+          },
+          tower: {
+            wins: levelStats?.tower_wins || 0,
+            losses: Math.max(0, (levelStats?.tower_games || 0) - (levelStats?.tower_wins || 0)),
+            total_profit: levelStats?.tower_profit || 0
+          },
+          roulette: {
+            wins: levelStats?.roulette_wins || 0,
+            losses: Math.max(0, (levelStats?.roulette_games || 0) - (levelStats?.roulette_wins || 0)),
+            total_profit: levelStats?.roulette_profit || 0
+          }
         },
         recentGames: recentGames || [],
         achievements,
@@ -243,8 +253,9 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
   };
 
   const getWinRate = (gameType: keyof typeof userStats.gameStats) => {
-    if (!userStats?.gameStats[gameType]) return 0;
-    const { wins, losses } = userStats.gameStats[gameType]!;
+    if (!userStats?.gameStats[gameType]) return '0.0';
+    const gameStats = userStats.gameStats[gameType];
+    const { wins, losses } = gameStats;
     const total = wins + losses;
     return total > 0 ? ((wins / total) * 100).toFixed(1) : '0.0';
   };
@@ -451,7 +462,9 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4">
-                    {Object.entries(userStats.gameStats).map(([gameType, stats]) => (
+                    {Object.entries(userStats.gameStats)
+                      .filter(([_, stats]) => stats && (stats.wins > 0 || stats.losses > 0)) // Only show games with activity
+                      .map(([gameType, stats]) => (
                       <div key={gameType} className="p-4 rounded-lg bg-card/50 border">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -480,6 +493,12 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
                         </div>
                       </div>
                     ))}
+                    {Object.values(userStats.gameStats).every(stats => stats.wins === 0 && stats.losses === 0) && (
+                      <div className="text-center text-muted-foreground py-8">
+                        <Gamepad2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No games played yet</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
