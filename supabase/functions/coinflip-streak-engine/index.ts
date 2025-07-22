@@ -138,8 +138,8 @@ serve(async (req) => {
       .from('profiles')
       .update({ 
         balance: newBalance,
-        total_wagered: profile.total_wagered + bet_amount,
-        total_profit: profile.total_profit + profit
+        total_wagered: supabase.raw(`total_wagered + ${bet_amount}`),
+        total_profit: supabase.raw(`total_profit + ${profit}`)
       })
       .eq('id', user.id)
 

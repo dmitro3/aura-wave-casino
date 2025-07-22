@@ -10,8 +10,8 @@ import { UserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import CoinFlipAnimation from './CoinflipStreak/CoinFlipAnimation';
 import StreakTracker from './CoinflipStreak/StreakTracker';
-import MultiplierDisplay from './CoinflipStreak/MultiplierDisplay';
-import StreakFeed from './CoinflipStreak/StreakFeed';
+import PayoutDisplay from './CoinflipStreak/PayoutDisplay';
+import LiveCoinflipFeed from './CoinflipStreak/LiveCoinflipFeed';
 
 interface CoinflipGameProps {
   userData: UserProfile;
@@ -467,20 +467,21 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
         </CardContent>
       </Card>
 
-      {/* Multiplier Display - Only show during active bet */}
+      {/* Payout Display - Only show during active bet */}
       {gameState.hasActiveBet && (
-        <MultiplierDisplay
+        <PayoutDisplay
           currentMultiplier={gameState.currentMultiplier}
           nextMultiplier={nextMultiplier}
           betAmount={gameState.betAmount}
           currentPayout={gameState.currentPayout}
           nextPayout={nextPayout}
           streak={gameState.streak.length}
+          gamePhase={gameState.gamePhase}
         />
       )}
 
-      {/* Live High Streak Feed */}
-      <StreakFeed />
+      {/* Live Coinflip Feed */}
+      <LiveCoinflipFeed />
     </div>
   );
 }

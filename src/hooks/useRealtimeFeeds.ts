@@ -13,6 +13,8 @@ export interface LiveBetFeed {
   multiplier?: number;
   game_data?: any;
   created_at: string;
+  streak_length?: number;
+  action?: string;
 }
 
 export interface CrashRound {

@@ -51,11 +51,11 @@ export default function CoinFlipAnimation({
   const getAnimationClass = () => {
     switch (animationState) {
       case 'flipping':
-        return 'animate-coin-flip';
+        return 'animate-coin-flip-smooth';
       case 'landing':
-        return 'animate-pulse';
+        return 'animate-coin-land';
       case 'complete':
-        return 'animate-bounce';
+        return 'animate-coin-bounce';
       default:
         return '';
     }
@@ -85,13 +85,14 @@ export default function CoinFlipAnimation({
           className={`
             ${sizeClasses[size]} 
             rounded-full 
-            gradient-primary 
+            bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600
             flex items-center justify-center 
             font-bold text-white 
             shadow-2xl 
             relative z-10
+            border-4 border-yellow-300
             ${getAnimationClass()}
-            ${animationState === 'complete' ? 'shadow-glow' : ''}
+            ${animationState === 'complete' ? 'shadow-[0_0_40px_rgba(251,191,36,0.6)]' : ''}
           `}
           style={{
             transformStyle: 'preserve-3d',
@@ -105,7 +106,7 @@ export default function CoinFlipAnimation({
           <div className={`
             absolute inset-0 ${sizeClasses[size]} 
             rounded-full 
-            bg-primary/30 
+            bg-yellow-400/30 
             animate-pulse 
             blur-lg
           `} />
