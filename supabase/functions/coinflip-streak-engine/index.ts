@@ -132,14 +132,25 @@ serve(async (req) => {
       console.log(`❌ Loss! Streak reset, Lost: $${bet_amount}`)
     }
 
+    // Get current user stats for calculations
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('balance, total_wagered, total_profit')
+      .eq('id', user.id)
+      .single()
+
+    if (userError || !userData) {
+      throw new Error('Failed to get user data')
+    }
+
     // Update user balance
-    const newBalance = profile.balance + profit
+    const newBalance = userData.balance + profit
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
         balance: newBalance,
-        total_wagered: supabase.raw(`total_wagered + ${bet_amount}`),
-        total_profit: supabase.raw(`total_profit + ${profit}`)
+        total_wagered: userData.total_wagered + bet_amount,
+        total_profit: userData.total_profit + profit
       })
       .eq('id', user.id)
 

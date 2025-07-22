@@ -3,25 +3,46 @@
   backface-visibility: hidden;
 }
 
-/* Enhanced coin flip animation with physics */
-@keyframes coinFlip {
+/* Smooth coin flip animation spinning on edge */
+@keyframes coinFlipSmooth {
   0% { 
-    transform: rotateY(0deg) translateY(0px) scale(1); 
+    transform: rotateY(0deg) translateY(0px) scale(1);
   }
-  20% { 
-    transform: rotateY(720deg) translateY(-30px) scale(1.1); 
+  25% { 
+    transform: rotateY(900deg) translateY(-20px) scale(1.05);
   }
-  40% { 
-    transform: rotateY(1440deg) translateY(-45px) scale(1.15); 
+  50% { 
+    transform: rotateY(1800deg) translateY(-30px) scale(1.1);
   }
-  60% { 
-    transform: rotateY(2160deg) translateY(-35px) scale(1.1); 
-  }
-  80% { 
-    transform: rotateY(2880deg) translateY(-15px) scale(1.05); 
+  75% { 
+    transform: rotateY(2700deg) translateY(-20px) scale(1.05);
   }
   100% { 
-    transform: rotateY(3600deg) translateY(0px) scale(1); 
+    transform: rotateY(3600deg) translateY(0px) scale(1);
+  }
+}
+
+@keyframes coinLand {
+  0% { 
+    transform: rotateY(3600deg) translateY(0px) scale(1);
+  }
+  50% { 
+    transform: rotateY(3630deg) translateY(-5px) scale(1.02);
+  }
+  100% { 
+    transform: rotateY(3600deg) translateY(0px) scale(1);
+  }
+}
+
+@keyframes coinBounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-10px) scale(1.05);
+  }
+  60% {
+    transform: translateY(-5px) scale(1.02);
   }
 }
 
@@ -41,8 +62,16 @@
   }
 }
 
-.animate-coin-flip {
-  animation: coinFlip 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+.animate-coin-flip-smooth {
+  animation: coinFlipSmooth 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.animate-coin-land {
+  animation: coinLand 0.6s ease-out;
+}
+
+.animate-coin-bounce {
+  animation: coinBounce 1s ease-out;
 }
 
 .animate-streak-glow {
