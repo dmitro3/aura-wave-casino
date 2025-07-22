@@ -36,15 +36,24 @@ export function UserLevelDisplay({ username, showXP = false, size = 'sm', classN
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <ProfileBorder level={stats.current_level} size={size}>
-        <div className={`${sizeClasses[size]} bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs`}>
-          {stats.current_level >= 100 ? (
-            <Crown className="w-4 h-4" />
-          ) : (
-            stats.current_level
-          )}
-        </div>
-      </ProfileBorder>
+      <div className="relative">
+        <ProfileBorder level={stats.current_level} size={size}>
+          <div className={`${sizeClasses[size]} rounded-full overflow-hidden relative`}>
+            {/* Avatar with proper sizing */}
+            <img 
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`}
+              alt={`${username} avatar`}
+              className="w-full h-full object-cover"
+            />
+            {/* Level overlay */}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-1 py-0.5">
+              <span className="text-white text-xs font-bold block text-center leading-none">
+                {stats.current_level >= 100 ? <Crown className="w-3 h-3 mx-auto" /> : stats.current_level}
+              </span>
+            </div>
+          </div>
+        </ProfileBorder>
+      </div>
       
       <div className="flex flex-col">
         <div className="flex items-center gap-2">

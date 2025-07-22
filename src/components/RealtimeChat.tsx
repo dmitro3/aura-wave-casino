@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import ClickableUsername from '@/components/ClickableUsername';
+import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { ProfileBorder } from '@/components/ProfileBorder';
 import { Badge } from '@/components/ui/badge';
 
@@ -178,22 +179,24 @@ export const RealtimeChat = () => {
                       </Avatar>
                     </ProfileBorder>
                     
-                    <div className={`flex-1 min-w-0 ${isOwnMessage ? 'text-right' : ''}`}>
-                       <div className={`flex items-center gap-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
-                         <ClickableUsername 
-                           username={msg.username}
-                           className={`font-medium text-sm ${isOwnMessage ? 'text-primary' : ''}`}
-                         />
-                        <Badge variant="outline" className="text-xs px-1 py-0">
-                          LVL {msg.user_level}
-                        </Badge>
-                        {badge && (
-                          <div className={`flex items-center gap-1 text-xs ${badge.color}`}>
-                            <badge.icon className="w-3 h-3" />
-                            <span>{badge.label}</span>
-                          </div>
-                        )}
-                      </div>
+                     <div className={`flex-1 min-w-0 ${isOwnMessage ? 'text-right' : ''}`}>
+                        <div className={`flex items-center gap-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
+                          <ClickableUsername 
+                            username={msg.username}
+                            className={`font-medium text-sm ${isOwnMessage ? 'text-primary' : ''}`}
+                          >
+                            {msg.username}
+                          </ClickableUsername>
+                         <Badge variant="outline" className="text-xs px-1 py-0">
+                           LVL {msg.user_level}
+                         </Badge>
+                         {badge && (
+                           <div className={`flex items-center gap-1 text-xs ${badge.color}`}>
+                             <badge.icon className="w-3 h-3" />
+                             <span>{badge.label}</span>
+                           </div>
+                         )}
+                       </div>
                       
                       <div className={`p-2 rounded-lg text-sm break-words max-w-xs ${
                         isOwnMessage 

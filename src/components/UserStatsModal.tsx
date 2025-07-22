@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { UserProgressSection } from './UserProgressSection';
 
 interface Achievement {
   id: string;
@@ -102,11 +103,12 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
         return;
       }
 
-      // Fetch game stats
-      const { data: gameStats, error: gameStatsError } = await supabase
-        .from('game_stats')
+      // Fetch comprehensive user level stats
+      const { data: levelStats, error: levelStatsError } = await supabase
+        .from('user_level_stats')
         .select('*')
-        .eq('user_id', profile.id);
+        .eq('user_id', profile.id)
+        .single();
 
       // Fetch recent games
       const { data: recentGames, error: recentGamesError } = await supabase
@@ -149,23 +151,40 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
         unlocked_at: ua.unlocked_at
       })) || [];
 
+      // Use level stats if available, otherwise fallback to profile
       const stats: UserStats = {
-        ...profile,
-        gameStats: {},
+        id: profile.id,
+        username: profile.username,
+        registration_date: profile.registration_date,
+        current_level: levelStats?.current_level || profile.current_level || 1,
+        lifetime_xp: levelStats?.lifetime_xp || profile.lifetime_xp || 0,
+        current_xp: levelStats?.current_level_xp || profile.current_xp || 0,
+        xp_to_next_level: levelStats?.xp_to_next_level || profile.xp_to_next_level || 100,
+        badges: profile.badges || [],
+        total_wagered: levelStats?.total_wagered || profile.total_wagered || 0,
+        total_profit: levelStats?.total_profit || profile.total_profit || 0,
+        gameStats: {
+          coinflip: levelStats ? {
+            wins: levelStats.coinflip_wins,
+            losses: levelStats.coinflip_games - levelStats.coinflip_wins,
+            total_profit: levelStats.coinflip_profit
+          } : undefined,
+          crash: levelStats ? {
+            wins: levelStats.crash_wins,
+            losses: levelStats.crash_games - levelStats.crash_wins,
+            total_profit: levelStats.crash_profit
+          } : undefined,
+          tower: levelStats ? {
+            wins: levelStats.tower_wins,
+            losses: levelStats.tower_games - levelStats.tower_wins,
+            total_profit: levelStats.tower_profit
+          } : undefined
+        },
         recentGames: recentGames || [],
         achievements,
         tipsSent,
         tipsReceived
       };
-
-      // Process game stats
-      gameStats?.forEach(stat => {
-        stats.gameStats[stat.game_type as keyof typeof stats.gameStats] = {
-          wins: stat.wins,
-          losses: stat.losses,
-          total_profit: stat.total_profit
-        };
-      });
 
       setUserStats(stats);
     } catch (error) {
@@ -266,66 +285,19 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
         ) : userStats ? (
           <ScrollArea className="max-h-[70vh]">
             <div className="space-y-6">
-              {/* Level & XP */}
+              {/* User Progress Section - reuse the component */}
+              <UserProgressSection />
+              
+              {/* Social Stats & Tipping */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Star className="w-5 h-5" />
-                    Level & Progress
+                    <Heart className="w-5 h-5" />
+                    Social & Tipping
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xl font-bold">Level {userStats.current_level}</span>
-                      <Badge variant="secondary">
-                        {userStats.current_xp} / {userStats.current_xp + userStats.xp_to_next_level} XP
-                      </Badge>
-                    </div>
-                    <div className="w-full bg-secondary rounded-full h-2">
-                      <div 
-                        className="bg-primary h-2 rounded-full transition-all duration-300"
-                        style={{ 
-                          width: `${(userStats.current_xp / (userStats.current_xp + userStats.xp_to_next_level)) * 100}%` 
-                        }}
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {userStats.badges.map((badge, index) => (
-                        <Badge key={index} variant="outline">
-                          {badge}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Overall Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Overall Statistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold">${userStats.total_wagered.toFixed(2)}</div>
-                      <div className="text-sm text-muted-foreground">Total Wagered</div>
-                    </div>
-                    <div className="text-center">
-                      <div className={`text-2xl font-bold ${userStats.total_profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {userStats.total_profit >= 0 ? '+' : ''}${userStats.total_profit.toFixed(2)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Total Profit</div>
-                    </div>
-                  </div>
-                  
-                  {/* Social Stats */}
-                  <Separator className="my-4" />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="text-center">
                       <div className="text-xl font-bold text-blue-400">${userStats.tipsSent.toFixed(2)}</div>
                       <div className="text-sm text-muted-foreground">Tips Sent</div>

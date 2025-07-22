@@ -16,6 +16,7 @@ import { RouletteGame } from '@/components/RouletteGame';
 import { TowerGame } from '@/components/TowerGame';
 import NotificationsPanel from '@/components/NotificationsPanel';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
+import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
 
 export default function Index() {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -245,6 +246,9 @@ export default function Index() {
         onClose={() => setShowProfile(false)}
         userData={userData}
       />
+
+      {/* Live Level-Up Notifications */}
+      <LiveLevelUpNotification />
     </div>
   );
 }
