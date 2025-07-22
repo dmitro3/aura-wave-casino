@@ -25,21 +25,18 @@ export default function StreakTracker({
   betAmount = 0
 }: StreakTrackerProps) {
   return (
-    <div className="w-full">
-      <div className="text-center mb-4">
-        <h3 className="text-lg font-semibold text-foreground">
-          Win Streak: {streak.length}
+    <div className="glass rounded-lg p-4">
+      <div className="text-center mb-3">
+        <h3 className="text-sm font-semibold text-foreground">
+          Streak Progress ({streak.length}/{maxStreak})
         </h3>
-        <p className="text-sm text-muted-foreground">
-          {maxStreak - streak.length} slots remaining
-        </p>
       </div>
       
-      <div className="flex justify-center space-x-2 overflow-x-auto py-2">
+      <div className="flex justify-center items-center space-x-1 overflow-x-auto pb-8">
         {Array.from({ length: maxStreak }, (_, index) => {
           const isWon = index < streak.length;
           const streakResult = streak[index];
-          const isLatest = index === streak.length - 1;
+          const isNext = index === streak.length;
           const multiplier = calculateMultiplier(index);
           const potentialPayout = betAmount * multiplier;
           
@@ -47,45 +44,37 @@ export default function StreakTracker({
             <div
               key={index}
               className={`
-                relative flex-shrink-0 w-12 h-12 rounded-full border-2 transition-all duration-300
+                relative flex-shrink-0 w-8 h-8 rounded-full border-2 transition-all duration-300 flex items-center justify-center
                 ${isWon 
-                  ? 'border-primary bg-primary/20 shadow-glow' 
-                  : 'border-muted bg-muted/10'
+                  ? 'border-success bg-success/20 text-success' 
+                  : isNext && isAnimating
+                  ? 'border-warning bg-warning/20 text-warning animate-pulse'
+                  : 'border-muted bg-muted/10 text-muted-foreground'
                 }
-                ${isLatest && isAnimating ? 'animate-pulse' : ''}
               `}
             >
               {isWon && streakResult ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <CoinFlipAnimation
-                    isFlipping={false}
-                    result={streakResult.result}
-                    size="small"
-                  />
+                <div className="text-xs">
+                  {streakResult.result === 'heads' ? '👑' : '⚡'}
                 </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-bold">
+                <div className="text-xs font-bold">
                   {index + 1}
                 </div>
               )}
               
-              {/* Multiplier and potential payout display */}
-              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-                <div className="text-xs font-medium text-primary">
-                  {multiplier.toFixed(2)}x
+              {/* Potential payout display below */}
+              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-center whitespace-nowrap">
+                <div className="text-xs font-medium text-success">
+                  ${potentialPayout ? Math.round(potentialPayout) : '0'}
                 </div>
-                {betAmount > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    ${potentialPayout.toFixed(2)}
-                  </div>
-                )}
               </div>
               
               {/* Connecting line */}
               {index < maxStreak - 1 && (
                 <div className={`
-                  absolute top-1/2 -right-1 w-2 h-0.5 transform -translate-y-1/2
-                  ${index < streak.length - 1 ? 'bg-primary' : 'bg-muted'}
+                  absolute top-1/2 -right-0.5 w-1 h-0.5 transform -translate-y-1/2
+                  ${index < streak.length ? 'bg-success' : 'bg-muted/30'}
                   transition-colors duration-300
                 `} />
               )}

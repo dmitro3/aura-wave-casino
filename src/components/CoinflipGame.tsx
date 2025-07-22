@@ -119,6 +119,14 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
     try {
       const clientSeed = generateClientSeed();
       
+      console.log('Calling coinflip engine with:', {
+        bet_amount: gameState.betAmount,
+        selected_side: gameState.selectedSide,
+        client_seed: clientSeed,
+        streak: gameState.streak.length,
+        current_multiplier: gameState.currentMultiplier
+      });
+      
       // Call server-side coinflip engine
       const { data, error } = await supabase.functions.invoke('coinflip-streak-engine', {
         body: {
@@ -129,6 +137,8 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           current_multiplier: gameState.currentMultiplier
         }
       });
+
+      console.log('Coinflip engine response:', { data, error });
 
       if (error) throw error;
 
@@ -153,9 +163,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
             ...prev,
             streak: newStreak,
             currentMultiplier: data.multiplier,
-            currentPayout: gameState.betAmount * data.multiplier,
-            nextMultiplier,
-            nextPayout: gameState.betAmount * nextMultiplier
+            currentPayout: gameState.betAmount * data.multiplier
           }));
 
           toast({
@@ -165,7 +173,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           });
         } else {
           // Reset game
-          handleGameEnd('lost', data.profit);
+          handleGameEnd('lost', data.profit || -gameState.betAmount);
           
           toast({
             title: "You Lost!",
@@ -174,8 +182,10 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           });
         }
 
-        // Update balance from server response
-        onUpdateUser({ balance: data.new_balance });
+        // Update balance from server response if available
+        if (data.new_balance !== undefined) {
+          onUpdateUser({ balance: data.new_balance });
+        }
         
       }, 2500); // Wait for coin animation
 
@@ -184,7 +194,8 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       setGameState(prev => ({
         ...prev,
         isFlipping: false,
-        gamePhase: 'betting'
+        gamePhase: 'setup',
+        hasActiveBet: false
       }));
       
       toast({
@@ -240,10 +251,8 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       ...prev,
       currentMultiplier: nextMultiplier,
       currentPayout: gameState.betAmount * nextMultiplier,
-      gamePhase: 'flipping'
+      gamePhase: 'betting'
     }));
-
-    handleFlip();
   };
 
   const handleGameEnd = (reason: 'lost' | 'cashed_out', profit: number) => {
@@ -270,7 +279,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
       <Card className="glass border-0 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
         <CardHeader className="relative">
-          <CardTitle className="flex items-center space-x-2">
+          <CardTitle className="flex items-center space-x-2 text-lg">
             <Coins className="w-5 h-5 text-primary" />
             <span>Coinflip Streak</span>
             {gameState.hasActiveBet && (
@@ -281,7 +290,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent className="relative space-y-6">
+        <CardContent className="relative space-y-4">
           {/* Coin Animation */}
           <CoinFlipAnimation
             isFlipping={gameState.isFlipping}
