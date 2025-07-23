@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target, Building } from 'lucide-react';
+import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target, Building, Gift } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import AuthModal from '@/components/AuthModal';
@@ -18,12 +18,14 @@ import NotificationsPanel from '@/components/NotificationsPanel';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Index() {
   const { user, signOut, loading: authLoading } = useAuth();
   const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
@@ -112,6 +114,16 @@ export default function Index() {
                   ${userData.balance.toFixed(2)}
                 </span>
               </div>
+
+              {/* Rewards Button */}
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/rewards')}
+                className="glass border-0 hover:glow-primary transition-smooth"
+              >
+                <Gift className="w-4 h-4 mr-2" />
+                Rewards
+              </Button>
 
               {/* Enhanced Level Display */}
               <UserLevelDisplay 

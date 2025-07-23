@@ -1,0 +1,225 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Gift, Package, Trophy, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCaseRewards } from '@/hooks/useCaseRewards';
+import { CaseOpeningModal } from '@/components/CaseOpeningModal';
+import { useToast } from '@/hooks/use-toast';
+
+export default function Rewards() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { availableCases, openedCases, loading, openCase } = useCaseRewards();
+  const [selectedCase, setSelectedCase] = useState<string | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<number>(1);
+  const { toast } = useToast();
+
+  const handleOpenCase = (caseId: string, level: number) => {
+    setSelectedCase(caseId);
+    setSelectedLevel(level);
+  };
+
+  const handleCaseOpened = async (reward: any) => {
+    toast({
+      title: `${reward.rarity.toUpperCase()} Reward!`,
+      description: `You won $${reward.reward_amount}!`,
+    });
+    setSelectedCase(null);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case 'common': return 'bg-gray-500';
+      case 'rare': return 'bg-blue-500';
+      case 'epic': return 'bg-purple-500';
+      case 'legendary': return 'bg-orange-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="glass p-8 rounded-2xl text-center">
+          <div className="text-2xl mb-4">📦</div>
+          <p className="text-muted-foreground">Loading your rewards...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen p-4">
+      {/* Header */}
+      <header className="mb-6">
+        <div className="glass rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/')}
+                className="glass border-0 hover:glow-primary transition-smooth"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Games
+              </Button>
+              <h1 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
+                Reward Cases
+              </h1>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="glass border-0">
+            <CardContent className="p-6 text-center">
+              <Package className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <div className="text-2xl font-bold">{availableCases.length}</div>
+              <div className="text-sm text-muted-foreground">Available Cases</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="glass border-0">
+            <CardContent className="p-6 text-center">
+              <Gift className="w-8 h-8 mx-auto mb-2 text-accent" />
+              <div className="text-2xl font-bold">{openedCases.length}</div>
+              <div className="text-sm text-muted-foreground">Cases Opened</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="glass border-0">
+            <CardContent className="p-6 text-center">
+              <Trophy className="w-8 h-8 mx-auto mb-2 text-success" />
+              <div className="text-2xl font-bold">
+                ${openedCases.reduce((sum, c) => sum + c.reward_amount, 0).toFixed(2)}
+              </div>
+              <div className="text-sm text-muted-foreground">Total Earned</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Available Cases */}
+        <Card className="glass border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Package className="w-5 h-5 text-primary" />
+              <span>Available Cases</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {availableCases.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Cases Available</h3>
+                <p className="text-muted-foreground">
+                  Level up to earn reward cases! You get a case every 25 levels.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableCases.map((caseReward) => (
+                  <Card key={caseReward.id} className="glass border-0 hover:glow-primary transition-smooth cursor-pointer">
+                    <CardContent className="p-6 text-center space-y-4">
+                      <div className="relative">
+                        <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                          <Gift className="w-10 h-10 text-white" />
+                        </div>
+                        <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                          LV {caseReward.level_unlocked}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-semibold">Level {caseReward.level_unlocked} Case</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Earned on {formatDate(caseReward.created_at)}
+                        </p>
+                      </div>
+                      
+                      <Button 
+                        onClick={() => handleOpenCase(caseReward.id, caseReward.level_unlocked)}
+                        className="w-full gradient-primary hover:glow-primary"
+                      >
+                        <Gift className="w-4 h-4 mr-2" />
+                        Open Case
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Case History */}
+        <Card className="glass border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="w-5 h-5 text-accent" />
+              <span>Case History</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {openedCases.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">No Cases Opened Yet</h3>
+                <p className="text-muted-foreground">
+                  Your opened cases will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {openedCases.map((caseReward) => (
+                  <div key={caseReward.id} className="flex items-center justify-between p-4 glass rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-3 h-3 rounded-full ${getRarityColor(caseReward.rarity)}`} />
+                      <div>
+                        <div className="font-semibold">Level {caseReward.level_unlocked} Case</div>
+                        <div className="text-sm text-muted-foreground">
+                          {caseReward.rarity.charAt(0).toUpperCase() + caseReward.rarity.slice(1)} • 
+                          Opened {formatDate(caseReward.opened_at || caseReward.created_at)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <div className="font-semibold text-success">
+                        +${caseReward.reward_amount.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Case Opening Modal */}
+      {selectedCase && (
+        <CaseOpeningModal
+          isOpen={!!selectedCase}
+          onClose={() => setSelectedCase(null)}
+          caseId={selectedCase}
+          level={selectedLevel}
+          onCaseOpened={handleCaseOpened}
+        />
+      )}
+    </div>
+  );
+}
