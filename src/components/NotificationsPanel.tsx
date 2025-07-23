@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import ClickableUsername from './ClickableUsername';
-import { CaseNotification } from './CaseNotification';
+import { CaseRewardNotification } from './CaseRewardNotification';
 
 interface Notification {
   id: string;
@@ -243,10 +243,10 @@ export default function NotificationsPanel() {
                 // Special handling for case notifications
                 if (notification.type === 'level_reward_case') {
                   return (
-                    <CaseNotification
+                    <CaseRewardNotification
                       key={notification.id}
                       notification={notification}
-                      onRefresh={fetchNotifications}
+                      onDismiss={() => markAsRead(notification.id)}
                     />
                   );
                 }

@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.tower-engine]
 verify_jwt = false
+
+[functions.case-opening-engine]
+verify_jwt = true

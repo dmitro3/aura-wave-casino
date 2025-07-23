@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Gift, Package, Trophy, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCaseRewards } from '@/hooks/useCaseRewards';
-import { CaseOpeningModal } from '@/components/CaseOpeningModal';
+import { EnhancedCaseOpeningModal } from '@/components/EnhancedCaseOpeningModal';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Rewards() {
@@ -24,7 +24,7 @@ export default function Rewards() {
   const handleCaseOpened = async (reward: any) => {
     toast({
       title: `${reward.rarity.toUpperCase()} Reward!`,
-      description: `You won $${reward.reward_amount}!`,
+      description: `You won $${reward.amount}!`,
     });
     setSelectedCase(null);
   };
@@ -210,9 +210,9 @@ export default function Rewards() {
         </Card>
       </div>
 
-      {/* Case Opening Modal */}
+      {/* Enhanced Case Opening Modal */}
       {selectedCase && (
-        <CaseOpeningModal
+        <EnhancedCaseOpeningModal
           isOpen={!!selectedCase}
           onClose={() => setSelectedCase(null)}
           caseId={selectedCase}
