@@ -28,6 +28,7 @@ interface SpinnerItem {
   glow: string;
   icon: string;
   shimmer: boolean;
+  amount: number;
 }
 
 const rarityConfig = {
@@ -70,10 +71,13 @@ const rarityConfig = {
 };
 
 // Generate spinner items for the carousel effect
-const generateSpinnerItems = (count: number): SpinnerItem[] => {
+const generateSpinnerItems = (count: number, level: number): SpinnerItem[] => {
   const items: SpinnerItem[] = [];
   const rarities: (keyof typeof rarityConfig)[] = ['common', 'rare', 'epic', 'legendary'];
   const weights = [60, 25, 12, 3]; // Probability weights
+  
+  // Base amount for calculations
+  const baseAmount = Math.max(10, level * 2);
   
   for (let i = 0; i < count; i++) {
     // Weighted random selection
@@ -89,12 +93,26 @@ const generateSpinnerItems = (count: number): SpinnerItem[] => {
       }
     }
     
+    // Calculate amount based on rarity and level
+    const multipliers = {
+      common: { min: 0.5, max: 2.5 },
+      rare: { min: 3, max: 12 },
+      epic: { min: 15, max: 40 },
+      legendary: { min: 50, max: 100 }
+    };
+    
+    const config = multipliers[selectedRarity];
+    const min = Math.round(baseAmount * config.min);
+    const max = Math.round(baseAmount * config.max);
+    const amount = Math.round(min + Math.random() * (max - min));
+    
     items.push({
       rarity: selectedRarity,
       color: rarityConfig[selectedRarity].color,
       glow: rarityConfig[selectedRarity].glow,
       icon: rarityConfig[selectedRarity].icon,
-      shimmer: ['epic', 'legendary'].includes(selectedRarity)
+      shimmer: ['epic', 'legendary'].includes(selectedRarity),
+      amount: amount
     });
   }
   return items;
@@ -110,7 +128,7 @@ export const EnhancedCaseOpeningModal = ({
   const [phase, setPhase] = useState<'ready' | 'opening' | 'spinning' | 'revealing' | 'complete'>('ready');
   const [reward, setReward] = useState<CaseReward | null>(null);
   const [isLocked, setIsLocked] = useState(false);
-  const [spinnerItems] = useState(() => generateSpinnerItems(200)); // More items for longer animation
+  const [spinnerItems, setSpinnerItems] = useState<SpinnerItem[]>([]);
   const [reelOffset, setReelOffset] = useState(0);
   const [animationStage, setAnimationStage] = useState<'fast' | 'slowing' | 'locked'>('fast');
   const { toast } = useToast();
@@ -132,22 +150,27 @@ export const EnhancedCaseOpeningModal = ({
 
       const rewardData = data.reward as CaseReward;
       
-      // Start spinning animation
-      setTimeout(() => {
-        setPhase('spinning');
-        
-        // Calculate target position based on winning item
-        const winningIndex = Math.floor(spinnerItems.length * 0.75); // Position winning item towards end
-        const winningItem: SpinnerItem = {
-          rarity: rewardData.rarity,
-          color: rarityConfig[rewardData.rarity].color,
-          glow: rarityConfig[rewardData.rarity].glow,
-          icon: rarityConfig[rewardData.rarity].icon,
-          shimmer: ['epic', 'legendary'].includes(rewardData.rarity)
-        };
-        
-        // Place winning item at target position
-        spinnerItems[winningIndex] = winningItem;
+        // Start spinning animation
+        setTimeout(() => {
+          setPhase('spinning');
+          
+          // Generate spinner items with the actual level
+          const items = generateSpinnerItems(200, level);
+          
+          // Calculate target position for the winning item (in the center)
+          const centerIndex = Math.floor(items.length / 2);
+          const winningItem: SpinnerItem = {
+            rarity: rewardData.rarity,
+            color: rarityConfig[rewardData.rarity].color,
+            glow: rarityConfig[rewardData.rarity].glow,
+            icon: rarityConfig[rewardData.rarity].icon,
+            shimmer: ['epic', 'legendary'].includes(rewardData.rarity),
+            amount: Math.round(rewardData.amount)
+          };
+          
+          // Place winning item at center position
+          items[centerIndex] = winningItem;
+          setSpinnerItems(items);
         
         // Fast spinning phase (2 seconds)
         setAnimationStage('fast');
@@ -164,7 +187,7 @@ export const EnhancedCaseOpeningModal = ({
           
           // Slowing phase (4-6 seconds with easing)
           setAnimationStage('slowing');
-          const targetOffset = winningIndex * 120 - 600; // Center winning item
+          const targetOffset = centerIndex * 120 - 600; // Center winning item
           let currentOffset = offset;
           const startTime = Date.now();
           const duration = 4500;
@@ -416,12 +439,17 @@ export const EnhancedCaseOpeningModal = ({
                           }}
                         >
                           {/* Item Icon */}
-                          <div className="text-3xl mb-1 text-white drop-shadow-lg">
+                          <div className="text-2xl mb-1 text-white drop-shadow-lg">
                             {item.icon}
                           </div>
                           
+                          {/* Dollar Amount */}
+                          <div className="text-sm font-bold text-white drop-shadow-lg">
+                            ${item.amount}
+                          </div>
+                          
                           {/* Rarity Indicator */}
-                          <div className="text-xs font-bold text-white/90 uppercase tracking-wider">
+                          <div className="text-xs font-bold text-white/70 uppercase tracking-wider">
                             {item.rarity.charAt(0)}
                           </div>
                           

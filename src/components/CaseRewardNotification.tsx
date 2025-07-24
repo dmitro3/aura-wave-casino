@@ -84,24 +84,24 @@ export const CaseRewardNotification = ({
 
   return (
     <>
-      <Card className="glass border border-primary/30 hover:glow-primary transition-smooth">
+      <Card className="glass border border-primary/30 hover:glow-primary transition-smooth max-w-md mx-auto">
         <CardContent className="p-4">
-          <div className="flex items-start gap-4">
-            <div className="p-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
-              <Gift className="w-6 h-6 text-white" />
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 p-2 rounded-full bg-gradient-to-br from-purple-500 to-pink-500">
+              <Gift className="w-5 h-5 text-white" />
             </div>
             
-            <div className="flex-1 space-y-2">
-              <h3 className="font-semibold text-lg">{notification.title}</h3>
-              <p className="text-muted-foreground">{notification.message}</p>
+            <div className="flex-1 min-w-0 space-y-2">
+              <h3 className="font-semibold text-base leading-tight">{notification.title}</h3>
+              <p className="text-muted-foreground text-sm leading-tight">{notification.message}</p>
               
-              <div className="flex gap-2 mt-3">
+              <div className="flex flex-col sm:flex-row gap-2 mt-3">
                 <Button 
                   onClick={handleOpenCase}
-                  className="gradient-primary hover:glow-primary text-white"
+                  className="gradient-primary hover:glow-primary text-white text-sm"
                   size="sm"
                 >
-                  <Gift className="w-4 h-4 mr-2" />
+                  <Gift className="w-3 h-3 mr-1" />
                   Open Level {notification.data.level || notification.data.new_level} Case
                 </Button>
                 
@@ -109,10 +109,10 @@ export const CaseRewardNotification = ({
                   onClick={handleViewRewards}
                   variant="outline"
                   size="sm"
-                  className="glass border-primary/30"
+                  className="glass border-primary/30 text-sm"
                 >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  View All Rewards
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  View All
                 </Button>
               </div>
             </div>
