@@ -173,25 +173,25 @@ export const EnhancedCaseOpeningModal = ({
           // Generate spinner items with the actual level
           const items = generateSpinnerItems(200, level);
           
-          // Calculate target position for the winning item (in the center)
-          const centerIndex = Math.floor(items.length / 2);
-          const winningItem: SpinnerItem = {
-            rarity: rewardData.rarity,
-            color: rarityConfig[rewardData.rarity].color,
-            glow: rarityConfig[rewardData.rarity].glow,
-            icon: rarityConfig[rewardData.rarity].icon,
-            shimmer: ['epic', 'legendary'].includes(rewardData.rarity),
-            amount: Math.round(rewardData.amount)
-          };
-          
-          // Place winning item at center position
-          items[centerIndex] = winningItem;
-          setSpinnerItems(items);
+        // Calculate target position for the winning item (in the center)
+        const centerIndex = Math.floor(items.length / 2);
+        const winningItem: SpinnerItem = {
+          rarity: rewardData.rarity,
+          color: rarityConfig[rewardData.rarity].color,
+          glow: rarityConfig[rewardData.rarity].glow,
+          icon: rarityConfig[rewardData.rarity].icon,
+          shimmer: ['epic', 'legendary'].includes(rewardData.rarity),
+          amount: Math.round(rewardData.amount)
+        };
+        
+        // Place winning item at center position
+        items[centerIndex] = winningItem;
+        setSpinnerItems(items);
         
         // Fast spinning phase (2 seconds)
         setAnimationStage('fast');
         let offset = 0;
-        const fastSpeed = 20;
+        const fastSpeed = 25;
         
         const fastSpin = setInterval(() => {
           offset += fastSpeed;
@@ -201,16 +201,16 @@ export const EnhancedCaseOpeningModal = ({
         setTimeout(() => {
           clearInterval(fastSpin);
           
-          // Slowing phase (4-6 seconds with easing)
+          // Smooth deceleration phase (5 seconds with better easing)
           setAnimationStage('slowing');
-          const targetOffset = centerIndex * 120 - 600; // Center winning item
+          const targetOffset = (centerIndex * 120) - 600; // Perfectly center the winning item
           let currentOffset = offset;
           const startTime = Date.now();
-          const duration = 4500;
+          const duration = 5000; // 5 seconds for smooth deceleration
           
           const easingFunction = (t: number) => {
-            // Cubic bezier easing for smooth deceleration
-            return 1 - Math.pow(1 - t, 4);
+            // Cubic bezier easing for very smooth deceleration
+            return 1 - Math.pow(1 - t, 5);
           };
           
           const slowSpin = setInterval(() => {
@@ -218,7 +218,7 @@ export const EnhancedCaseOpeningModal = ({
             const progress = Math.min(elapsed / duration, 1);
             const easedProgress = easingFunction(progress);
             
-            const newOffset = offset + (targetOffset - offset) * easedProgress;
+            const newOffset = currentOffset + (targetOffset - currentOffset) * easedProgress;
             setReelOffset(newOffset);
             
             if (progress >= 1) {
@@ -263,7 +263,18 @@ export const EnhancedCaseOpeningModal = ({
     onClose();
   };
 
-  const getRewardRange = (level: number, rarity: string) => {
+  const getRewardRange = (level: number, rarity: string, isFreeCase?: boolean) => {
+    if (isFreeCase) {
+      // Free case ranges
+      const freeRanges = {
+        common: { min: 500, max: 2500 },
+        rare: { min: 2500, max: 10000 },
+        epic: { min: 10000, max: 50000 }
+      };
+      return freeRanges[rarity as keyof typeof freeRanges] || { min: 500, max: 2500 };
+    }
+    
+    // Level reward cases
     const baseAmount = Math.max(1, level * 0.1);
     const multipliers = {
       common: { min: 0.5, max: 2.5 },
@@ -316,15 +327,57 @@ export const EnhancedCaseOpeningModal = ({
           {(phase === 'ready' || phase === 'opening') && (
             <div className="text-center space-y-6">
               <div className="relative mx-auto w-48 h-48">
+                {/* Custom case designs based on type */}
                 <Card className={`
-                  w-full h-full flex items-center justify-center
+                  w-full h-full flex items-center justify-center relative overflow-hidden
                   ${phase === 'opening' ? 'animate-pulse' : ''}
-                  gradient-primary border-2 border-primary/30
+                  ${isFreeCase 
+                    ? freeCaseType === 'common' ? 'bg-gradient-to-br from-gray-400 to-gray-600' 
+                      : freeCaseType === 'rare' ? 'bg-gradient-to-br from-blue-400 to-blue-600'
+                      : 'bg-gradient-to-br from-purple-400 to-purple-600'
+                    : 'gradient-primary'
+                  } border-2 ${
+                    isFreeCase 
+                      ? freeCaseType === 'common' ? 'border-gray-400/50' 
+                        : freeCaseType === 'rare' ? 'border-blue-400/50'
+                        : 'border-purple-400/50'
+                      : 'border-primary/30'
+                  }
                   ${phase === 'opening' ? 'animate-bounce' : ''}
                 `}>
                   <CardContent className="p-0">
-                    <div className="text-center text-white">
-                      <Gift className={`w-24 h-24 mx-auto mb-4 ${phase === 'opening' ? 'animate-spin' : ''}`} />
+                    <div className="text-center text-white relative z-10">
+                      {/* Custom icons based on case type */}
+                      {isFreeCase ? (
+                        <>
+                          {freeCaseType === 'common' && (
+                            <div className="relative">
+                              <div className="w-24 h-24 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                <span className="text-4xl">💰</span>
+                              </div>
+                            </div>
+                          )}
+                          {freeCaseType === 'rare' && (
+                            <div className="relative">
+                              <div className="w-24 h-24 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                <span className="text-4xl">💎</span>
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse rounded-full" />
+                            </div>
+                          )}
+                          {freeCaseType === 'epic' && (
+                            <div className="relative">
+                              <div className="w-24 h-24 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                <span className="text-4xl">⭐</span>
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-300/40 to-transparent animate-pulse rounded-full" />
+                              <div className="absolute -inset-2 border-2 border-yellow-300/50 rounded-full animate-spin" />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <Gift className={`w-24 h-24 mx-auto mb-4 ${phase === 'opening' ? 'animate-spin' : ''}`} />
+                      )}
                       <div className="text-xl font-bold">
                         {isFreeCase ? freeCaseType?.charAt(0).toUpperCase() + freeCaseType?.slice(1) : `Level ${level}`}
                       </div>
@@ -348,6 +401,10 @@ export const EnhancedCaseOpeningModal = ({
                       : `Ready to open your Level ${level} case?`
                     }
                   </p>
+                  {/* Show potential winnings */}
+                  <div className="text-sm text-muted-foreground">
+                    Potential winnings: ${getRewardRange(level, isFreeCase ? freeCaseType! : 'common', isFreeCase).min.toLocaleString()} - ${getRewardRange(level, isFreeCase ? freeCaseType! : 'common', isFreeCase).max.toLocaleString()}
+                  </div>
                   <Button 
                     onClick={openCase}
                     disabled={isLocked}

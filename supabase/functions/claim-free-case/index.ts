@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Record the claim
+    // Record the claim in free_case_claims table
     const { error: claimError } = await supabase
       .from('free_case_claims')
       .insert({
@@ -181,6 +181,22 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: false, error: 'Failed to record claim' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Also record in case_rewards table for history tracking
+    const { error: historyError } = await supabase
+      .from('case_rewards')
+      .insert({
+        user_id: user.id,
+        level_unlocked: 0, // Use 0 for free cases
+        rarity: caseType,
+        reward_amount: rewardAmount,
+        opened_at: new Date().toISOString()
+      });
+
+    if (historyError) {
+      console.error('Error recording case history:', historyError);
+      // Don't fail the whole operation for history error, just log it
     }
 
     console.log(`✅ Free case claimed successfully! User received $${rewardAmount}`);

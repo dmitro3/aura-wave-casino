@@ -266,7 +266,12 @@ export default function Rewards() {
                     <div className="flex items-center space-x-4">
                       <div className={`w-3 h-3 rounded-full ${getRarityColor(caseReward.rarity)}`} />
                       <div>
-                        <div className="font-semibold">Level {caseReward.level_unlocked} Case</div>
+                        <div className="font-semibold">
+                          {caseReward.level_unlocked === 0 
+                            ? `${caseReward.rarity.charAt(0).toUpperCase() + caseReward.rarity.slice(1)} Free Case`
+                            : `Level ${caseReward.level_unlocked} Case`
+                          }
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {caseReward.rarity.charAt(0).toUpperCase() + caseReward.rarity.slice(1)} • 
                           Opened {formatDate(caseReward.opened_at || caseReward.created_at)}
