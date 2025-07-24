@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Gift, Package, Trophy, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCaseRewards } from '@/hooks/useCaseRewards';
+import { useFreeCases } from '@/hooks/useFreeCases';
 import { EnhancedCaseOpeningModal } from '@/components/EnhancedCaseOpeningModal';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,6 +13,7 @@ export default function Rewards() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { availableCases, openedCases, loading, openCase } = useCaseRewards();
+  const { caseStatuses, claiming, claimFreeCase, formatTimeUntil } = useFreeCases();
   const [selectedCase, setSelectedCase] = useState<string | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const { toast } = useToast();
@@ -111,6 +113,76 @@ export default function Rewards() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Free Cases */}
+        <Card className="glass border-0">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Gift className="w-5 h-5 text-success" />
+              <span>Free Cases</span>
+              <span className="text-sm text-muted-foreground font-normal">• Always Available</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {caseStatuses.map((status) => (
+                <Card key={status.config.type} className="glass border-0 hover:glow-primary transition-smooth">
+                  <CardContent className="p-6 text-center space-y-4">
+                    <div className="relative">
+                      <div className={`w-16 h-16 mx-auto bg-gradient-to-br ${status.config.color} rounded-lg flex items-center justify-center`}>
+                        <span className="text-2xl">{status.config.icon}</span>
+                      </div>
+                      <div className={`absolute -top-2 -right-2 text-xs px-2 py-1 rounded-full font-bold ${
+                        status.config.type === 'common' ? 'bg-gray-500 text-white' :
+                        status.config.type === 'rare' ? 'bg-blue-500 text-white' :
+                        'bg-purple-500 text-white'
+                      }`}>
+                        {status.config.type.toUpperCase()}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold">{status.config.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        ${status.config.minAmount.toLocaleString()} - ${status.config.maxAmount.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {status.config.cooldownMinutes} minute cooldown
+                      </p>
+                    </div>
+                    
+                    <Button 
+                      onClick={() => claimFreeCase(status.config.type)}
+                      disabled={!status.canClaim || claiming === status.config.type}
+                      className={`w-full ${
+                        status.canClaim 
+                          ? 'gradient-primary hover:glow-primary' 
+                          : 'bg-muted text-muted-foreground cursor-not-allowed'
+                      }`}
+                    >
+                      {claiming === status.config.type ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Claiming...
+                        </>
+                      ) : status.canClaim ? (
+                        <>
+                          <Gift className="w-4 h-4 mr-2" />
+                          Claim Free
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4 mr-2" />
+                          {formatTimeUntil(status.timeUntilClaim)}
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Available Cases */}
         <Card className="glass border-0">

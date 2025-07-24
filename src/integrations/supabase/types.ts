@@ -235,6 +235,33 @@ export type Database = {
         }
         Relationships: []
       }
+      free_case_claims: {
+        Row: {
+          amount: number
+          case_type: string
+          claimed_at: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          case_type: string
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          case_type?: string
+          claimed_at?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       game_history: {
         Row: {
           action: string | null
@@ -921,6 +948,14 @@ export type Database = {
       calculate_xp_for_level_new: {
         Args: { target_level: number }
         Returns: number
+      }
+      can_claim_free_case: {
+        Args: { p_user_id: string; p_case_type: string }
+        Returns: boolean
+      }
+      get_next_free_case_claim_time: {
+        Args: { p_user_id: string; p_case_type: string }
+        Returns: string
       }
       process_tip: {
         Args: {
