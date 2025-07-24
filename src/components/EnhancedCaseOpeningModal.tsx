@@ -12,6 +12,8 @@ interface EnhancedCaseOpeningModalProps {
   caseId: string;
   level: number;
   onCaseOpened: (reward: CaseReward) => void;
+  isFreeCase?: boolean;
+  freeCaseType?: 'common' | 'rare' | 'epic';
 }
 
 interface CaseReward {
@@ -123,7 +125,9 @@ export const EnhancedCaseOpeningModal = ({
   onClose, 
   caseId, 
   level, 
-  onCaseOpened 
+  onCaseOpened,
+  isFreeCase = false,
+  freeCaseType 
 }: EnhancedCaseOpeningModalProps) => {
   const [phase, setPhase] = useState<'ready' | 'opening' | 'spinning' | 'revealing' | 'complete'>('ready');
   const [reward, setReward] = useState<CaseReward | null>(null);
@@ -140,15 +144,27 @@ export const EnhancedCaseOpeningModal = ({
     setPhase('opening');
 
     try {
-      // Call secure server-side case opening
-      const { data, error } = await supabase.functions.invoke('case-opening-engine', {
-        body: { caseId, level }
-      });
+      // Call appropriate case opening endpoint
+      const endpoint = isFreeCase ? 'claim-free-case' : 'case-opening-engine';
+      const body = isFreeCase 
+        ? { caseType: freeCaseType }
+        : { caseId, level };
+
+      const { data, error } = await supabase.functions.invoke(endpoint, { body });
 
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
 
-      const rewardData = data.reward as CaseReward;
+      // Handle different response formats
+      const rewardData: CaseReward = isFreeCase 
+        ? { 
+            rarity: (freeCaseType || 'common') as 'common' | 'rare' | 'epic' | 'legendary', 
+            amount: data.amount, 
+            level, 
+            animationType: 'normal', 
+            caseId 
+          }
+        : data.reward as CaseReward;
       
         // Start spinning animation
         setTimeout(() => {
@@ -281,7 +297,7 @@ export const EnhancedCaseOpeningModal = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Gift className="w-5 h-5" />
-            Level {level} Case Opening
+            {isFreeCase ? `${freeCaseType?.charAt(0).toUpperCase()}${freeCaseType?.slice(1)} Free Case` : `Level ${level} Case Opening`}
           </DialogTitle>
           {!isLocked && (
             <Button
@@ -309,8 +325,12 @@ export const EnhancedCaseOpeningModal = ({
                   <CardContent className="p-0">
                     <div className="text-center text-white">
                       <Gift className={`w-24 h-24 mx-auto mb-4 ${phase === 'opening' ? 'animate-spin' : ''}`} />
-                      <div className="text-xl font-bold">Level {level}</div>
-                      <div className="text-sm opacity-80">Reward Case</div>
+                      <div className="text-xl font-bold">
+                        {isFreeCase ? freeCaseType?.charAt(0).toUpperCase() + freeCaseType?.slice(1) : `Level ${level}`}
+                      </div>
+                      <div className="text-sm opacity-80">
+                        {isFreeCase ? 'Free Case' : 'Reward Case'}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -323,7 +343,10 @@ export const EnhancedCaseOpeningModal = ({
               {phase === 'ready' && (
                 <div className="space-y-4">
                   <p className="text-lg font-semibold">
-                    Ready to open your Level {level} case?
+                    {isFreeCase 
+                      ? `Ready to open your ${freeCaseType} free case?`
+                      : `Ready to open your Level ${level} case?`
+                    }
                   </p>
                   <Button 
                     onClick={openCase}

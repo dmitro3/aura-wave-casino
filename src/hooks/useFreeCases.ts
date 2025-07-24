@@ -56,7 +56,7 @@ const FREE_CASE_CONFIGS: FreeCaseConfig[] = [
 export const useFreeCases = () => {
   const [caseStatuses, setCaseStatuses] = useState<FreeCaseStatus[]>([]);
   const [loading, setLoading] = useState(true);
-  const [claiming, setClaiming] = useState<string | null>(null);
+  const [selectedFreeCase, setSelectedFreeCase] = useState<FreeCaseConfig | null>(null);
   const { toast } = useToast();
 
   const fetchCaseStatuses = async () => {
@@ -92,42 +92,28 @@ export const useFreeCases = () => {
     }
   };
 
-  const claimFreeCase = async (caseType: 'common' | 'rare' | 'epic') => {
-    if (claiming) return;
+  const openFreeCaseModal = (caseType: 'common' | 'rare' | 'epic') => {
+    const config = FREE_CASE_CONFIGS.find(c => c.type === caseType);
+    const status = caseStatuses.find(s => s.config.type === caseType);
+    
+    if (!config || !status?.canClaim) return;
+    
+    setSelectedFreeCase(config);
+  };
 
-    setClaiming(caseType);
-    try {
-      const { data, error } = await supabase.functions.invoke('claim-free-case', {
-        body: { caseType }
-      });
+  const handleFreeCaseOpened = async (reward: any) => {
+    toast({
+      title: '🎉 Free Case Claimed!',
+      description: `You received $${reward.amount}! Added to your balance.`,
+    });
+    
+    // Refresh case statuses
+    await fetchCaseStatuses();
+    setSelectedFreeCase(null);
+  };
 
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: '🎉 Free Case Claimed!',
-          description: `You received $${data.amount}! Added to your balance.`,
-        });
-        
-        // Refresh case statuses
-        await fetchCaseStatuses();
-      } else {
-        toast({
-          title: 'Claim Failed',
-          description: data.error || 'Unable to claim case at this time.',
-          variant: 'destructive'
-        });
-      }
-    } catch (error) {
-      console.error('Error claiming free case:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to claim free case. Please try again.',
-        variant: 'destructive'
-      });
-    } finally {
-      setClaiming(null);
-    }
+  const closeFreeCaseModal = () => {
+    setSelectedFreeCase(null);
   };
 
   const formatTimeUntil = (milliseconds: number): string => {
@@ -172,8 +158,10 @@ export const useFreeCases = () => {
   return {
     caseStatuses,
     loading,
-    claiming,
-    claimFreeCase,
+    selectedFreeCase,
+    openFreeCaseModal,
+    handleFreeCaseOpened,
+    closeFreeCaseModal,
     formatTimeUntil,
     refetch: fetchCaseStatuses
   };

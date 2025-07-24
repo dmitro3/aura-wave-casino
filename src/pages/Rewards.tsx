@@ -13,7 +13,7 @@ export default function Rewards() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { availableCases, openedCases, loading, openCase } = useCaseRewards();
-  const { caseStatuses, claiming, claimFreeCase, formatTimeUntil } = useFreeCases();
+  const { caseStatuses, selectedFreeCase, openFreeCaseModal, handleFreeCaseOpened, closeFreeCaseModal } = useFreeCases();
   const [selectedCase, setSelectedCase] = useState<string | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const { toast } = useToast();
@@ -152,28 +152,33 @@ export default function Rewards() {
                     </div>
                     
                     <Button 
-                      onClick={() => claimFreeCase(status.config.type)}
-                      disabled={!status.canClaim || claiming === status.config.type}
+                      onClick={() => openFreeCaseModal(status.config.type)}
+                      disabled={!status.canClaim}
                       className={`w-full ${
                         status.canClaim 
                           ? 'gradient-primary hover:glow-primary' 
                           : 'bg-muted text-muted-foreground cursor-not-allowed'
                       }`}
                     >
-                      {claiming === status.config.type ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                          Claiming...
-                        </>
-                      ) : status.canClaim ? (
+                      {status.canClaim ? (
                         <>
                           <Gift className="w-4 h-4 mr-2" />
-                          Claim Free
+                          Open Free Case
                         </>
                       ) : (
                         <>
                           <Clock className="w-4 h-4 mr-2" />
-                          {formatTimeUntil(status.timeUntilClaim)}
+                          {(() => {
+                            const now = new Date();
+                            const timeUntil = Math.max(0, (status.nextClaimTime?.getTime() || 0) - now.getTime());
+                            const seconds = Math.ceil(timeUntil / 1000);
+                            const minutes = Math.floor(seconds / 60);
+                            const remainingSeconds = seconds % 60;
+                            
+                            if (timeUntil <= 0) return 'Ready!';
+                            if (minutes > 0) return `${minutes}m ${remainingSeconds}s`;
+                            return `${remainingSeconds}s`;
+                          })()}
                         </>
                       )}
                     </Button>
@@ -282,7 +287,7 @@ export default function Rewards() {
         </Card>
       </div>
 
-      {/* Enhanced Case Opening Modal */}
+      {/* Enhanced Case Opening Modal for Level Rewards */}
       {selectedCase && (
         <EnhancedCaseOpeningModal
           isOpen={!!selectedCase}
@@ -290,6 +295,19 @@ export default function Rewards() {
           caseId={selectedCase}
           level={selectedLevel}
           onCaseOpened={handleCaseOpened}
+        />
+      )}
+
+      {/* Enhanced Case Opening Modal for Free Cases */}
+      {selectedFreeCase && (
+        <EnhancedCaseOpeningModal
+          isOpen={!!selectedFreeCase}
+          onClose={closeFreeCaseModal}
+          caseId={`free-${selectedFreeCase.type}`}
+          level={1} // Free cases use level 1 as base
+          onCaseOpened={handleFreeCaseOpened}
+          isFreeCase={true}
+          freeCaseType={selectedFreeCase.type}
         />
       )}
     </div>
