@@ -65,15 +65,20 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const { toast } = useToast();
 
   const handlePlaceBet = async () => {
-    const bet = parseFloat(betInput);
-    if (isNaN(bet) || bet <= 0) {
+    // Import validation function
+    const { validateBetAmount } = await import('@/lib/utils');
+    const validation = validateBetAmount(betInput);
+    
+    if (!validation.isValid) {
       toast({
         title: "Invalid Bet",
-        description: "Please enter a valid bet amount",
+        description: validation.error,
         variant: "destructive",
       });
       return;
     }
+
+    const bet = validation.sanitized;
 
     if (bet > userData.balance) {
       toast({

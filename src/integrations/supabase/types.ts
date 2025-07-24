@@ -953,6 +953,14 @@ export type Database = {
           new_border_tier: number
         }[]
       }
+      validate_bet_amount: {
+        Args: { p_amount: number }
+        Returns: boolean
+      }
+      validate_username: {
+        Args: { p_username: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

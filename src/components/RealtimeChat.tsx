@@ -98,6 +98,19 @@ export const RealtimeChat = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !user || !userData || loading) return;
 
+    // Import validation function
+    const { validateChatMessage } = await import('@/lib/utils');
+    const validation = validateChatMessage(newMessage);
+    
+    if (!validation.isValid) {
+      toast({
+        title: "Invalid Message",
+        description: validation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -106,7 +119,7 @@ export const RealtimeChat = () => {
         .insert({
           user_id: user.id,
           username: userData.username,
-          message: newMessage.trim(),
+          message: validation.sanitized,
           user_level: userData.current_level
         });
 

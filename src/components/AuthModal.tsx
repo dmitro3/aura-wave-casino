@@ -74,6 +74,42 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
+    // Import validation functions
+    const { validateUsername, validateEmail, validatePassword } = await import('@/lib/utils');
+    
+    // Validate username
+    const usernameValidation = validateUsername(registerData.username);
+    if (!usernameValidation.isValid) {
+      toast({
+        title: "Invalid Username",
+        description: usernameValidation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate email
+    const emailValidation = validateEmail(registerData.email);
+    if (!emailValidation.isValid) {
+      toast({
+        title: "Invalid Email",
+        description: emailValidation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password
+    const passwordValidation = validatePassword(registerData.password);
+    if (!passwordValidation.isValid) {
+      toast({
+        title: "Invalid Password",
+        description: passwordValidation.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (registerData.password !== registerData.confirmPassword) {
       toast({
         title: "Password Mismatch",
@@ -83,18 +119,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
 
-    if (registerData.password.length < 6) {
-      toast({
-        title: "Password Too Short",
-        description: "Password must be at least 6 characters long",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
     try {
-      const { error } = await signUp(registerData.email, registerData.password, registerData.username);
+      const { error } = await signUp(emailValidation.sanitized, registerData.password, usernameValidation.sanitized);
       
       if (error) {
         toast({
