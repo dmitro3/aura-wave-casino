@@ -13,11 +13,13 @@ interface CaseRewardNotificationProps {
     title: string;
     message: string;
     data: {
-      old_level: number;
-      new_level: number;
-      cases_earned: number;
-      border_changed: boolean;
-      new_border_tier: number;
+      old_level?: number;
+      new_level?: number;
+      level?: number;
+      cases_earned?: number;
+      border_changed?: boolean;
+      new_border_tier?: number;
+      case_rarity?: string;
     };
   };
   onDismiss: () => void;
@@ -34,19 +36,33 @@ export const CaseRewardNotification = ({
   const navigate = useNavigate();
 
   const handleOpenCase = () => {
+    // Get the level from the notification data
+    const targetLevel = notification.data.level || notification.data.new_level;
+    
     // Find the case for this specific level
     const levelCase = availableCases.find(
-      c => c.level_unlocked === notification.data.new_level
+      c => c.level_unlocked === targetLevel
     );
     
     if (levelCase) {
       setSelectedCase(levelCase.id);
       setSelectedLevel(levelCase.level_unlocked);
     } else {
-      toast({
-        title: 'Case Not Found',
-        description: 'Unable to find your level case. Please check your rewards page.',
-        variant: 'destructive'
+      // Force a refresh of cases and try again
+      refetch().then(() => {
+        const updatedCase = availableCases.find(
+          c => c.level_unlocked === targetLevel
+        );
+        if (updatedCase) {
+          setSelectedCase(updatedCase.id);
+          setSelectedLevel(updatedCase.level_unlocked);
+        } else {
+          toast({
+            title: 'Case Not Found',
+            description: `Unable to find your level ${targetLevel} case. Please check your rewards page.`,
+            variant: 'destructive'
+          });
+        }
       });
     }
   };
@@ -86,7 +102,7 @@ export const CaseRewardNotification = ({
                   size="sm"
                 >
                   <Gift className="w-4 h-4 mr-2" />
-                  Open Level {notification.data.new_level} Case
+                  Open Level {notification.data.level || notification.data.new_level} Case
                 </Button>
                 
                 <Button 
