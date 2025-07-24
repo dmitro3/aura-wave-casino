@@ -123,10 +123,28 @@ Deno.serve(async (req) => {
     console.log(`💰 Generated ${caseType} reward: $${rewardAmount}`);
 
     // Begin transaction - update user balance and record claim
+    // First get current balance
+    const { data: currentProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('Error getting current balance:', profileError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to get current balance' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const newBalance = Number(currentProfile.balance) + rewardAmount;
+
+    // Update balance with the new calculated value
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
-        balance: supabase.sql`balance + ${rewardAmount}`,
+        balance: newBalance,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id);
@@ -154,7 +172,7 @@ Deno.serve(async (req) => {
       await supabase
         .from('profiles')
         .update({ 
-          balance: supabase.sql`balance - ${rewardAmount}`,
+          balance: Number(currentProfile.balance), // Rollback to original balance
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
