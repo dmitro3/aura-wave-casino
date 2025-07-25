@@ -203,7 +203,7 @@ export const EnhancedCaseOpeningModal = ({
           
           // Smooth deceleration phase (5 seconds with better easing)
           setAnimationStage('slowing');
-          const targetOffset = (centerIndex * 120) - 600; // Perfectly center the winning item
+          const targetOffset = (centerIndex * 110) - 450; // Center winning item in 900px viewport
           let currentOffset = offset;
           const startTime = Date.now();
           const duration = 5000; // 5 seconds for smooth deceleration
@@ -476,103 +476,126 @@ export const EnhancedCaseOpeningModal = ({
                 <p className="text-muted-foreground">Your reward is being determined...</p>
               </div>
               
-              {/* Horizontal Scrolling Reel Container */}
+              {/* CS2-Style Case Opening Reel */}
               <div className="relative">
-                {/* Reel Track Background */}
-                <div className="relative h-40 overflow-hidden bg-gradient-to-r from-slate-900/40 via-slate-800/40 to-slate-900/40 rounded-xl border-2 border-primary/30 shadow-2xl">
-                  {/* Center Selection Indicator */}
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-2 h-full bg-gradient-to-b from-yellow-300 via-yellow-400 to-yellow-500 z-20 shadow-lg shadow-yellow-400/50 rounded-full" />
-                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-full bg-white z-30 shadow-lg shadow-white/50" />
+                {/* Fixed-width viewport container - shows exactly 9 items */}
+                <div className="relative w-[900px] h-[120px] mx-auto overflow-hidden rounded-lg border-4 border-primary/30 bg-gradient-to-b from-background/80 to-background/40 backdrop-blur-sm shadow-2xl">
                   
-                  {/* Selection Frame */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-4 border-yellow-400 rounded-xl z-10 shadow-lg shadow-yellow-400/30 animate-pulse" />
-                  
-                  {/* Scrolling Items Reel */}
+                  {/* Scrolling reel */}
                   <div 
-                    className="flex h-full items-center transition-transform duration-75 ease-linear"
+                    className="absolute top-2 left-0 h-[104px] flex items-center gap-2 transition-none"
                     style={{
                       transform: `translateX(-${reelOffset}px)`,
-                      width: `${spinnerItems.length * 120}px`
+                      width: `${spinnerItems.length * 110}px`, // 100px item + 10px gap
+                      willChange: 'transform'
                     }}
                   >
                     {spinnerItems.map((item, index) => {
-                      const distanceFromCenter = Math.abs((index * 120 - reelOffset) - 600);
-                      const isCenter = distanceFromCenter < 60;
-                      const opacity = Math.max(0.3, 1 - (distanceFromCenter / 400));
-                      const scale = isCenter ? 1.1 : Math.max(0.8, 1 - (distanceFromCenter / 800));
+                      // Calculate distance from center for fade effect
+                      const itemCenter = (index * 110) + 50; // 110px spacing, 50px to item center
+                      const reelCenter = reelOffset + 450; // 450px is center of 900px viewport
+                      const distanceFromCenter = Math.abs(itemCenter - reelCenter);
+                      const maxDistance = 300; // Items fade out beyond this distance
+                      const opacity = Math.max(0.3, 1 - (distanceFromCenter / maxDistance));
+                      const scale = Math.max(0.8, 1 - (distanceFromCenter / (maxDistance * 2)));
+                      const isCenter = distanceFromCenter < 55; // Center detection for highlighting
                       
                       return (
                         <div
                           key={index}
-                          className={`
-                            flex-shrink-0 w-28 h-28 mx-1 rounded-xl border-3
-                            bg-gradient-to-br ${item.color} ${rarityConfig[item.rarity].border}
-                            flex flex-col items-center justify-center relative
-                            transition-all duration-100 ease-out
-                            ${isCenter ? `ring-4 ring-yellow-400 shadow-2xl ${item.glow}` : 'shadow-lg'}
-                            ${item.shimmer ? 'animate-pulse' : ''}
-                          `}
+                          className="flex-shrink-0 w-[100px] h-[100px] relative transition-opacity duration-200"
                           style={{
-                            opacity,
+                            opacity: opacity,
                             transform: `scale(${scale})`,
-                            filter: isCenter ? 'brightness(1.2)' : `brightness(${0.7 + opacity * 0.3})`
                           }}
                         >
-                          {/* Item Icon */}
-                          <div className="text-2xl mb-1 text-white drop-shadow-lg">
-                            {item.icon}
-                          </div>
-                          
-                          {/* Dollar Amount */}
-                          <div className="text-sm font-bold text-white drop-shadow-lg">
-                            ${item.amount}
-                          </div>
-                          
-                          {/* Rarity Indicator */}
-                          <div className="text-xs font-bold text-white/70 uppercase tracking-wider">
-                            {item.rarity.charAt(0)}
-                          </div>
-                          
-                          {/* Shine Effect for Rare Items */}
-                          {item.shimmer && isCenter && (
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse rounded-xl" />
-                          )}
-                          
-                          {/* Particle Effects */}
-                          {isCenter && animationStage === 'locked' && (
-                            <div className="absolute inset-0 pointer-events-none">
-                              {[...Array(6)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="absolute text-yellow-300 animate-bounce"
-                                  style={{
-                                    top: `${10 + Math.random() * 80}%`,
-                                    left: `${10 + Math.random() * 80}%`,
-                                    animationDelay: `${i * 0.1}s`,
-                                    animationDuration: '0.8s'
-                                  }}
-                                >
-                                  {rarityConfig[item.rarity].particles}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          <Card className={`
+                            w-full h-full flex items-center justify-center relative overflow-hidden
+                            border-2 transition-all duration-300
+                            bg-gradient-to-br ${item.color}
+                            ${isCenter ? `ring-4 ring-yellow-400 shadow-2xl ${item.glow}` : 'shadow-lg'}
+                            ${item.shimmer ? 'animate-pulse' : ''}
+                            ${rarityConfig[item.rarity].border}
+                          `}>
+                            <CardContent className="p-2 text-center text-white relative z-10">
+                              <div className="text-2xl font-bold mb-1">{item.icon}</div>
+                              <div className="text-xs font-semibold">${item.amount.toLocaleString()}</div>
+                              <div className="text-xs opacity-80 capitalize truncate">{item.rarity}</div>
+                            </CardContent>
+                            
+                            {/* Shimmer effect for rare items */}
+                            {item.shimmer && (
+                              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-pulse" />
+                            )}
+
+                            {/* Particle Effects when locked and centered */}
+                            {isCenter && animationStage === 'locked' && (
+                              <div className="absolute inset-0 pointer-events-none">
+                                {[...Array(6)].map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className="absolute text-yellow-300 animate-bounce text-sm"
+                                    style={{
+                                      top: `${10 + Math.random() * 80}%`,
+                                      left: `${10 + Math.random() * 80}%`,
+                                      animationDelay: `${i * 0.1}s`,
+                                      animationDuration: '0.8s'
+                                    }}
+                                  >
+                                    {rarityConfig[item.rarity].particles}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </Card>
                         </div>
                       );
                     })}
                   </div>
                   
-                  {/* Edge Fade Effects */}
-                  <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-slate-900/60 to-transparent z-10 pointer-events-none" />
-                  <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-slate-900/60 to-transparent z-10 pointer-events-none" />
+                  {/* Center alignment indicator */}
+                  <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-primary/80 to-primary/40 z-30">
+                    {/* Top marker */}
+                    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-primary rounded-full shadow-lg border-2 border-background">
+                      <div className="absolute inset-1 bg-white rounded-full" />
+                    </div>
+                    {/* Bottom marker */}
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-primary rounded-full shadow-lg border-2 border-background">
+                      <div className="absolute inset-1 bg-white rounded-full" />
+                    </div>
+                  </div>
+                  
+                  {/* Smooth fade gradients */}
+                  <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-background via-background/80 to-transparent pointer-events-none z-20" />
+                  <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-background via-background/80 to-transparent pointer-events-none z-20" />
+                  
+                  {/* Glow effect when locked */}
+                  {animationStage === 'locked' && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-pulse pointer-events-none z-10" />
+                  )}
                 </div>
                 
                 {/* Animation Status */}
                 <div className="text-center mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    {animationStage === 'fast' && '⚡ Fast Spin'}
-                    {animationStage === 'slowing' && '🎯 Finding Your Reward...'}
-                    {animationStage === 'locked' && '🔒 Locked In!'}
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted/80 backdrop-blur-sm rounded-full border border-border/50">
+                    {animationStage === 'fast' && (
+                      <>
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-sm font-medium">Fast Spin</span>
+                      </>
+                    )}
+                    {animationStage === 'slowing' && (
+                      <>
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                        <span className="text-sm font-medium">Slowing Down</span>
+                      </>
+                    )}
+                    {animationStage === 'locked' && (
+                      <>
+                        <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        <span className="text-sm font-medium">Locked In!</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
