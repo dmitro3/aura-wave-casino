@@ -203,7 +203,7 @@ export const EnhancedCaseOpeningModal = ({
           
           // Smooth deceleration phase (5 seconds with better easing)
           setAnimationStage('slowing');
-          const targetOffset = (centerIndex * 80) - 400; // Perfectly center the winning item
+          const targetOffset = (centerIndex * 120) - 600; // Perfectly center the winning item
           let currentOffset = offset;
           const startTime = Date.now();
           const duration = 5000; // 5 seconds for smooth deceleration
@@ -479,37 +479,37 @@ export const EnhancedCaseOpeningModal = ({
               {/* Horizontal Scrolling Reel Container */}
               <div className="relative">
                 {/* Reel Track Background */}
-                <div className="relative h-24 overflow-hidden bg-gradient-to-r from-slate-900/40 via-slate-800/40 to-slate-900/40 rounded-xl border-2 border-primary/30 shadow-2xl">
+                <div className="relative h-40 overflow-hidden bg-gradient-to-r from-slate-900/40 via-slate-800/40 to-slate-900/40 rounded-xl border-2 border-primary/30 shadow-2xl">
                   {/* Center Selection Indicator */}
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-2 h-full bg-gradient-to-b from-yellow-300 via-yellow-400 to-yellow-500 z-20 shadow-lg shadow-yellow-400/50 rounded-full" />
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0.5 h-full bg-white z-30 shadow-lg shadow-white/50" />
                   
                   {/* Selection Frame */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-4 border-yellow-400 rounded-xl z-10 shadow-lg shadow-yellow-400/30 animate-pulse" />
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-4 border-yellow-400 rounded-xl z-10 shadow-lg shadow-yellow-400/30 animate-pulse" />
                   
                   {/* Scrolling Items Reel */}
                   <div 
                     className="flex h-full items-center transition-transform duration-75 ease-linear"
                     style={{
                       transform: `translateX(-${reelOffset}px)`,
-                      width: `${spinnerItems.length * 80}px`
+                      width: `${spinnerItems.length * 120}px`
                     }}
                   >
                     {spinnerItems.map((item, index) => {
-                      const distanceFromCenter = Math.abs((index * 80 - reelOffset) - 400);
-                      const isCenter = distanceFromCenter < 40;
-                      const opacity = Math.max(0.3, 1 - (distanceFromCenter / 300));
-                      const scale = isCenter ? 1.1 : Math.max(0.8, 1 - (distanceFromCenter / 600));
+                      const distanceFromCenter = Math.abs((index * 120 - reelOffset) - 600);
+                      const isCenter = distanceFromCenter < 60;
+                      const opacity = Math.max(0.3, 1 - (distanceFromCenter / 400));
+                      const scale = isCenter ? 1.1 : Math.max(0.8, 1 - (distanceFromCenter / 800));
                       
                       return (
                         <div
                           key={index}
                           className={`
-                            flex-shrink-0 w-18 h-18 mx-0.5 rounded-lg border-2
+                            flex-shrink-0 w-28 h-28 mx-1 rounded-xl border-3
                             bg-gradient-to-br ${item.color} ${rarityConfig[item.rarity].border}
                             flex flex-col items-center justify-center relative
                             transition-all duration-100 ease-out
-                            ${isCenter ? `ring-2 ring-yellow-400 shadow-xl ${item.glow}` : 'shadow-md'}
+                            ${isCenter ? `ring-4 ring-yellow-400 shadow-2xl ${item.glow}` : 'shadow-lg'}
                             ${item.shimmer ? 'animate-pulse' : ''}
                           `}
                           style={{
@@ -519,13 +519,18 @@ export const EnhancedCaseOpeningModal = ({
                           }}
                         >
                           {/* Item Icon */}
-                          <div className="text-lg text-white drop-shadow-lg">
+                          <div className="text-2xl mb-1 text-white drop-shadow-lg">
                             {item.icon}
                           </div>
                           
                           {/* Dollar Amount */}
-                          <div className="text-xs font-bold text-white drop-shadow-lg">
+                          <div className="text-sm font-bold text-white drop-shadow-lg">
                             ${item.amount}
+                          </div>
+                          
+                          {/* Rarity Indicator */}
+                          <div className="text-xs font-bold text-white/70 uppercase tracking-wider">
+                            {item.rarity.charAt(0)}
                           </div>
                           
                           {/* Shine Effect for Rare Items */}
