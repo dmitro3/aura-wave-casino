@@ -304,8 +304,8 @@ export const EnhancedCaseOpeningModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl mx-auto bg-background border border-border overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] mx-auto bg-background border border-border overflow-y-auto">
+        <DialogHeader className="sticky top-0 z-10 bg-background pb-4">
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Gift className="w-5 h-5" />
             {isFreeCase ? `${freeCaseType?.charAt(0).toUpperCase()}${freeCaseType?.slice(1)} Free Case` : `Level ${level} Case Opening`}
@@ -322,7 +322,7 @@ export const EnhancedCaseOpeningModal = ({
           )}
         </DialogHeader>
 
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 px-6 pb-6">
           {/* Case Display */}
           {(phase === 'ready' || phase === 'opening') && (
             <div className="text-center space-y-6">
