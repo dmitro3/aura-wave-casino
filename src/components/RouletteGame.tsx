@@ -989,8 +989,55 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           {/* Betting Interface */}
           <Card className="glass border-0">
             <CardHeader className="pb-4">
-              <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <CardTitle className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <span>Place Your Bets</span>
+                
+                {/* Inline Betting Controls - Only show for authenticated users */}
+                {user && profile && (
+                  <div className="flex items-center gap-3">
+                    {/* Bet Amount Controls */}
+                    <div className="flex items-center gap-2 glass rounded-lg px-3 py-1 border border-primary/20">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setBetAmount(Math.max(0.01, Math.floor(betAmount / 2 * 100) / 100))}
+                        disabled={currentRound.status !== 'betting'}
+                        className="h-7 w-10 rounded bg-gradient-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/30 text-red-400 font-bold text-xs"
+                      >
+                        ÷2
+                      </Button>
+                      
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm font-bold text-primary">$</span>
+                        <Input
+                          type="number"
+                          value={betAmount}
+                          onChange={(e) => {
+                            const newAmount = Number(e.target.value);
+                            const maxBalance = profile?.balance || 0;
+                            setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                          }}
+                          min="0.01"
+                          max={profile?.balance || 0}
+                          step="0.01"
+                          className="w-16 h-7 text-center text-sm font-bold bg-black/50 border border-primary/40 rounded px-1"
+                          disabled={currentRound.status !== 'betting'}
+                        />
+                      </div>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setBetAmount(Math.min(profile?.balance || 0, betAmount * 2))}
+                        disabled={currentRound.status !== 'betting'}
+                        className="h-7 w-10 rounded bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-bold text-xs"
+                      >
+                        ×2
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   {user && profile && (
                     <div className="flex items-center gap-2">
@@ -1001,87 +1048,27 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   <span className="text-muted-foreground">
                     {timeLeft > 0 ? `${timeLeft}s remaining` : 'Bets closed'}
                   </span>
+                  {user && (
+                    <div className="flex items-center gap-1">
+                      {currentRound.status === 'betting' ? (
+                        <>
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-emerald-400">Open</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                          <span className="text-xs text-red-400">Closed</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Bet Amount Controls */}
-              {user && profile ? (
-                <div className="flex items-center justify-center">
-                  <div className="relative glass rounded-xl p-4 border border-primary/20 shadow-lg backdrop-blur-lg w-full max-w-lg">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-xl"></div>
-                    
-                    <div className="relative flex items-center justify-between">
-                      {/* Divide by 2 Button */}
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setBetAmount(Math.max(0.01, Math.floor(betAmount / 2 * 100) / 100))}
-                        disabled={currentRound.status !== 'betting'}
-                        className="h-10 w-16 rounded-lg bg-gradient-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/30 text-red-400 font-bold text-sm transition-all duration-200 hover:scale-105"
-                      >
-                        ÷2
-                      </Button>
-                      
-                      {/* Bet Amount Input Container */}
-                      <div className="flex flex-col items-center gap-1 flex-1 mx-4">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Bet Amount
-                        </label>
-                        <div className="relative w-full max-w-32">
-                          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/30 rounded-lg blur-sm"></div>
-                          <div className="relative bg-black/50 border-2 border-primary/40 rounded-lg p-2 flex items-center gap-2">
-                            <span className="text-base font-bold text-primary">$</span>
-                            <Input
-                              type="number"
-                              value={betAmount}
-                              onChange={(e) => {
-                                const newAmount = Number(e.target.value);
-                                const maxBalance = profile?.balance || 0;
-                                setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
-                              }}
-                              min="0.01"
-                              max={profile?.balance || 0}
-                              step="0.01"
-                              className="w-20 text-center text-base font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-white"
-                              disabled={currentRound.status !== 'betting'}
-                            />
-                          </div>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          Max: ${profile?.balance?.toFixed(2) || '0.00'}
-                        </div>
-                      </div>
-                      
-                      {/* Multiply by 2 Button */}
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setBetAmount(Math.min(profile?.balance || 0, betAmount * 2))}
-                        disabled={currentRound.status !== 'betting'}
-                        className="h-10 w-16 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-bold text-sm transition-all duration-200 hover:scale-105"
-                      >
-                        ×2
-                      </Button>
-                      
-                      {/* Betting Status Indicator */}
-                      <div className="ml-4 flex items-center">
-                        {currentRound.status === 'betting' ? (
-                          <div className="flex items-center gap-2 text-emerald-400">
-                            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                            <span className="text-xs font-medium">Open</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-red-400">
-                            <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                            <span className="text-xs font-medium">Closed</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
+              {/* Remove the old betting interface section */}
+              {!user && (
                 <div className="text-center py-4">
                   <p className="text-muted-foreground">Sign in to place bets</p>
                 </div>
