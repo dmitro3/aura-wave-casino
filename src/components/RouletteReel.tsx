@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 
 interface RouletteReelProps {
   isSpinning: boolean;
@@ -36,9 +36,30 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const [isAnimating, setIsAnimating] = useState(false);
   const [actualContainerWidth, setActualContainerWidth] = useState(DEFAULT_CONTAINER_WIDTH);
   const [actualCenterOffset, setActualCenterOffset] = useState(DEFAULT_CONTAINER_WIDTH / 2);
+  const [isReelReady, setIsReelReady] = useState(false);
   const animationRef = useRef<number>();
   const startTimeRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastSynchronizedPosition = useRef<number | null>(null);
+  const positionInitialized = useRef(false);
+
+  // MEMOIZED: Generate tiles once and reuse to prevent loading issues
+  const tiles = useMemo(() => {
+    const generatedTiles = [];
+    const repeatCount = 20; // Enough repeats for smooth infinite scrolling
+    
+    for (let repeat = 0; repeat < repeatCount; repeat++) {
+      WHEEL_SLOTS.forEach((slot, index) => {
+        generatedTiles.push({
+          ...slot,
+          uniqueKey: `${repeat}-${index}`,
+          globalIndex: repeat * WHEEL_SLOTS.length + index
+        });
+      });
+    }
+    
+    return generatedTiles;
+  }, []); // Empty dependency array - generate once and never change
 
   // Measure actual container dimensions
   useEffect(() => {
@@ -56,6 +77,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         
         setActualContainerWidth(width);
         setActualCenterOffset(centerOffset);
+        
+        // Mark reel as ready once container is measured and tiles are generated
+        if (!isReelReady && tiles.length > 0) {
+          setIsReelReady(true);
+          console.log('✅ Reel ready with', tiles.length, 'tiles');
+        }
       }
     };
 
@@ -64,21 +91,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     window.addEventListener('resize', measureContainer);
     
     return () => window.removeEventListener('resize', measureContainer);
-  }, []);
-
-  // Generate tiles for seamless scrolling (repeat pattern multiple times)
-  const tiles = [];
-  const repeatCount = 20; // Enough repeats for smooth infinite scrolling
-  
-  for (let repeat = 0; repeat < repeatCount; repeat++) {
-    WHEEL_SLOTS.forEach((slot, index) => {
-      tiles.push({
-        ...slot,
-        uniqueKey: `${repeat}-${index}`,
-        globalIndex: repeat * WHEEL_SLOTS.length + index
-      });
-    });
-  }
+  }, [tiles.length, isReelReady]);
 
   // Animation phases for structured timing
   const SPEEDUP_DURATION = 0.5; // seconds
@@ -216,7 +229,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Initialize position from synchronized position on first load
   useEffect(() => {
-    if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating) {
+    // Only update if we have a new synchronized position and we're not currently animating
+    if (synchronizedPosition !== null && 
+        synchronizedPosition !== undefined && 
+        !isAnimating &&
+        (synchronizedPosition !== lastSynchronizedPosition.current || !positionInitialized.current)) {
+      
       console.log('🔄 Initializing position from synchronized state:', synchronizedPosition);
       
       // Calculate the offset between backend's expected center and actual center
@@ -232,7 +250,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         centerOffsetDifference,
         adjustedPosition: normalizedPosition,
         actualCenter,
-        backendExpectedCenter: backendCenterOffset
+        backendExpectedCenter: backendCenterOffset,
+        isFirstInit: !positionInitialized.current
       });
       
       // Safeguard: if position is extremely negative, normalize it
@@ -247,18 +266,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       }
       
       setPosition(normalizedPosition);
+      lastSynchronizedPosition.current = synchronizedPosition;
+      positionInitialized.current = true;
     }
   }, [synchronizedPosition, isAnimating, actualCenterOffset]);
 
   // Keep position between rounds - no reset
   useEffect(() => {
-    // Just ensure we're not animating when round ends
+    // Clean up animation state when round ends, but don't move the reel
     if (!isSpinning && !showWinAnimation && isAnimating) {
       console.log('🎰 Round ended, stopping any remaining animation');
       setIsAnimating(false);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = undefined;
       }
+      startTimeRef.current = undefined;
+    }
+    
+    // Reset position tracking when a new round starts
+    if (isSpinning && !isAnimating) {
+      console.log('🎰 New round starting, preparing for animation');
+      // Don't reset position - keep current position for smooth continuation
     }
   }, [isSpinning, showWinAnimation, isAnimating]);
 
@@ -280,7 +309,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       {/* Reel Container */}
       <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl">
         
-        {/* Center Indicator Line */}
+        {/* Loading State */}
+        {!isReelReady && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
+            <div className="flex items-center gap-3 text-white">
+              <div className="w-5 h-5 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent"></div>
+              <span className="text-sm font-medium">Loading reel...</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Center Indicator Line - Always visible */}
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
           {/* Top arrow */}
           <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -302,48 +341,50 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           <div className="absolute inset-y-0 -left-2 -right-2 bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent blur-md"></div>
         </div>
 
-        {/* Moving Tiles */}
-        <div 
-          id="roulette-reel"
-          className="flex h-full items-center transition-none"
-          style={{
-            transform: `translateX(${position}px)`,
-            willChange: 'transform'
-          }}
-        >
-          {tiles.map((tile) => {
-            // Check if this tile is the winning one and should be highlighted
-            const tilePosition = position + tile.globalIndex * TILE_WIDTH;
-            const tileCenterPosition = tilePosition + TILE_WIDTH / 2;
-            const distanceFromCenter = Math.abs(tileCenterPosition - actualCenterOffset);
-            
-            // Check if tile is at center during spinning for scaling animation
-            const isCenterTile = isAnimating && distanceFromCenter < TILE_WIDTH / 2;
-            
-            const isWinningTile = (showWinAnimation || extendedWinAnimation) && 
-                                  tile.slot === winningSlot && 
-                                  !isAnimating &&
-                                  // Only highlight the tile that's actually at the center line
-                                  distanceFromCenter < TILE_WIDTH / 3;
-            
-            return (
-              <div
-                key={tile.uniqueKey}
-                className={`flex-shrink-0 h-28 flex flex-col items-center justify-center relative transition-all duration-150 ${getTileColorClass(tile.color)} ${
-                  isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : 
-                  isCenterTile ? 'scale-105 z-10' : ''
-                }`}
-                style={{ width: `${TILE_WIDTH}px` }}
-              >
-                <div className={`text-2xl font-bold drop-shadow-lg ${
-                  isWinningTile ? 'text-emerald-200 scale-125' : ''
-                }`}>
-                  {tile.slot}
+        {/* Moving Tiles - Only render when ready */}
+        {isReelReady && (
+          <div 
+            id="roulette-reel"
+            className="flex h-full items-center transition-none"
+            style={{
+              transform: `translateX(${position}px)`,
+              willChange: 'transform'
+            }}
+          >
+            {tiles.map((tile) => {
+              // Check if this tile is the winning one and should be highlighted
+              const tilePosition = position + tile.globalIndex * TILE_WIDTH;
+              const tileCenterPosition = tilePosition + TILE_WIDTH / 2;
+              const distanceFromCenter = Math.abs(tileCenterPosition - actualCenterOffset);
+              
+              // Check if tile is at center during spinning for scaling animation
+              const isCenterTile = isAnimating && distanceFromCenter < TILE_WIDTH / 2;
+              
+              const isWinningTile = (showWinAnimation || extendedWinAnimation) && 
+                                    tile.slot === winningSlot && 
+                                    !isAnimating &&
+                                    // Only highlight the tile that's actually at the center line
+                                    distanceFromCenter < TILE_WIDTH / 3;
+              
+              return (
+                <div
+                  key={tile.uniqueKey}
+                  className={`flex-shrink-0 h-28 flex flex-col items-center justify-center relative transition-all duration-150 ${getTileColorClass(tile.color)} ${
+                    isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : 
+                    isCenterTile ? 'scale-105 z-10' : ''
+                  }`}
+                  style={{ width: `${TILE_WIDTH}px` }}
+                >
+                  <div className={`text-2xl font-bold drop-shadow-lg ${
+                    isWinningTile ? 'text-emerald-200 scale-125' : ''
+                  }`}>
+                    {tile.slot}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
