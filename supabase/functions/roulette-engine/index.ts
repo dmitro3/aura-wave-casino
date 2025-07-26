@@ -287,14 +287,31 @@ async function getCurrentRound(supabase: any) {
       }
       
       // Calculate the final reel position that centers the winning slot precisely
-      // Simplified calculation:
-      // - Winning slot index position in reel: winningSlotIndex * TILE_WIDTH
-      // - Center of winning slot: winningSlotIndex * TILE_WIDTH + TILE_WIDTH/2
-      // - To center this under CENTER_OFFSET: CENTER_OFFSET - (center of winning slot)
-      // - Since reel moves left (negative direction), we use negative position
+      // 
+      // Understanding the coordinate system:
+      // - Container center line is at CENTER_OFFSET (600px from left edge)
+      // - When reel position = 0: first tile (index 0) left edge is at x=0
+      // - Tile at index i: left edge at (position + i * TILE_WIDTH)
+      // - Tile at index i: center at (position + i * TILE_WIDTH + TILE_WIDTH/2)
+      // 
+      // Goal: Make winning slot center align with CENTER_OFFSET
+      // Equation: position + winningSlotIndex * TILE_WIDTH + TILE_WIDTH/2 = CENTER_OFFSET
+      // Solve for position: position = CENTER_OFFSET - winningSlotIndex * TILE_WIDTH - TILE_WIDTH/2
       
-      const winningSlotCenterPosition = winningSlotIndex * TILE_WIDTH + (TILE_WIDTH / 2);
-      const winningSlotTargetPosition = -(winningSlotCenterPosition - CENTER_OFFSET);
+      const winningSlotTargetPosition = CENTER_OFFSET - (winningSlotIndex * TILE_WIDTH + TILE_WIDTH / 2);
+      
+              // Verification: at this position, where will the winning slot center be?
+        const verificationSlotCenter = winningSlotTargetPosition + (winningSlotIndex * TILE_WIDTH + TILE_WIDTH / 2);
+        
+        console.log('🧮 Position calculation details:', {
+          winningSlotIndex,
+          TILE_WIDTH,
+          CENTER_OFFSET,
+          calculation: `${CENTER_OFFSET} - (${winningSlotIndex} * ${TILE_WIDTH} + ${TILE_WIDTH/2})`,
+          winningSlotTargetPosition,
+          verification: `At position ${winningSlotTargetPosition}, slot ${result.slot} center will be at ${verificationSlotCenter} (should equal ${CENTER_OFFSET})`,
+          isAccurate: Math.abs(verificationSlotCenter - CENTER_OFFSET) < 1
+        });
       
       // For the first round or if no previous position, start from 0
       // Otherwise, calculate from the previous round's final position
@@ -341,17 +358,16 @@ async function getCurrentRound(supabase: any) {
         });
       }
       
-      console.log('🎯 Calculated synchronized reel position:', {
-        resultSlot: result.slot,
-        winningSlotIndex,
-        winningSlotCenterPosition,
-        centerOffset: CENTER_OFFSET,
-        winningSlotTargetPosition,
-        previousReelPosition,
-        finalReelPosition,
-        totalRotationDistance,
-        calculation: `slot ${result.slot} at index ${winningSlotIndex}: center=${winningSlotCenterPosition}, target=${winningSlotTargetPosition}, final=${finalReelPosition}`
-      });
+              console.log('🎯 Calculated synchronized reel position:', {
+          resultSlot: result.slot,
+          winningSlotIndex,
+          centerOffset: CENTER_OFFSET,
+          winningSlotTargetPosition,
+          previousReelPosition,
+          finalReelPosition,
+          totalRotationDistance,
+          calculation: `slot ${result.slot} at index ${winningSlotIndex}: target=${winningSlotTargetPosition}, final=${finalReelPosition}`
+        });
 
       // Update round to spinning with result and synchronized reel position
       const { data: updatedRound } = await supabase

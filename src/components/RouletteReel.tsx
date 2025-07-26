@@ -93,6 +93,37 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           console.log('🎰 Synchronized animation completed. Final position:', currentPosition);
           console.log('🎯 Target synchronized position was:', finalPosition);
           console.log('🎯 Winning slot should be:', winningSlot, 'under center line');
+          
+          // Verify positioning accuracy
+          if (winningSlot !== null) {
+            const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningSlot);
+            if (winningSlotIndex !== -1) {
+              // Find the closest instance of the winning slot to the center
+              let closestDistance = Infinity;
+              let closestTilePosition = null;
+              
+              for (let repeat = 0; repeat < 20; repeat++) {
+                const globalIndex = repeat * WHEEL_SLOTS.length + winningSlotIndex;
+                const tilePosition = finalPosition + globalIndex * TILE_WIDTH;
+                const tileCenterPosition = tilePosition + TILE_WIDTH / 2;
+                const distanceFromCenter = Math.abs(tileCenterPosition - CENTER_OFFSET);
+                
+                if (distanceFromCenter < closestDistance) {
+                  closestDistance = distanceFromCenter;
+                  closestTilePosition = tileCenterPosition;
+                }
+              }
+              
+              console.log('🔍 Animation accuracy verification:', {
+                winningSlot,
+                centerLine: CENTER_OFFSET,
+                closestWinningSlotCenter: closestTilePosition,
+                distanceFromCenter: closestDistance,
+                isAccurate: closestDistance < 5 // Within 5px tolerance
+              });
+            }
+          }
+          
           setPosition(finalPosition); // Ensure exact landing
           setIsAnimating(false);
           startTimeRef.current = undefined;
