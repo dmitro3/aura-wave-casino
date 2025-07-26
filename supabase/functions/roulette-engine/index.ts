@@ -271,6 +271,78 @@ serve(async (req) => {
         }
       }
 
+      case 'fix_daily_seeds': {
+        console.log('🔧 Fixing daily seeds system...')
+        
+        try {
+          // Check if daily_seed_id column exists by trying to select it
+          const { data: columnTest, error: columnError } = await supabase
+            .from('roulette_rounds')
+            .select('daily_seed_id')
+            .limit(1)
+
+          if (columnError) {
+            console.log('❌ daily_seed_id column missing:', columnError.message)
+            return new Response(JSON.stringify({
+              error: 'daily_seed_id column does not exist in roulette_rounds table',
+              details: columnError.message,
+              solution: 'Please run this SQL in Supabase SQL Editor:\n\nALTER TABLE public.roulette_rounds ADD COLUMN IF NOT EXISTS daily_seed_id UUID REFERENCES public.daily_seeds(id);\nALTER TABLE public.roulette_rounds ADD COLUMN IF NOT EXISTS nonce_id INTEGER;'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+
+          console.log('✅ daily_seed_id column exists')
+
+          // Test creating a new round with advanced system
+          console.log('🧪 Testing advanced round creation...')
+          const testRound = await createNewRound(supabase)
+          
+          if (testRound.daily_seed_id) {
+            console.log('✅ Advanced round creation works!')
+            
+            // Delete the test round
+            await supabase
+              .from('roulette_rounds')
+              .delete()
+              .eq('id', testRound.id)
+            
+            console.log('🗑️ Cleaned up test round')
+            
+            return new Response(JSON.stringify({
+              success: true,
+              message: 'Daily seeds system is working! New rounds will use advanced provably fair.',
+              test_round: {
+                id: testRound.id,
+                daily_seed_id: testRound.daily_seed_id,
+                nonce_id: testRound.nonce_id
+              }
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          } else {
+            return new Response(JSON.stringify({
+              error: 'Test round creation used legacy system instead of advanced',
+              details: 'Round was created but without daily_seed_id'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+          
+        } catch (error) {
+          console.error('❌ Fix error:', error)
+          return new Response(JSON.stringify({
+            error: error.message,
+            success: false
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,

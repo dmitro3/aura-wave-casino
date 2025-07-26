@@ -709,6 +709,53 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }
 
+  const fixDailySeeds = async () => {
+    try {
+      console.log('🔧 Fixing daily seeds system...')
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'fix_daily_seeds' }
+      })
+
+      if (error) {
+        console.error('❌ Fix daily seeds error:', error)
+        toast({
+          title: "Fix Error",
+          description: error.message,
+          variant: "destructive"
+        })
+        return
+      }
+
+      console.log('✅ Fix daily seeds result:', data)
+      
+      if (data.success) {
+        toast({
+          title: "Daily Seeds Fixed!",
+          description: data.message,
+          variant: "default"
+        })
+      } else {
+        toast({
+          title: "Daily Seeds Issue",
+          description: data.error || data.details,
+          variant: "destructive"
+        })
+        
+        // If we have a solution, log it
+        if (data.solution) {
+          console.log('💡 Solution:', data.solution)
+        }
+      }
+    } catch (error) {
+      console.error('❌ Fix daily seeds error:', error)
+      toast({
+        title: "Fix Error",
+        description: "Failed to fix daily seeds system",
+        variant: "destructive"
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -787,6 +834,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 <div className="flex items-center gap-2">
                   <Button onClick={testDailySeeds} variant="outline" size="sm">
                     Test Daily Seeds
+                  </Button>
+                  <Button onClick={fixDailySeeds} variant="outline" size="sm">
+                    Fix Daily Seeds
                   </Button>
                   <span className="text-sm text-muted-foreground">
                     {timeLeft > 0 ? `${timeLeft}s remaining` : 'Bets closed'}
