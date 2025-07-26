@@ -28,13 +28,61 @@ const WHEEL_SLOTS = [
 ];
 
 const TILE_WIDTH = 120; // Width of each tile in pixels
+const BACKEND_CONTAINER_WIDTH = 1200; // Backend's container width
+const BACKEND_CENTER_OFFSET = 600; // Backend's center position
 
-export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extendedWinAnimation }: RouletteReelProps) {
+export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [translateX, setTranslateX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const animationRef = useRef<number>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [actualContainerWidth, setActualContainerWidth] = useState(BACKEND_CONTAINER_WIDTH);
+  const [actualCenterOffset, setActualCenterOffset] = useState(BACKEND_CENTER_OFFSET);
 
-  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX });
+  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition });
+
+  // Measure actual container size for responsive design
+  useEffect(() => {
+    const measureContainer = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const width = rect.width || BACKEND_CONTAINER_WIDTH;
+        const centerOffset = width / 2;
+        
+        setActualContainerWidth(width);
+        setActualCenterOffset(centerOffset);
+        
+        console.log('📏 Container measured:', { width, centerOffset });
+      }
+    };
+
+    measureContainer();
+    window.addEventListener('resize', measureContainer);
+    
+    return () => window.removeEventListener('resize', measureContainer);
+  }, []);
+
+  // Sync position when not animating (cross-user synchronization)
+  useEffect(() => {
+    if (synchronizedPosition !== null && 
+        synchronizedPosition !== undefined && 
+        !isAnimating) {
+      
+      console.log('🔄 Syncing to backend position:', synchronizedPosition);
+      
+      // Adjust backend position for our actual container size
+      const centerDifference = actualCenterOffset - BACKEND_CENTER_OFFSET;
+      const adjustedPosition = synchronizedPosition + centerDifference;
+      
+      console.log('📍 Position sync:', {
+        backend: synchronizedPosition,
+        centerDifference,
+        adjusted: adjustedPosition
+      });
+      
+      setTranslateX(adjustedPosition);
+    }
+  }, [synchronizedPosition, isAnimating, actualCenterOffset]);
 
   // Create a repeating loop of tiles (20 repetitions for smooth infinite scroll)
   const tiles = [];
@@ -48,79 +96,67 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
     }
   }
 
-  // Animation: Start fast, then slow down smoothly to land on winning slot
+  // Enhanced animation: Use provably fair position with smoother slowdown
   useEffect(() => {
-    if (isSpinning && winningSlot !== null) {
-      console.log('🚀 Starting reel animation for slot:', winningSlot);
+    if (isSpinning && winningSlot !== null && synchronizedPosition !== null && synchronizedPosition !== undefined) {
+      console.log('🚀 Starting provably fair animation to slot:', winningSlot, 'at position:', synchronizedPosition);
       
       setIsAnimating(true);
       
-      // Find the winning slot index in our WHEEL_SLOTS array
-      const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningSlot);
+      // Use the EXACT position calculated by the provably fair backend
+      const startPosition = translateX;
       
-      if (winningSlotIndex === -1) {
-        console.error('❌ Winning slot not found:', winningSlot);
-        return;
-      }
-
-      // Calculate where the winning slot should be positioned
-      // We want it centered, so we need to position it at the center of our container
-      const containerCenter = 600; // Assume 1200px container, center at 600px
+      // Adjust backend position for our actual container size
+      const centerDifference = actualCenterOffset - BACKEND_CENTER_OFFSET;
+      const exactTargetPosition = synchronizedPosition + centerDifference;
       
-      // Position the winning slot so it ends up at the center
-      // We'll use a tile from the middle repetitions to avoid edge cases
-      const targetRepetition = 10; // Use 10th repetition
-      const targetTileIndex = targetRepetition * WHEEL_SLOTS.length + winningSlotIndex;
-      const targetPosition = containerCenter - (targetTileIndex * TILE_WIDTH + TILE_WIDTH / 2);
-      
-      // Add multiple full rotations for visual effect (always move left)
-      const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH; // 15 * 120 = 1800px
-      const extraRotations = 5; // 5 extra full rotations
-      const finalPosition = targetPosition - (extraRotations * fullRotation);
-      
-      console.log('🎯 Animation target:', {
+      console.log('🎯 Provably fair animation setup:', {
         winningSlot,
-        winningSlotIndex,
-        targetTileIndex,
-        containerCenter,
-        targetPosition,
-        finalPosition,
-        extraRotations
+        startPosition,
+        backendPosition: synchronizedPosition,
+        centerDifference,
+        exactTarget: exactTargetPosition,
+        distance: Math.abs(exactTargetPosition - startPosition)
       });
 
-      // Animate from current position to final position
-      const startPosition = translateX;
-      const totalDistance = Math.abs(finalPosition - startPosition);
-      const duration = 3000; // 3 seconds
+      // Enhanced animation timing with smoother slowdown
+      const duration = 4000; // 4 seconds for smoother experience
       const startTime = Date.now();
 
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Easing function: start fast, then slow down smoothly
-        // Using cubic ease-out for realistic deceleration
-        const easeOut = 1 - Math.pow(1 - progress, 3);
+        // Enhanced easing function for ultra-smooth slowdown
+        let easeProgress;
+        if (progress < 0.1) {
+          // Phase 1: Quick start (first 10% of time) - quadratic ease-in
+          const phaseProgress = progress / 0.1;
+          easeProgress = phaseProgress * phaseProgress * 0.3; // 0% to 30% distance
+        } else if (progress < 0.4) {
+          // Phase 2: Fast movement (10%-40% of time) - linear
+          const phaseProgress = (progress - 0.1) / 0.3;
+          easeProgress = 0.3 + phaseProgress * 0.5; // 30% to 80% distance
+        } else {
+          // Phase 3: Ultra-smooth slowdown (40%-100% of time) - quartic ease-out
+          const phaseProgress = (progress - 0.4) / 0.6;
+          // Quartic ease-out for ultra-smooth deceleration: 1 - (1-t)^4
+          const smoothEaseOut = 1 - Math.pow(1 - phaseProgress, 4);
+          easeProgress = 0.8 + smoothEaseOut * 0.2; // 80% to 100% distance
+        }
         
-        const currentPosition = startPosition + (finalPosition - startPosition) * easeOut;
+        const currentPosition = startPosition + (exactTargetPosition - startPosition) * easeProgress;
         setTranslateX(currentPosition);
 
         if (progress < 1) {
           animationRef.current = requestAnimationFrame(animate);
         } else {
-          // Animation complete
-          console.log('✅ Animation complete at position:', currentPosition);
+          // Animation complete - verify provably fair landing
+          console.log('✅ Provably fair animation complete at position:', currentPosition);
           setIsAnimating(false);
           
-          // Verify landing accuracy
-          const actualTileCenter = currentPosition + (targetTileIndex * TILE_WIDTH + TILE_WIDTH / 2);
-          const distanceFromCenter = Math.abs(actualTileCenter - containerCenter);
-          console.log('🎯 Landing verification:', {
-            expectedCenter: containerCenter,
-            actualCenter: actualTileCenter,
-            distanceOff: distanceFromCenter,
-            accurate: distanceFromCenter < 10
-          });
+          // Verify the provably fair result landed correctly
+          verifyProvablyFairLanding(winningSlot, currentPosition);
         }
       };
 
@@ -131,7 +167,48 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       
       animationRef.current = requestAnimationFrame(animate);
     }
-  }, [isSpinning, winningSlot, translateX]);
+  }, [isSpinning, winningSlot, synchronizedPosition, translateX, actualCenterOffset]);
+
+  // Verify that the provably fair result landed exactly under the center line
+  const verifyProvablyFairLanding = (slot: number | null, finalPosition: number) => {
+    if (slot === null) return;
+    
+    const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
+    if (slotIndex === -1) return;
+    
+    // Find the closest instance of the winning slot to the center
+    let closestDistance = Infinity;
+    let closestTileCenter = 0;
+    
+    for (let repeat = 0; repeat < 20; repeat++) {
+      const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
+      const tileLeftEdge = finalPosition + (tileGlobalIndex * TILE_WIDTH);
+      const tileCenterPosition = tileLeftEdge + (TILE_WIDTH / 2);
+      const distanceFromCenter = Math.abs(tileCenterPosition - actualCenterOffset);
+      
+      if (distanceFromCenter < closestDistance) {
+        closestDistance = distanceFromCenter;
+        closestTileCenter = tileCenterPosition;
+      }
+    }
+    
+    const isAccurate = closestDistance < 5; // Very strict tolerance
+    
+    console.log('🎯 PROVABLY FAIR VERIFICATION:', {
+      expectedSlot: slot,
+      expectedCenter: actualCenterOffset,
+      actualTileCenter: closestTileCenter,
+      distanceOff: closestDistance.toFixed(2) + 'px',
+      result: isAccurate ? '✅ PERFECT PROVABLY FAIR LANDING' : '❌ PROVABLY FAIR ERROR',
+      tolerance: '5px'
+    });
+    
+    if (!isAccurate) {
+      console.error(`❌ PROVABLY FAIR SYSTEM ERROR: Slot ${slot} missed center by ${closestDistance.toFixed(2)}px!`);
+    } else {
+      console.log(`✅ PROVABLY FAIR SUCCESS: Slot ${slot} landed perfectly under center line!`);
+    }
+  };
 
   // Clean up animation when round ends
   useEffect(() => {
@@ -158,7 +235,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
   return (
     <div className="relative w-full max-w-7xl mx-auto">
       {/* Reel container */}
-      <div className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
+      <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
         {/* Center indicator line */}
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
@@ -191,8 +268,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
           {tiles.map((tile) => {
             // Calculate if this tile is near the center for highlighting
             const tileCenter = translateX + (tile.index * TILE_WIDTH + TILE_WIDTH / 2);
-            const containerCenter = 600; // Half of 1200px container
-            const distanceFromCenter = Math.abs(tileCenter - containerCenter);
+            const distanceFromCenter = Math.abs(tileCenter - actualCenterOffset);
             const isNearCenter = distanceFromCenter < TILE_WIDTH / 2;
             const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < TILE_WIDTH / 3;
 
@@ -201,7 +277,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
                 key={tile.key}
                 className={`
                   flex-shrink-0 h-28 flex items-center justify-center relative
-                  border-2 shadow-lg transition-all duration-150
+                  border-2 shadow-lg transition-all duration-200
                   ${getTileColor(tile.color)}
                   ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : ''}
                   ${isNearCenter && isAnimating ? 'scale-105 z-10' : ''}
