@@ -215,12 +215,22 @@ async function getCurrentRound(supabase: any) {
       }
       
       // Calculate the final reel position that centers the winning slot precisely
-      // We want the CENTER of the winning tile to align with the center line
-      // Tile starts at: winningSlotIndex * TILE_WIDTH
-      // Tile center is at: (winningSlotIndex * TILE_WIDTH) + (TILE_WIDTH / 2)
-      // To center it: -(tile_center_position) + CENTER_OFFSET
-      const tileCenterPosition = (winningSlotIndex * TILE_WIDTH) + (TILE_WIDTH / 2);
-      const winningSlotTargetPosition = -tileCenterPosition + CENTER_OFFSET;
+      // The tiles move from right to left (negative direction)
+      // Each tile is TILE_WIDTH pixels wide
+      // The center line is at CENTER_OFFSET from the left edge
+      // We want the winning tile's center to be exactly under the center line
+      
+      // Tile position calculation: index * TILE_WIDTH gives us the LEFT edge of the tile
+      // Tile center is at: LEFT edge + (TILE_WIDTH / 2)
+      const tileLeftEdge = winningSlotIndex * TILE_WIDTH;
+      const tileCenterFromOrigin = tileLeftEdge + (TILE_WIDTH / 2);
+      
+      // To center the tile under the center line:
+      // We need to move the reel so that tileCenterFromOrigin ends up at CENTER_OFFSET
+      // Since tiles move leftward (negative direction): position = -(tileCenterFromOrigin - CENTER_OFFSET)
+      // BUT: if result is always one position before, we need to adjust by +TILE_WIDTH
+      const baseTargetPosition = -(tileCenterFromOrigin - CENTER_OFFSET);
+      const winningSlotTargetPosition = baseTargetPosition + TILE_WIDTH; // Shift one tile forward
       
       // For the first round or if no previous position, start from 0
       // Otherwise, calculate from the previous round's final position
@@ -248,11 +258,15 @@ async function getCurrentRound(supabase: any) {
       console.log('🎯 Calculated synchronized reel position:', {
         resultSlot: result.slot,
         winningSlotIndex,
-        tileCenterPosition,
+        tileLeftEdge,
+        tileCenterFromOrigin,
+        centerOffset: CENTER_OFFSET,
+        baseTargetPosition,
         winningSlotTargetPosition,
+        adjustment: TILE_WIDTH,
         previousReelPosition,
         finalReelPosition,
-        calculation: `slot ${result.slot} at index ${winningSlotIndex} should center at position ${winningSlotTargetPosition}`
+        calculation: `slot ${result.slot} at index ${winningSlotIndex}: left=${tileLeftEdge}, center=${tileCenterFromOrigin}, base=${baseTargetPosition}, final=${winningSlotTargetPosition} (+${TILE_WIDTH} adjustment)`
       });
 
       // Update round to spinning with result and synchronized reel position
