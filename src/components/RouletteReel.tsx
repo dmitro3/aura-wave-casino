@@ -111,17 +111,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Adjust the backend position by the center offset difference
       let finalPosition = synchronizedPosition + centerOffsetDifference;
       
-      // Ensure consistent left movement
-      while (finalPosition >= startPosition) {
-        finalPosition -= fullRotationDistance;
+      // CONSISTENT ANIMATION: Ensure we always move left with enough rotations for visual effect
+      const minRotations = 5; // Minimum 5 full rotations for visual appeal
+      const maxRotations = 8; // Maximum 8 full rotations to avoid excessive animation
+      
+      // Calculate target rotations based on current position
+      let rotationsNeeded = minRotations;
+      while (finalPosition + (rotationsNeeded * fullRotationDistance) >= startPosition) {
+        rotationsNeeded++;
+        if (rotationsNeeded > maxRotations) break;
       }
       
-      console.log('🎯 Adjusted animation params:', {
+      // Apply the rotations - always move left
+      finalPosition -= (rotationsNeeded * fullRotationDistance);
+      
+      console.log('🎯 Consistent animation setup:', {
         originalBackendPosition: synchronizedPosition,
         centerOffsetDifference,
-        adjustedFinalPosition: finalPosition,
         startPosition,
-        difference: finalPosition - startPosition
+        rotationsApplied: rotationsNeeded,
+        finalPosition,
+        totalDistance: Math.abs(finalPosition - startPosition),
+        direction: 'LEFT (guaranteed)'
       });
 
       const startTime = performance.now();
@@ -165,24 +176,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           setIsAnimating(false);
           startTimeRef.current = undefined;
         } else {
-          // Calculate progress through different phases
+          // Calculate progress through different phases - CONSISTENT ANIMATION
           let progress = 0;
           
           if (elapsed <= SPEEDUP_DURATION) {
-            // Phase 1: Speed up (quadratic ease-in)
+            // Phase 1: Speed up (0.5s) - Smooth acceleration from 0
             const phaseProgress = elapsed / SPEEDUP_DURATION;
-            progress = phaseProgress * phaseProgress * 0.1; // Slow start, 10% completion
+            // Quadratic ease-in: slow start, accelerating
+            progress = phaseProgress * phaseProgress * 0.15; // 0-15% completion
           } else if (elapsed <= SPEEDUP_DURATION + FAST_DURATION) {
-            // Phase 2: Fast rolling (linear)
+            // Phase 2: Fast rolling (1.0s) - Consistent fast speed
             const phaseProgress = (elapsed - SPEEDUP_DURATION) / FAST_DURATION;
-            progress = 0.1 + phaseProgress * 0.7; // Linear from 10% to 80%
+            // Linear progression for consistent visual speed
+            progress = 0.15 + phaseProgress * 0.65; // 15-80% completion
           } else {
-            // Phase 3: Slow down (cubic ease-out)
+            // Phase 3: Slow down (2.0s) - Smooth deceleration to exact landing
             const phaseProgress = (elapsed - SPEEDUP_DURATION - FAST_DURATION) / SLOWDOWN_DURATION;
+            // Cubic ease-out: fast to slow, precise landing
             const easeOut = 1 - Math.pow(1 - phaseProgress, 3);
-            progress = 0.8 + easeOut * 0.2; // Ease out from 80% to 100%
+            progress = 0.80 + easeOut * 0.20; // 80-100% completion
           }
           
+          // Ensure smooth, consistent movement
           const currentPosition = startPosition + (finalPosition - startPosition) * progress;
           setPosition(currentPosition);
           
@@ -329,13 +344,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             );
           })}
         </div>
-
-        {/* Win Animation Overlay */}
-        {showWinAnimation && (
-          <div className="absolute inset-0 bg-emerald-400/20 animate-pulse rounded-xl pointer-events-none">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent animate-pulse"></div>
-          </div>
-        )}
       </div>
     </div>
   );
