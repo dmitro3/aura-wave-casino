@@ -1053,21 +1053,53 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                             
                             <div className="flex items-center gap-2 bg-black/50 rounded-lg px-3 py-2 relative z-10">
                               <span className="text-lg font-bold text-primary">$</span>
-                              <Input
-                                type="number"
-                                value={betAmount}
-                                onChange={(e) => {
-                                  const newAmount = Number(e.target.value);
-                                  const maxBalance = profile?.balance || 0;
-                                  setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
-                                }}
-                                min="0.01"
-                                max={profile?.balance || 0}
-                                step="0.01"
-                                className="flex-1 text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-white"
-                                disabled={currentRound.status !== 'betting'}
-                                placeholder="0.00"
-                              />
+                              <div className="relative flex-1">
+                                <Input
+                                  type="number"
+                                  value={betAmount}
+                                  onChange={(e) => {
+                                    const newAmount = Number(e.target.value);
+                                    const maxBalance = profile?.balance || 0;
+                                    setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                                  }}
+                                  min="0.01"
+                                  max={profile?.balance || 0}
+                                  step="0.01"
+                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-primary focus:text-emerald-400 placeholder:text-primary/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  style={{
+                                    MozAppearance: 'textfield'
+                                  }}
+                                  disabled={currentRound.status !== 'betting'}
+                                  placeholder="0.00"
+                                />
+                                
+                                {/* Custom Spin Buttons */}
+                                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex flex-col">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newAmount = betAmount + 0.01;
+                                      const maxBalance = profile?.balance || 0;
+                                      setBetAmount(newAmount > maxBalance ? maxBalance : newAmount);
+                                    }}
+                                    disabled={currentRound.status !== 'betting'}
+                                    className="w-4 h-3 flex items-center justify-center bg-gradient-to-b from-primary/30 to-primary/20 hover:from-primary/50 hover:to-primary/30 active:from-primary/60 active:to-primary/40 rounded-t text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                                  >
+                                    ▲
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newAmount = Math.max(0.01, betAmount - 0.01);
+                                      setBetAmount(newAmount);
+                                    }}
+                                    disabled={currentRound.status !== 'betting'}
+                                    className="w-4 h-3 flex items-center justify-center bg-gradient-to-b from-primary/20 to-primary/30 hover:from-primary/30 hover:to-primary/50 active:from-primary/40 active:to-primary/60 rounded-b text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                                  >
+                                    ▼
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
