@@ -905,7 +905,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
   // Stable reference for bet display to prevent flickering
   const userBetsDisplayRef = useRef<Record<string, number>>({});
-  const [, forceUpdate] = useState({});
+  const [, setForceUpdate] = useState({});
   
   // Force re-render function for immediate visual updates
   const forceRender = () => setForceUpdate({});

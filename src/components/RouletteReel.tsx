@@ -43,12 +43,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const lastSynchronizedPosition = useRef<number | null>(null);
   const positionInitialized = useRef(false);
 
+  // Constants for tile generation
+  const REPEAT_COUNT = 20; // Enough repeats for smooth infinite scrolling
+
   // MEMOIZED: Generate tiles once and reuse to prevent loading issues
   const tiles = useMemo(() => {
     const generatedTiles = [];
-    const repeatCount = 20; // Enough repeats for smooth infinite scrolling
     
-    for (let repeat = 0; repeat < repeatCount; repeat++) {
+    for (let repeat = 0; repeat < REPEAT_COUNT; repeat++) {
       WHEEL_SLOTS.forEach((slot, index) => {
         generatedTiles.push({
           ...slot,
@@ -162,7 +164,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
               let closestDistance = Infinity;
               let closestTilePosition = 0;
               
-              for (let repeat = 0; repeat < repeatCount; repeat++) {
+              for (let repeat = 0; repeat < REPEAT_COUNT; repeat++) {
                 const tileGlobalIndex = repeat * WHEEL_SLOTS.length + winningSlotIndex;
                 const tilePosition = finalPosition + tileGlobalIndex * TILE_WIDTH;
                 const tileCenterPosition = tilePosition + TILE_WIDTH / 2;
