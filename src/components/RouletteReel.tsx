@@ -29,14 +29,35 @@ const WHEEL_SLOTS = [
 
 const TILE_WIDTH = 120; // Width of each tile in pixels
 
+// Animation phases
+enum AnimationPhase {
+  IDLE = 'idle',
+  ACCELERATION = 'acceleration',
+  FULL_SPEED = 'full_speed',
+  DECELERATION = 'deceleration',
+  STOPPED = 'stopped'
+}
+
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [translateX, setTranslateX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<AnimationPhase>(AnimationPhase.IDLE);
+  const [currentVelocity, setCurrentVelocity] = useState(0);
   const animationRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const [actualCenterOffset, setActualCenterOffset] = useState(600);
+  const startTimeRef = useRef<number>(0);
+  const startPositionRef = useRef<number>(0);
+  const targetPositionRef = useRef<number>(0);
 
-  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition });
+  console.log('🎰 RouletteReel:', { 
+    isSpinning, 
+    winningSlot, 
+    translateX, 
+    synchronizedPosition, 
+    animationPhase,
+    currentVelocity 
+  });
 
   // Measure actual container size for responsive design
   useEffect(() => {
@@ -55,9 +76,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return () => window.removeEventListener('resize', measureContainer);
   }, []);
 
-  // Create a repeating loop of tiles (50 repetitions for smooth infinite scroll)
+  // Create a repeating loop of tiles (60 repetitions for ultra-smooth infinite scroll)
   const tiles = [];
-  for (let repeat = 0; repeat < 50; repeat++) {
+  for (let repeat = 0; repeat < 60; repeat++) {
     for (let i = 0; i < WHEEL_SLOTS.length; i++) {
       tiles.push({
         ...WHEEL_SLOTS[i],
@@ -67,49 +88,86 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }
 
-  // Real rolling animation function
-  const animateRolling = useCallback((startPosition: number, targetPosition: number) => {
+  // High-fidelity physics-based animation function
+  const animateHighFidelity = useCallback((startPosition: number, targetPosition: number) => {
     const startTime = Date.now();
-    const duration = 3000; // Exactly 3 seconds
+    const totalDuration = 4000; // 4 seconds total
+    const accelerationDuration = 800; // 0.8s acceleration
+    const fullSpeedDuration = 2400; // 2.4s full speed
+    const decelerationDuration = 800; // 0.8s deceleration
     
-    console.log('🚀 Starting real rolling animation:', {
+    startTimeRef.current = startTime;
+    startPositionRef.current = startPosition;
+    targetPositionRef.current = targetPosition;
+    
+    console.log('🚀 Starting high-fidelity animation:', {
       startPosition,
       targetPosition,
-      distance: Math.abs(targetPosition - startPosition)
+      distance: Math.abs(targetPosition - startPosition),
+      totalDuration,
+      accelerationDuration,
+      fullSpeedDuration,
+      decelerationDuration
     });
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
+      const totalProgress = Math.min(elapsed / totalDuration, 1);
       
-      // Calculate velocity-based easing for realistic rolling
-      let easedProgress;
-      if (progress < 0.2) {
-        // Start slow (0-20%) - accelerate
-        const phaseProgress = progress / 0.2;
-        easedProgress = phaseProgress * phaseProgress * 0.2;
-      } else if (progress < 0.8) {
-        // Maintain speed (20-80%) - constant velocity
-        easedProgress = 0.2 + (progress - 0.2) * 0.6;
+      let currentPosition: number;
+      let phase: AnimationPhase;
+      let velocity: number;
+      
+      if (elapsed < accelerationDuration) {
+        // ACCELERATION PHASE (0-0.8s)
+        const phaseProgress = elapsed / accelerationDuration;
+        // Use cubic-bezier(0.6, 0.04, 0.98, 0.335) equivalent
+        const easedProgress = 1 - Math.pow(1 - phaseProgress, 3);
+        const phaseDistance = (targetPosition - startPosition) * 0.3; // 30% of total distance
+        currentPosition = startPosition + phaseDistance * easedProgress;
+        phase = AnimationPhase.ACCELERATION;
+        velocity = easedProgress * 100; // Velocity indicator
+      } else if (elapsed < accelerationDuration + fullSpeedDuration) {
+        // FULL SPEED PHASE (0.8s-3.2s)
+        const phaseProgress = (elapsed - accelerationDuration) / fullSpeedDuration;
+        const phaseDistance = (targetPosition - startPosition) * 0.6; // 60% of total distance
+        const accelerationDistance = (targetPosition - startPosition) * 0.3;
+        currentPosition = startPosition + accelerationDistance + (phaseDistance * phaseProgress);
+        phase = AnimationPhase.FULL_SPEED;
+        velocity = 100; // Constant high velocity
       } else {
-        // Slow down (80-100%) - decelerate
-        const phaseProgress = (progress - 0.8) / 0.2;
-        easedProgress = 0.8 + (1 - Math.pow(1 - phaseProgress, 2)) * 0.2;
+        // DECELERATION PHASE (3.2s-4.0s)
+        const phaseProgress = (elapsed - accelerationDuration - fullSpeedDuration) / decelerationDuration;
+        // Use easeOutQuart equivalent
+        const easedProgress = 1 - Math.pow(1 - phaseProgress, 4);
+        const phaseDistance = (targetPosition - startPosition) * 0.1; // 10% of total distance
+        const previousDistance = (targetPosition - startPosition) * 0.9;
+        currentPosition = startPosition + previousDistance + (phaseDistance * easedProgress);
+        phase = AnimationPhase.DECELERATION;
+        velocity = (1 - easedProgress) * 100; // Decreasing velocity
       }
       
-      // Calculate current position with smooth movement
-      const currentPosition = startPosition + (targetPosition - startPosition) * easedProgress;
+      // Apply bounce effect at the end
+      if (phase === AnimationPhase.DECELERATION && totalProgress > 0.95) {
+        const bounceProgress = (totalProgress - 0.95) / 0.05;
+        const bounceOffset = Math.sin(bounceProgress * Math.PI * 2) * 5; // 5px bounce
+        currentPosition += bounceOffset;
+      }
       
-      // Apply the position change smoothly
+      // Update state
       setTranslateX(currentPosition);
+      setAnimationPhase(phase);
+      setCurrentVelocity(velocity);
 
-      if (progress < 1) {
+      if (totalProgress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
         // Animation complete - ensure exact landing
-        console.log('✅ Rolling animation complete');
+        console.log('✅ High-fidelity animation complete');
         setTranslateX(targetPosition);
         setIsAnimating(false);
+        setAnimationPhase(AnimationPhase.STOPPED);
+        setCurrentVelocity(0);
       }
     };
 
@@ -119,13 +177,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
     
     setIsAnimating(true);
+    setAnimationPhase(AnimationPhase.ACCELERATION);
     animationRef.current = requestAnimationFrame(animate);
   }, []);
 
   // Start animation when spinning begins
   useEffect(() => {
     if (isSpinning && winningSlot !== null) {
-      console.log('🚀 Starting real rolling animation to slot:', winningSlot);
+      console.log('🚀 Starting high-fidelity animation to slot:', winningSlot);
       
       // Find the winning slot in our wheel configuration
       const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
@@ -140,10 +199,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       // Add multiple full rotations for dramatic effect
       const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
-      const rotations = 5; // 5 full rotations for dramatic effect
+      const rotations = 6; // 6 full rotations for dramatic effect
       const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
       
-      console.log('🎯 Rolling animation setup:', {
+      console.log('🎯 High-fidelity animation setup:', {
         winningSlot,
         slotIndex,
         winningSlotCenter,
@@ -154,16 +213,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         distance: Math.abs(finalTargetPosition - translateX)
       });
 
-      // Start the real rolling animation
-      animateRolling(translateX, finalTargetPosition);
+      // Start the high-fidelity animation
+      animateHighFidelity(translateX, finalTargetPosition);
     }
-  }, [isSpinning, winningSlot, actualCenterOffset, translateX, animateRolling]);
+  }, [isSpinning, winningSlot, actualCenterOffset, translateX, animateHighFidelity]);
 
   // Clean up animation when round ends
   useEffect(() => {
     if (!isSpinning && animationRef.current) {
       cancelAnimationFrame(animationRef.current);
       setIsAnimating(false);
+      setAnimationPhase(AnimationPhase.IDLE);
+      setCurrentVelocity(0);
     }
   }, [isSpinning]);
 
@@ -171,22 +232,53 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const getTileColor = (color: string) => {
     switch (color) {
       case 'green':
-        return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 text-white';
+        return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 text-white shadow-lg shadow-emerald-500/25';
       case 'red':
-        return 'bg-gradient-to-br from-red-400 to-red-600 border-red-300 text-white';
+        return 'bg-gradient-to-br from-red-400 to-red-600 border-red-300 text-white shadow-lg shadow-red-500/25';
       case 'black':
-        return 'bg-gradient-to-br from-gray-700 to-gray-900 border-gray-600 text-white';
+        return 'bg-gradient-to-br from-gray-700 to-gray-900 border-gray-600 text-white shadow-lg shadow-gray-500/25';
       default:
         return 'bg-gray-500 text-white';
     }
   };
 
+  // Get tile effects based on animation phase
+  const getTileEffects = (tileIndex: number) => {
+    if (!isAnimating) return '';
+    
+    const tileCenter = translateX + (tileIndex * TILE_WIDTH + TILE_WIDTH / 2);
+    const distanceFromCenter = Math.abs(tileCenter - actualCenterOffset);
+    const isNearCenter = distanceFromCenter < TILE_WIDTH / 2;
+    
+    if (animationPhase === AnimationPhase.FULL_SPEED && isNearCenter) {
+      // Motion blur effect during full speed
+      return 'blur-[0.5px] scale-95';
+    } else if (animationPhase === AnimationPhase.DECELERATION && isNearCenter) {
+      // Subtle glow during deceleration
+      return 'shadow-lg shadow-emerald-400/30';
+    }
+    
+    return '';
+  };
+
   return (
     <div className="relative w-full max-w-7xl mx-auto">
+      {/* Animation phase indicator */}
+      <div className="absolute top-2 left-2 z-40">
+        <div className="bg-black/70 text-white px-3 py-1 rounded-lg text-sm font-mono">
+          Phase: {animationPhase.replace('_', ' ').toUpperCase()}
+          {isAnimating && (
+            <div className="text-xs text-emerald-400">
+              Velocity: {Math.round(currentVelocity)}%
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Reel container */}
       <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 border border-gray-600/50">
         
-        {/* Center indicator line */}
+        {/* Center indicator line with enhanced styling */}
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
           {/* Top arrow */}
           <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -198,11 +290,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-emerald-400 drop-shadow-lg"></div>
           </div>
           
-          {/* Center line */}
+          {/* Center line with enhanced glow */}
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-300 via-emerald-400 to-emerald-300 shadow-lg"></div>
           
-          {/* Glow effect */}
+          {/* Enhanced glow effect */}
           <div className="absolute inset-0 bg-emerald-400 shadow-emerald-400/50 shadow-2xl blur-sm animate-pulse"></div>
+          
+          {/* Additional glow layers for depth */}
+          <div className="absolute inset-0 bg-emerald-300/30 shadow-emerald-300/20 shadow-xl blur-md"></div>
         </div>
 
         {/* Horizontal scrolling tiles */}
@@ -229,7 +324,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   flex-shrink-0 h-28 flex items-center justify-center relative
                   border-2 shadow-lg transition-all duration-75
                   ${getTileColor(tile.color)}
-                  ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : ''}
+                  ${getTileEffects(tile.index)}
+                  ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20 animate-pulse' : ''}
                   ${isExtendedWinningTile ? 'scale-125 ring-8 ring-emerald-300 shadow-2xl shadow-emerald-300/70 z-30 animate-pulse' : ''}
                   ${isNearCenter && isAnimating ? 'z-10' : ''}
                 `}
@@ -242,6 +338,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                 }`}>
                   {tile.slot}
                 </div>
+                
+                {/* Subtle inner glow for depth */}
+                <div className="absolute inset-0 bg-white/5 rounded-lg pointer-events-none"></div>
               </div>
             );
           })}
