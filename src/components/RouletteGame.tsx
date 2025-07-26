@@ -661,12 +661,44 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         return
       }
 
-      console.log('✅ Daily seeds setup result:', data)
-      toast({
-        title: "Daily Seeds Setup",
-        description: data.success ? data.message : data.error,
-        variant: data.success ? "default" : "destructive"
-      })
+      console.log('✅ Daily seeds diagnostic result:', data)
+      
+      if (data.diagnostic) {
+        const diag = data.diagnostic
+        console.log('📊 Detailed diagnostic:', diag)
+        
+        // Show detailed diagnostic info
+        const details = [
+          `Daily Seeds: ${diag.daily_seeds_table.count} records`,
+          `Rounds: ${diag.roulette_rounds_table.count} total`,
+          `Advanced Rounds: ${diag.roulette_rounds_table.rounds_with_daily_seed_id}`,
+          `Verification Query: ${diag.verification_query.works ? 'Works' : 'Failed'}`,
+          `Daily Seed Creation: ${diag.daily_seed_creation.works ? 'Works' : 'Failed'}`
+        ].join(' | ')
+        
+        toast({
+          title: "Daily Seeds Diagnostic",
+          description: details,
+          variant: diag.verification_query.works && diag.daily_seed_creation.works ? "default" : "destructive"
+        })
+        
+        // Log specific issues
+        if (!diag.verification_query.works) {
+          console.error('❌ Verification query failed:', diag.verification_query.error)
+        }
+        if (!diag.daily_seed_creation.works) {
+          console.error('❌ Daily seed creation failed:', diag.daily_seed_creation.error)
+        }
+        if (diag.roulette_rounds_table.rounds_with_daily_seed_id === 0) {
+          console.warn('⚠️ No rounds have daily_seed_id - all rounds are using legacy system')
+        }
+      } else {
+        toast({
+          title: "Daily Seeds Setup",
+          description: data.success ? data.message : data.error,
+          variant: data.success ? "default" : "destructive"
+        })
+      }
     } catch (error) {
       console.error('❌ Daily seeds test error:', error)
       toast({
