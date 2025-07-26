@@ -91,6 +91,19 @@ export function RouletteGame() {
       if (error) throw error;
       
       console.log('🎰 Current round:', data);
+      
+      // Check if this is a new round (different ID)
+      const isNewRound = currentRound?.id !== data?.id;
+      if (isNewRound) {
+        console.log('🆕 New round detected, clearing user bets');
+        setUserBets({});
+        setBetTotals({
+          green: { total: 0, count: 0, users: [] },
+          red: { total: 0, count: 0, users: [] },
+          black: { total: 0, count: 0, users: [] }
+        });
+      }
+      
       setCurrentRound(data);
       
       // Fetch bets for this round
@@ -116,6 +129,7 @@ export function RouletteGame() {
 
       if (error) throw error;
       
+      console.log('🔍 Fetched round bets:', data);
       setRoundBets(data || []);
       calculateBetTotals(data || []);
       
@@ -126,6 +140,7 @@ export function RouletteGame() {
         userRoundBets.forEach((bet: RouletteBet) => {
           userBetsByColor[bet.bet_color] = (userBetsByColor[bet.bet_color] || 0) + bet.bet_amount;
         });
+        console.log('👤 User bets for round:', userBetsByColor);
         setUserBets(userBetsByColor);
       }
     } catch (error: any) {
@@ -162,6 +177,7 @@ export function RouletteGame() {
       totals[color].users.push(bet);
     });
 
+    console.log('📊 Calculated bet totals:', totals);
     setBetTotals(totals);
   };
 
@@ -343,9 +359,12 @@ export function RouletteGame() {
       }));
 
       // Update user balance immediately on frontend to reflect the bet
-      await updateUserProfile({ 
+      updateUserProfile({ 
         balance: profile.balance - betAmount 
       });
+
+      // Immediately fetch updated round bets to show live bets
+      await fetchRoundBets(currentRound.id);
 
     } catch (error: any) {
       toast({
