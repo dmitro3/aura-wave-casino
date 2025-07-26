@@ -239,8 +239,8 @@ async function getCurrentRound(supabase: any) {
       
       // Calculate final reel position for cross-user sync
       const TILE_WIDTH = 120;
-      const CONTAINER_WIDTH = 600;
-      const CENTER_OFFSET = CONTAINER_WIDTH / 2; // Exact center at 300px
+              const CONTAINER_WIDTH = 800;
+              const CENTER_OFFSET = CONTAINER_WIDTH / 2; // Exact center at 400px
       const WHEEL_SLOTS_LENGTH = 15;
       
       // Find the position of the winning slot in our WHEEL_SLOTS array

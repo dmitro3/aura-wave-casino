@@ -802,14 +802,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                     <Button
                       onClick={() => placeBet(color)}
                       disabled={!user || !profile || currentRound.status !== 'betting'}
-                      className={`w-full h-20 flex flex-col gap-2 border-2 ${getBetColorClass(color)}`}
+                      className={`w-full h-12 flex flex-col gap-1 border-2 ${getBetColorClass(color)}`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold capitalize">{color}</span>
-                        <span className="text-sm">{getMultiplierText(color)}</span>
+                        <span className="text-base font-bold capitalize">{color}</span>
+                        <span className="text-xs">{getMultiplierText(color)}</span>
                       </div>
                       {(userBets[color] || userBetsRef.current[color]) && (
-                        <span className="text-xs opacity-90 bg-white/20 px-2 py-1 rounded">
+                        <span className="text-xs opacity-90 bg-white/20 px-1 py-0.5 rounded">
                           Your bet: ${(userBets[color] || userBetsRef.current[color] || 0).toFixed(2)}
                         </span>
                       )}
