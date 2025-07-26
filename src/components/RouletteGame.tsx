@@ -94,6 +94,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const currentRoundRef = useRef<string | null>(null);
   const userBetsRef = useRef<Record<string, number>>({});
 
+  // Filter roulette bets from live feed (TowerGame pattern)
+  const rouletteBets = (liveBetFeed || []).filter(bet => bet.game_type === 'roulette');
+  const greenBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'green');
+  const redBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'red');
+  const blackBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'black');
+
   // Fetch current round
   const fetchCurrentRound = async () => {
     try {
