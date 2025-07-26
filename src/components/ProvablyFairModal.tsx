@@ -75,30 +75,50 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
     setLoading(true);
     try {
+      console.log('🔍 Fetching round details for:', roundData.id);
+      
       // Fetch verification data
-      const { data: verification } = await supabase.functions.invoke('roulette-engine', {
+      const { data: verification, error: verificationError } = await supabase.functions.invoke('roulette-engine', {
         body: {
           action: 'verify_round',
           roundId: roundData.id
         }
       });
 
+      if (verificationError) {
+        console.error('❌ Verification error:', verificationError);
+        throw verificationError;
+      }
+
+      console.log('✅ Verification data received:', verification);
+
       if (verification) {
         setVerificationData(verification);
-        setClientSeed(verification.client_seed || '');
+        setClientSeed(verification.client_seed || 'default_client_seed');
       }
 
       // Fetch user's bets for this round
-      const { data: bets } = await supabase
+      const { data: bets, error: betsError } = await supabase
         .from('roulette_bets')
         .select('bet_color, bet_amount, potential_payout, actual_payout, is_winner, profit')
         .eq('round_id', roundData.id)
         .eq('user_id', user.id);
 
-      setUserBets(bets || []);
+      if (betsError) {
+        console.error('❌ Bets error:', betsError);
+      } else {
+        console.log('✅ User bets:', bets);
+        setUserBets(bets || []);
+      }
 
-    } catch (error) {
-      console.error('Error fetching round details:', error);
+    } catch (error: any) {
+      console.error('❌ Error fetching round details:', error);
+      // Set a basic verification data even on error
+      setVerificationData({
+        round_id: roundData.id,
+        round_number: roundData.round_number,
+        error: error.message || 'Failed to load round details'
+      });
     }
     setLoading(false);
   };
@@ -255,8 +275,20 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
               </Card>
             )}
 
+            {/* Error Display */}
+            {verificationData?.error && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="text-center text-red-500">
+                    <h4 className="font-semibold mb-2">Error Loading Round Details</h4>
+                    <p className="text-sm">{verificationData.error}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Provably Fair Verification */}
-            {verificationData && (
+            {verificationData && !verificationData.error && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -265,14 +297,26 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {verificationData.is_completed === false && (
+                    <div className="p-4 rounded-lg border bg-yellow-50">
+                      <p className="text-sm text-yellow-800">
+                        🕐 This round is still ongoing. Server seed will be revealed when the round completes.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label>Server Seed Hash</Label>
-                      <Input value={verificationData.server_seed_hash} readOnly className="font-mono text-xs" />
+                      <Input value={verificationData.server_seed_hash || 'N/A'} readOnly className="font-mono text-xs" />
                     </div>
                     <div>
                       <Label>Server Seed (Revealed)</Label>
-                      <Input value={verificationData.server_seed || 'Not revealed yet'} readOnly className="font-mono text-xs" />
+                      <Input 
+                        value={verificationData.server_seed || 'Not revealed yet'} 
+                        readOnly 
+                        className="font-mono text-xs" 
+                      />
                     </div>
                     <div>
                       <Label>Client Seed</Label>
@@ -281,17 +325,20 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                         onChange={(e) => setClientSeed(e.target.value)}
                         placeholder="Enter your client seed"
                         className="font-mono text-xs" 
+                        disabled={verificationData.is_completed === false}
                       />
                     </div>
                     <div>
                       <Label>Nonce</Label>
-                      <Input value={verificationData.nonce} readOnly className="font-mono text-xs" />
+                      <Input value={verificationData.nonce || 'N/A'} readOnly className="font-mono text-xs" />
                     </div>
                   </div>
 
-                  <Button onClick={verifyFairness} disabled={isVerifying || !clientSeed} className="w-full">
-                    {isVerifying ? 'Verifying...' : 'Verify Fairness'}
-                  </Button>
+                  {verificationData.is_completed && (
+                    <Button onClick={verifyFairness} disabled={isVerifying || !clientSeed} className="w-full">
+                      {isVerifying ? 'Verifying...' : 'Verify Fairness'}
+                    </Button>
+                  )}
 
                   {verificationData.verification_result && (
                     <div className="p-4 rounded-lg border bg-muted">
@@ -303,10 +350,10 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                         SHA-256 Hash: <code className="bg-background px-1 rounded">{verificationData.hash_result}</code>
                       </p>
                       <p className="text-sm">
-                        Result Calculation: {verificationData.hash_number} % 15 = {verificationData.result_slot}
+                        Result Calculation: {verificationData.hash_number} % 15 = {verificationData.calculated_slot}
                       </p>
-                      <p className="text-sm font-semibold text-emerald-400">
-                        ✅ Result: Slot {verificationData.result_slot} ({verificationData.result_color})
+                      <p className={`text-sm font-semibold ${verificationData.verification_result === 'VALID' ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {verificationData.verification_result === 'VALID' ? '✅' : '❌'} Result: Slot {verificationData.result_slot} ({verificationData.result_color}) - {verificationData.verification_result}
                       </p>
                     </div>
                   )}

@@ -114,7 +114,7 @@ serve(async (req) => {
           throw new Error('Round ID required');
         }
 
-        const verification = await verifyRound(supabase, roundId);
+        const verification = await verifyRound(supabase, roundId, clientSeed);
         return new Response(JSON.stringify(verification), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -629,7 +629,7 @@ async function setClientSeed(supabase: any, userId: string, clientSeed: string) 
   return { success: true, seed: newSeed };
 }
 
-async function verifyRound(supabase: any, roundId: string) {
+async function verifyRound(supabase: any, roundId: string, clientSeed?: string) {
   console.log(`🔍 Verifying round ${roundId}`);
 
   const { data: round } = await supabase
@@ -638,11 +638,43 @@ async function verifyRound(supabase: any, roundId: string) {
     .eq('id', roundId)
     .single();
 
-  if (!round || round.status !== 'completed') {
-    throw new Error('Round not completed or not found');
+  if (!round) {
+    throw new Error('Round not found');
   }
 
-  // Return verification data
+  // For ongoing rounds, show basic info but no server seed
+  if (round.status !== 'completed') {
+    return {
+      round_id: round.id,
+      round_number: round.round_number,
+      server_seed: null, // Hidden until round completes
+      server_seed_hash: round.server_seed_hash,
+      nonce: round.nonce,
+      result_slot: round.result_slot,
+      result_color: round.result_color,
+      status: round.status,
+      client_seed: clientSeed || 'default_client_seed',
+      is_completed: false
+    };
+  }
+
+  // For completed rounds, show full verification
+  const usedClientSeed = clientSeed || 'default_client_seed';
+  const hashInput = `${round.server_seed}:${usedClientSeed}:${round.nonce}`;
+  
+  let hashResult = '';
+  let hashNumber = 0;
+  let calculatedSlot = 0;
+  
+  try {
+    hashResult = await sha256Hash(hashInput);
+    // Take first 8 chars and convert to number
+    hashNumber = parseInt(hashResult.substring(0, 8), 16);
+    calculatedSlot = hashNumber % 15;
+  } catch (error) {
+    console.error('Error calculating verification:', error);
+  }
+
   return {
     round_id: round.id,
     round_number: round.round_number,
@@ -651,12 +683,15 @@ async function verifyRound(supabase: any, roundId: string) {
     nonce: round.nonce,
     result_slot: round.result_slot,
     result_color: round.result_color,
-    verification_steps: [
-      `1. Server seed: ${round.server_seed}`,
-      `2. SHA-256 hash: ${round.server_seed_hash}`,
-      `3. Hash input: ${round.server_seed}:default_client:${round.nonce}`,
-      `4. Result slot: ${round.result_slot} (hash % 15)`
-    ]
+    status: round.status,
+    client_seed: usedClientSeed,
+    is_completed: true,
+    // Verification calculation
+    hash_input: hashInput,
+    hash_result: hashResult,
+    hash_number: hashNumber,
+    calculated_slot: calculatedSlot,
+    verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID'
   };
 }
 
