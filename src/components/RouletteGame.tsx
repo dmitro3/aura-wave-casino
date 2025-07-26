@@ -100,6 +100,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const redBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'red');
   const blackBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'black');
 
+  // Clear user bets when round changes
+  useEffect(() => {
+    if (currentRound?.id && currentRoundRef.current && currentRound.id !== currentRoundRef.current) {
+      console.log('🔄 Round changed, clearing user bets');
+      setUserBets({});
+      userBetsRef.current = {};
+      currentRoundRef.current = currentRound.id;
+    }
+  }, [currentRound?.id]);
+
   // Fetch current round
   const fetchCurrentRound = async () => {
     try {
@@ -455,8 +465,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         return newBets;
       });
 
-      // Force refresh of round bets to show live updates for all users
-      await fetchRoundBets(currentRound.id);
+      // Store the current round ID with user bets to clear when round changes
+      currentRoundRef.current = currentRound.id;
 
     } catch (error: any) {
       toast({

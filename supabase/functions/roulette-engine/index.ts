@@ -320,14 +320,20 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     .single();
 
   // Get user profile for live feed
-  const { data: userProfile } = await supabase
+  const { data: userProfile, error: profileError } = await supabase
     .from('profiles')
     .select('username, avatar_url')
     .eq('id', userId)
     .single();
 
+  if (profileError) {
+    console.error('❌ Error fetching user profile:', profileError);
+  }
+
+  console.log(`👤 User profile for live feed:`, userProfile);
+
   // Add to live bet feed (TowerGame pattern)
-  await supabase
+  const { error: feedError } = await supabase
     .from('live_bet_feed')
     .insert({
       user_id: userId,
@@ -342,6 +348,12 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
         potential_payout: potentialPayout
       }
     });
+
+  if (feedError) {
+    console.error('❌ Error inserting into live feed:', feedError);
+  } else {
+    console.log(`📡 Added to live feed: ${userProfile?.username} bet $${betAmount} on ${betColor}`);
+  }
 
   console.log(`✅ Bet placed: ${bet.id} and added to live feed`);
   return bet;
@@ -436,6 +448,16 @@ async function completeRound(supabase: any, round: any) {
       total_bets_count: totalBetsCount,
       total_bets_amount: totalBetsAmount
     });
+
+  // Clear live bet feed for this round after a short delay (so users can see results)
+  setTimeout(async () => {
+    await supabase
+      .from('live_bet_feed')
+      .delete()
+      .eq('game_type', 'roulette')
+      .eq('game_data->round_id', round.id);
+    console.log(`🧹 Cleared live feed for round ${round.id}`);
+  }, 5000); // 5 second delay to show results
 
   console.log(`🎉 Round completed with ${totalBetsCount} bets totaling ${totalBetsAmount}`);
 }
