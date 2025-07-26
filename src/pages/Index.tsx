@@ -15,7 +15,6 @@ import { RealtimeChat } from '@/components/RealtimeChat';
 import { RouletteGame } from '@/components/RouletteGame';
 import { Footer } from '@/components/Footer';
 import { TowerGame } from '@/components/TowerGame';
-import NotificationsPanel from '@/components/NotificationsPanel';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
@@ -201,8 +200,7 @@ export default function Index({ initialGame }: IndexProps) {
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 pb-8">
         {/* Left Sidebar */}
         <div className="lg:col-span-1 space-y-4">
-          {user && <NotificationsPanel />}
-          {user && userData && <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />}
+          {user && <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />}
           
           <Card className="glass border-0">
             <CardHeader>

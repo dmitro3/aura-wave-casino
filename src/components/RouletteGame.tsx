@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, Users, Wallet, Shield, TrendingUp } from 'lucide-react';
+import { Clock, Users, Wallet, Shield, TrendingUp, Bell, BellDot } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
@@ -59,6 +59,17 @@ interface RouletteResult {
   created_at: string;
 }
 
+interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  message: string;
+  data?: any;
+  is_read: boolean;
+  created_at: string;
+}
+
 interface BetTotals {
   green: { total: number; count: number; users: RouletteBet[] };
   red: { total: number; count: number; users: RouletteBet[] };
@@ -96,9 +107,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [loading, setLoading] = useState(true);
   const [winningColor, setWinningColor] = useState<string | null>(null);
   const [extendedWinAnimation, setExtendedWinAnimation] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [testData, setTestData] = useState<any>(null);
   const [lastCompletedRound, setLastCompletedRound] = useState<RouletteRound | null>(null);
   
+  // Notification state
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+
   // SECURITY: State management for preventing abuse
   const [isPlacingBet, setIsPlacingBet] = useState(false);
   const [lastBetTime, setLastBetTime] = useState<number>(0);
@@ -847,19 +863,115 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   };
 
-  const [isMobile, setIsMobile] = useState(false);
-
   // Check if mobile on mount and window resize
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 640);
+      setIsMobile(window.innerWidth < 768);
     };
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Notification functions
+  const fetchNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setNotifications((data || []) as Notification[]);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
+
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    if (!user) return;
+    
+    try {
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, is_read: true }))
+      );
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  // Fetch notifications on mount and set up real-time subscription
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+
+      // Set up real-time subscription for new notifications
+      const channel = supabase
+        .channel(`notifications_${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              const newNotification = payload.new as Notification;
+              setNotifications(prev => [newNotification, ...prev]);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+
+  // Count unread notifications
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   // SECURITY: Reset bet limits and state when round changes
   useEffect(() => {
@@ -999,6 +1111,100 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                     <div className="flex items-center gap-2">
                       <Wallet className="w-4 h-4" />
                       <span>Balance: ${profile.balance.toFixed(2)}</span>
+                      
+                      {/* Notification Button */}
+                      <Dialog open={notificationModalOpen} onOpenChange={setNotificationModalOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="relative p-1 h-8 w-8"
+                          >
+                            {unreadCount > 0 ? (
+                              <BellDot className="w-4 h-4" />
+                            ) : (
+                              <Bell className="w-4 h-4" />
+                            )}
+                            {unreadCount > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                              </span>
+                            )}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center justify-between">
+                              <span>Notifications</span>
+                              {unreadCount > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={markAllNotificationsAsRead}
+                                  className="text-xs"
+                                >
+                                  Mark all read
+                                </Button>
+                              )}
+                            </DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="h-96">
+                            {notifications.length === 0 ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">No notifications yet</p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                {notifications.map((notification) => (
+                                  <div
+                                    key={notification.id}
+                                    className={`p-3 rounded-lg border transition-colors ${
+                                      notification.is_read
+                                        ? 'bg-card/20 border-border/50'
+                                        : 'bg-primary/10 border-primary/20'
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-medium text-sm truncate">
+                                          {notification.title}
+                                        </h4>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                          {notification.message}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                          {new Date(notification.created_at).toLocaleString()}
+                                        </p>
+                                      </div>
+                                      <div className="flex items-center gap-1 ml-2">
+                                        {!notification.is_read && (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => markNotificationAsRead(notification.id)}
+                                            className="p-1 h-6 w-6"
+                                          >
+                                            ✓
+                                          </Button>
+                                        )}
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => deleteNotification(notification.id)}
+                                          className="p-1 h-6 w-6 text-red-400 hover:text-red-300"
+                                        >
+                                          ×
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   )}
                   <span className="text-muted-foreground">
