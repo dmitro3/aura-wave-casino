@@ -58,7 +58,7 @@ interface BetTotals {
 
 export const RouletteGame = () => {
   const { user } = useAuth();
-  const { profile, updateUserProfile } = useUserProfile();
+  const { userData: profile, updateUserProfile } = useUserProfile();
   const { toast } = useToast();
 
   // Game state
