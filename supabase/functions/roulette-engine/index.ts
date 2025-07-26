@@ -319,7 +319,31 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     .select()
     .single();
 
-  console.log(`✅ Bet placed: ${bet.id}`);
+  // Get user profile for live feed
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('username, avatar_url')
+    .eq('id', userId)
+    .single();
+
+  // Add to live bet feed (TowerGame pattern)
+  await supabase
+    .from('live_bet_feed')
+    .insert({
+      user_id: userId,
+      username: userProfile?.username || 'Anonymous',
+      game_type: 'roulette',
+      bet_amount: betAmount,
+      result: 'pending',
+      profit: 0,
+      game_data: {
+        bet_color: betColor,
+        round_id: roundId,
+        potential_payout: potentialPayout
+      }
+    });
+
+  console.log(`✅ Bet placed: ${bet.id} and added to live feed`);
   return bet;
 }
 
@@ -359,6 +383,17 @@ async function completeRound(supabase: any, round: any) {
         profit: profit
       })
       .eq('id', bet.id);
+
+    // Update live bet feed with result
+    await supabase
+      .from('live_bet_feed')
+      .update({
+        result: isWinner ? 'win' : 'loss',
+        profit: profit
+      })
+      .eq('user_id', bet.user_id)
+      .eq('game_type', 'roulette')
+      .eq('game_data->round_id', round.id);
 
     // Update user stats using the proper function
     await supabase.rpc('update_user_stats', {
