@@ -852,12 +852,28 @@ async function verifyRound(supabase: any, roundId: string, clientSeed?: string) 
 
     const dailySeed = round.daily_seeds;
     
+    console.log(`🔍 Round data:`, {
+      id: round.id,
+      daily_seed_id: round.daily_seed_id,
+      nonce_id: round.nonce_id,
+      has_daily_seed: !!dailySeed
+    });
+    
+    if (dailySeed) {
+      console.log(`🔍 Daily seed data:`, {
+        date: dailySeed.date,
+        has_server_seed: !!dailySeed.server_seed,
+        has_lotto: !!dailySeed.lotto,
+        has_lotto_hash: !!dailySeed.lotto_hash
+      });
+    }
+    
          // If we have advanced data, use it
      if (dailySeed && round.nonce_id) {
        console.log(`🎯 Using advanced verification for round ${roundId}`);
        return await verifyAdvancedRound(round, dailySeed);
     } else {
-      console.log(`🔄 Using legacy verification for round ${roundId}`);
+      console.log(`🔄 Using legacy verification for round ${roundId} - dailySeed: ${!!dailySeed}, nonce_id: ${round.nonce_id}`);
       return await verifyLegacyRound(round, clientSeed);
     }
     
@@ -983,18 +999,24 @@ async function verifyLegacyRound(round: any, clientSeed?: string) {
     server_seed: round.server_seed,
     server_seed_hash: round.server_seed_hash,
     nonce: round.nonce,
+    nonce_id: round.nonce, // For compatibility with frontend
     result_slot: round.result_slot,
     result_color: round.result_color,
     status: round.status,
     client_seed: usedClientSeed,
     is_completed: true,
+    // Legacy system doesn't have lotto/daily seeds
+    lotto: null,
+    lotto_hash: null,
+    daily_date: null,
     // Legacy Verification calculation
     hash_input: hashInput,
     hash_result: hashResult,
     hash_number: hashNumber,
     calculated_slot: calculatedSlot,
     actual_calculated_slot: actualCalculatedSlot,
-    verification_result: actualCalculatedSlot === round.result_slot ? 'VALID' : 'INVALID'
+    verification_result: actualCalculatedSlot === round.result_slot ? 'VALID' : 'INVALID',
+    provably_fair_formula: `hash("sha256", "${round.server_seed}:${usedClientSeed}:${round.nonce}")`
   };
 }
 

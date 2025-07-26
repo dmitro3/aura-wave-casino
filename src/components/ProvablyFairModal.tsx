@@ -329,23 +329,23 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                     </div>
                     <div>
                       <Label>Lotto Hash</Label>
-                      <Input value={verificationData.lotto_hash || 'N/A'} readOnly className="font-mono text-xs" />
+                      <Input value={verificationData.lotto_hash || 'Not available (Legacy round)'} readOnly className="font-mono text-xs" />
                     </div>
                     <div>
                       <Label>Lotto (Revealed)</Label>
                       <Input 
-                        value={verificationData.lotto || 'Not revealed yet'} 
+                        value={verificationData.lotto || 'Not available (Legacy round)'} 
                         readOnly 
                         className="font-mono text-xs" 
                       />
                     </div>
                     <div>
                       <Label>Round ID (Nonce)</Label>
-                      <Input value={verificationData.nonce_id || 'N/A'} readOnly className="font-mono text-xs" />
+                      <Input value={verificationData.nonce_id || verificationData.nonce || 'N/A'} readOnly className="font-mono text-xs" />
                     </div>
                     <div>
                       <Label>Daily Date</Label>
-                      <Input value={verificationData.daily_date || 'N/A'} readOnly className="font-mono text-xs" />
+                      <Input value={verificationData.daily_date || 'Not available (Legacy round)'} readOnly className="font-mono text-xs" />
                     </div>
                   </div>
 
