@@ -407,14 +407,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     return () => clearInterval(refreshInterval);
   }, []);
 
-  // Handle round payout (TowerGame pattern)
+  // Handle round payout (Fetch updated balance from backend)
   const handleRoundPayout = async (completedRound: RouletteRound) => {
     if (!user || !profile || !completedRound.result_color) {
       return;
     }
 
     try {
-      console.log('💰 Checking for payouts for completed round:', completedRound.id);
+      console.log('💰 Round completed, fetching updated user balance:', completedRound.id);
       
       // Check if user had any bets in this round
       const userBetsInRound = Object.entries(userBets).filter(([_, amount]) => amount > 0);
@@ -424,47 +424,48 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         return;
       }
 
-      // Calculate user's total winnings
-      let totalPayout = 0;
-      let totalProfit = 0;
-      let hadWinningBet = false;
+      // Small delay to let backend finish processing payouts
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      for (const [betColor, betAmount] of userBetsInRound) {
-        if (betColor === completedRound.result_color) {
-          // User won on this color
-          const multiplier = betColor === 'green' ? 14 : 2;
-          const payout = betAmount * multiplier;
-          totalPayout += payout;
-          totalProfit += (payout - betAmount);
-          hadWinningBet = true;
-          console.log(`🎯 User won ${payout} on ${betColor} (bet: ${betAmount}, multiplier: ${multiplier}x)`);
-        } else {
-          // User lost this bet
-          totalProfit -= betAmount;
-          console.log(`😢 User lost ${betAmount} on ${betColor}`);
-        }
+      // Fetch the updated profile from backend
+      const { data: updatedProfile, error } = await supabase
+        .from('profiles')
+        .select('balance, total_profit')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('❌ Error fetching updated profile:', error);
+        return;
       }
 
-      if (hadWinningBet && totalPayout > 0) {
-        console.log(`💰 Total payout for user: ${totalPayout}, total profit: ${totalProfit}`);
-        
-        // Update user balance immediately (TowerGame pattern)
+      if (updatedProfile) {
+        const oldBalance = profile.balance;
+        const newBalance = updatedProfile.balance;
+        const balanceDifference = newBalance - oldBalance;
+
+        console.log(`💰 Balance update: ${oldBalance} → ${newBalance} (difference: ${balanceDifference})`);
+
+        // Update frontend with the actual backend values
         await onUpdateUser({
-          balance: profile.balance + totalPayout,
-          total_profit: (profile.total_profit || 0) + totalProfit
+          balance: newBalance,
+          total_profit: updatedProfile.total_profit
         });
 
-        toast({
-          title: "🎉 You Won!",
-          description: `Won $${totalPayout.toFixed(2)} on ${completedRound.result_color}!`,
-        });
-      } else if (totalProfit < 0) {
-        // Only losses, update profit stats
-        await onUpdateUser({
-          total_profit: (profile.total_profit || 0) + totalProfit
-        });
-        
-        console.log(`😢 User lost total: ${Math.abs(totalProfit)}`);
+        // Show appropriate notification
+        if (balanceDifference > 0) {
+          // Check which color won to show in message
+          const winningBets = userBetsInRound.filter(([betColor]) => betColor === completedRound.result_color);
+          
+          toast({
+            title: "🎉 You Won!",
+            description: `Won $${balanceDifference.toFixed(2)} on ${completedRound.result_color}!`,
+          });
+          
+          console.log(`🎯 User won $${balanceDifference} on ${completedRound.result_color}`);
+        } else {
+          console.log(`😢 User lost (no balance increase)`);
+        }
       }
 
     } catch (error: any) {

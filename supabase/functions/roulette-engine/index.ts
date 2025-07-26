@@ -493,6 +493,9 @@ async function completeRound(supabase: any, round: any) {
     const actualPayout = isWinner ? bet.potential_payout : 0;
     const profit = actualPayout - bet.bet_amount;
 
+    console.log(`🎲 Processing bet: user=${bet.user_id}, color=${bet.bet_color}, amount=${bet.bet_amount}, potential=${bet.potential_payout}`);
+    console.log(`🎯 Round result: ${round.result_color}, isWinner: ${isWinner}, actualPayout: ${actualPayout}, profit: ${profit}`);
+
     // Update bet record
     await supabase
       .from('roulette_bets')
