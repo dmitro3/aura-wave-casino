@@ -800,6 +800,39 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }
 
+  const testDailySeed = async () => {
+    try {
+      console.log('🧪 Testing daily seed...')
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'test_daily_seed' }
+      })
+
+      if (error) {
+        console.error('❌ Daily seed test error:', error)
+        toast({
+          title: "Daily Seed Error",
+          description: error.message,
+          variant: "destructive"
+        })
+        return
+      }
+
+      console.log('✅ Daily seed test result:', data)
+      toast({
+        title: "Daily Seed Test",
+        description: data.success ? "Daily seed works!" : data.error,
+        variant: data.success ? "default" : "destructive"
+      })
+    } catch (error) {
+      console.error('❌ Daily seed test error:', error)
+      toast({
+        title: "Error",
+        description: "Failed to test daily seed",
+        variant: "destructive"
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -884,6 +917,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   </Button>
                   <Button onClick={forceAdvancedRound} variant="outline" size="sm">
                     Create Advanced Round
+                  </Button>
+                  <Button onClick={testDailySeed} variant="outline" size="sm">
+                    Test Daily Seed
                   </Button>
                   <span className="text-sm text-muted-foreground">
                     {timeLeft > 0 ? `${timeLeft}s remaining` : 'Bets closed'}

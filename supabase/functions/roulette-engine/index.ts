@@ -422,6 +422,38 @@ serve(async (req) => {
         }
       }
 
+      case 'test_daily_seed': {
+        console.log('🧪 Testing daily seed creation...')
+        
+        try {
+          const dailySeed = await getOrCreateDailySeed(supabase);
+          console.log('✅ Daily seed test successful:', dailySeed);
+          
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Daily seed works!',
+            daily_seed: {
+              id: dailySeed.id,
+              date: dailySeed.date,
+              server_seed_hash: dailySeed.server_seed_hash,
+              lotto_hash: dailySeed.lotto_hash
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+          
+        } catch (error) {
+          console.error('❌ Daily seed test error:', error)
+          return new Response(JSON.stringify({
+            error: error.message,
+            success: false
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,
