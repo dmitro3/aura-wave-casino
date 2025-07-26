@@ -427,12 +427,32 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       // Small delay to let backend finish processing payouts
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Fetch the updated profile from backend
-      const { data: updatedProfile, error } = await supabase
-        .from('profiles')
-        .select('balance, total_profit')
-        .eq('id', user.id)
-        .single();
+      // Fetch the updated profile from backend with retry logic
+      let updatedProfile = null;
+      let error = null;
+      
+      // Try up to 3 times to get the updated balance
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        console.log(`💰 Fetching updated balance (attempt ${attempt}/3)`);
+        
+        const result = await supabase
+          .from('profiles')
+          .select('balance, total_profit')
+          .eq('id', user.id)
+          .single();
+          
+        if (result.error) {
+          error = result.error;
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            continue;
+          }
+        } else {
+          updatedProfile = result.data;
+          error = null;
+          break;
+        }
+      }
 
       if (error) {
         console.error('❌ Error fetching updated profile:', error);

@@ -144,13 +144,15 @@ export function useUserProfile() {
         (payload) => {
           console.log('🏦 DEDICATED BALANCE UPDATE:', payload);
           
-          if (payload.new && payload.old && payload.new.balance !== payload.old.balance) {
-            console.log('💰 BALANCE SYNC: Force updating balance from', payload.old.balance, 'to', payload.new.balance);
+          if (payload.new && payload.new.balance !== undefined) {
+            console.log('💰 BALANCE SYNC: Updating balance to', payload.new.balance);
             setUserData(prev => {
               if (!prev) return null;
               return {
                 ...prev,
                 balance: payload.new.balance,
+                username: payload.new.username || prev.username,
+                badges: payload.new.badges || prev.badges,
               };
             });
           }
@@ -158,10 +160,38 @@ export function useUserProfile() {
       )
       .subscribe();
 
+    // Periodic balance refresh to ensure sync (every 10 seconds)
+    const balanceRefreshInterval = setInterval(async () => {
+      try {
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('balance')
+          .eq('id', user.id)
+          .single();
+
+        if (currentProfile) {
+          setUserData(prev => {
+            if (!prev) return null;
+            if (prev.balance !== currentProfile.balance) {
+              console.log('🔄 PERIODIC BALANCE SYNC:', prev.balance, '→', currentProfile.balance);
+              return {
+                ...prev,
+                balance: currentProfile.balance,
+              };
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        console.error('Error in periodic balance refresh:', error);
+      }
+    }, 5000); // Every 5 seconds
+
     return () => {
       console.log('🧹 Cleaning up comprehensive stats subscription');
       supabase.removeChannel(statsChannel);
       supabase.removeChannel(balanceChannel);
+      clearInterval(balanceRefreshInterval);
     };
   }, [user])
 
@@ -299,6 +329,32 @@ export function useUserProfile() {
 
       // Refresh profile data to get latest state
       await fetchUserProfile();
+      
+      // Additional force balance sync if balance was updated
+      if (updates.balance !== undefined) {
+        console.log('💰 Force syncing balance after manual update');
+        setTimeout(async () => {
+          const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('balance')
+            .eq('id', user.id)
+            .single();
+
+          if (currentProfile) {
+            setUserData(prev => {
+              if (!prev) return null;
+              if (prev.balance !== currentProfile.balance) {
+                console.log('🔄 POST-UPDATE BALANCE SYNC:', prev.balance, '→', currentProfile.balance);
+                return {
+                  ...prev,
+                  balance: currentProfile.balance,
+                };
+              }
+              return prev;
+            });
+          }
+        }, 100);
+      }
     } catch (error) {
       console.error('Error updating user profile:', error);
       throw error;
