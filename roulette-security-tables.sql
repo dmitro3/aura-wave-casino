@@ -64,7 +64,7 @@ BEGIN
     END IF;
     
     -- Verify round is still in betting phase
-    SELECT status, betting_end_time INTO round_status, round_betting_end
+    SELECT status, betting_end_time::TIMESTAMPTZ INTO round_status, round_betting_end
     FROM roulette_rounds
     WHERE id = p_round_id;
     
