@@ -237,9 +237,9 @@ async function getCurrentRound(supabase: any) {
       let result;
       
              // Try advanced method first
-       if (activeRound.daily_seed_id && activeRound.nonce_id) {
-         try {
-           console.log('🎯 Using advanced provably fair method');
+      if (activeRound.daily_seed_id && activeRound.nonce_id) {
+        try {
+          console.log('🎯 Using advanced provably fair method');
           
           // Get daily seed for this round
           const { data: dailySeed, error: seedError } = await supabase
@@ -257,19 +257,19 @@ async function getCurrentRound(supabase: any) {
           }
 
                      // Generate provably fair result using advanced method
-           const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
-           result = resultData.result;
-           
-         } catch (error) {
-           console.error('❌ Advanced result generation failed, falling back to legacy:', error);
+          const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
+          result = resultData.result;
+          
+        } catch (error) {
+          console.error('❌ Advanced result generation failed, falling back to legacy:', error);
           // Fall back to legacy method
           result = await generateLegacyResult(supabase, activeRound);
         }
-             } else {
-         console.log('🔄 Using legacy method (no advanced data)');
-         // Use legacy method if no advanced data
-         result = await generateLegacyResult(supabase, activeRound);
-       }
+      } else {
+        console.log('🔄 Using legacy method (no advanced data)');
+        // Use legacy method if no advanced data
+        result = await generateLegacyResult(supabase, activeRound);
+      }
       
       // Calculate final reel position for cross-user sync
       const TILE_WIDTH = 120;
@@ -800,7 +800,9 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
       bet_amount: betAmount,
       bet_color: betColor,
       game_type: 'roulette',
-      round_id: roundId
+      round_id: roundId,
+      result: 'pending', // Will be updated when round completes
+      profit: 0 // Will be updated when round completes
     });
 
   console.log(`✅ Bet placed successfully: ${betAmount} on ${betColor} for user ${userId}`);
@@ -868,7 +870,7 @@ async function completeRound(supabase: any, round: any) {
       })
       .eq('user_id', bet.user_id)
       .eq('game_type', 'roulette')
-      .eq('game_data->round_id', round.id);
+      .eq('round_id', round.id);
 
     // Update user stats using the proper function
     await supabase.rpc('update_user_stats', {

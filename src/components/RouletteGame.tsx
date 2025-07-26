@@ -126,7 +126,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   // Filter roulette bets from live feed (only current round)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
     bet.game_type === 'roulette' && 
-    bet.game_data?.round_id === currentRound?.id
+    bet.round_id === currentRound?.id
   );
   
   // Debug bet amounts
@@ -136,14 +136,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         username: bet.username,
         bet_amount: bet.bet_amount,
         bet_amount_type: typeof bet.bet_amount,
-        game_data: bet.game_data
+        bet_color: bet.bet_color,
+        round_id: bet.round_id,
+        game_type: bet.game_type
       })));
     }
   }, [rouletteBets]);
   
-  const greenBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'green');
-  const redBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'red');
-  const blackBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'black');
+  const greenBets = rouletteBets.filter(bet => bet.bet_color === 'green');
+  const redBets = rouletteBets.filter(bet => bet.bet_color === 'red');
+  const blackBets = rouletteBets.filter(bet => bet.bet_color === 'black');
 
   // Clear user bets when round changes
   useEffect(() => {

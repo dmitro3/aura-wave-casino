@@ -6,12 +6,15 @@ export interface LiveBetFeed {
   id: string;
   user_id: string;
   username: string;
+  avatar_url?: string;
   game_type: 'crash' | 'coinflip' | 'roulette' | 'tower';
   bet_amount: number;
   result: string;
   profit: number;
   multiplier?: number;
   game_data?: any;
+  bet_color?: string; // For roulette bets
+  round_id?: string; // For roulette round association
   created_at: string;
   streak_length?: number;
   action?: string;
