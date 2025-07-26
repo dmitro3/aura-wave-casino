@@ -17,12 +17,8 @@ interface RoundHistory {
   round_number: number;
   result_slot: number;
   result_color: string;
-  server_seed_hash: string;
-  nonce: number;
   created_at: string;
   status: string;
-  daily_seed_id?: string;
-  nonce_id?: number;
 }
 
 export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistoryModalProps) {
@@ -42,7 +38,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
     try {
       const { data, error } = await supabase
         .from('roulette_rounds')
-        .select('id, round_number, result_slot, result_color, server_seed_hash, nonce, created_at, status, daily_seed_id, nonce_id')
+        .select('id, round_number, result_slot, result_color, created_at, status')
         .eq('status', 'completed')
         .order('round_number', { ascending: false })
         .limit(50);
@@ -74,8 +70,8 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
     }
   };
 
-  const getSystemType = (round: RoundHistory) => {
-    return round.daily_seed_id ? 'Advanced' : 'Legacy';
+  const getSystemType = () => {
+    return 'Completed';
   };
 
   return (
@@ -120,13 +116,13 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                           </div>
 
                           {/* System Type */}
-                          <Badge variant={getSystemType(round) === 'Advanced' ? 'default' : 'secondary'} className="text-xs">
-                            {getSystemType(round)}
+                          <Badge variant="default" className="text-xs">
+                            {getSystemType()}
                           </Badge>
 
                           {/* Hash Preview */}
                           <div className="text-xs font-mono text-muted-foreground">
-                            {round.server_seed_hash.slice(0, 12)}...
+                            Round #{round.round_number}
                           </div>
 
                           {/* Date */}
@@ -172,7 +168,13 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
       <ProvablyFairModal
         isOpen={detailModalOpen}
         onClose={() => setDetailModalOpen(false)}
-        roundData={selectedRound}
+        roundData={selectedRound ? {
+          ...selectedRound,
+          server_seed_hash: '',
+          result_multiplier: 0,
+          reel_position: 0,
+          nonce: 0
+        } : null}
         showCurrentRound={false}
       />
     </>

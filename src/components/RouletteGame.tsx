@@ -11,7 +11,7 @@ import { UserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
-import { RouletteReel } from './RouletteReel';
+import { EnhancedRouletteReel } from './EnhancedRouletteReel';
 import { ProvablyFairModal } from './ProvablyFairModal';
 import { ProvablyFairHistoryModal } from './ProvablyFairHistoryModal';
 
@@ -309,7 +309,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const openRoundDetails = (result: RouletteResult) => {
     // Convert RouletteResult to RouletteRound format for the modal
     const roundData: RouletteRound = {
-      id: result.round_id,
+      id: result.id,
       round_number: result.round_number,
       status: 'completed',
       result_slot: result.result_slot,
@@ -1033,7 +1033,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           {/* Roulette Reel */}
           <Card className="glass border-0">
             <CardContent className="p-6">
-              <RouletteReel 
+              <EnhancedRouletteReel 
                 isSpinning={currentRound.status === 'spinning'}
                 winningSlot={currentRound.result_slot !== undefined ? currentRound.result_slot : null}
                 showWinAnimation={currentRound.status === 'completed'}
@@ -1336,7 +1336,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       <ProvablyFairModal
         isOpen={provablyFairModalOpen}
         onClose={() => setProvablyFairModalOpen(false)}
-        roundData={selectedRoundData}
+        roundData={selectedRoundData ? {
+          ...selectedRoundData,
+          result_slot: selectedRoundData.result_slot || 0,
+          result_color: selectedRoundData.result_color || 'black',
+          result_multiplier: selectedRoundData.result_multiplier || 0,
+          reel_position: selectedRoundData.reel_position || 0
+        } : null}
         showCurrentRound={selectedRoundData?.id === currentRound?.id}
       />
 
