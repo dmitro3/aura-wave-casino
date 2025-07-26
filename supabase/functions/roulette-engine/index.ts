@@ -339,20 +339,71 @@ serve(async (req) => {
         console.log('🚀 Force creating advanced round...')
         
         try {
-          // Create a test advanced round
-          const testRound = await createNewRound(supabase)
+          // Create advanced round WITHOUT fallback to see what fails
+          console.log('📅 Getting daily seed...');
+          const dailySeed = await getOrCreateDailySeed(supabase);
+          console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
           
-          console.log('✅ Advanced round created:', testRound)
+          // Get next nonce ID for today
+          console.log('🔢 Getting next nonce ID...');
+          const { data: lastRound, error: lastRoundError } = await supabase
+            .from('roulette_rounds')
+            .select('nonce_id')
+            .eq('daily_seed_id', dailySeed.id)
+            .order('nonce_id', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (lastRoundError && lastRoundError.code !== 'PGRST116') {
+            console.error('❌ Error fetching last round:', lastRoundError);
+          }
+
+          const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
+          console.log('✅ Next nonce ID:', nextNonceId);
+        
+          const now = new Date();
+          const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
+          const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
+
+          const roundData = {
+            status: 'betting',
+            betting_end_time: bettingEnd.toISOString(),
+            spinning_end_time: spinningEnd.toISOString(),
+            daily_seed_id: dailySeed.id,
+            nonce_id: nextNonceId,
+            server_seed_hash: dailySeed.server_seed_hash,
+            nonce: nextNonceId
+          };
+
+          console.log('📝 Inserting round data:', roundData);
+          const { data: newRound, error: insertError } = await supabase
+            .from('roulette_rounds')
+            .insert(roundData)
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('❌ Advanced round insert failed:', insertError);
+            console.error('❌ Round data that failed:', roundData);
+            throw new Error(`Insert failed: ${insertError.message}`);
+          }
+
+          console.log('✅ Advanced round created successfully:', newRound);
           
           return new Response(JSON.stringify({
             success: true,
             message: 'Advanced round created successfully!',
             round: {
-              id: testRound.id,
-              daily_seed_id: testRound.daily_seed_id,
-              nonce_id: testRound.nonce_id,
-              status: testRound.status,
-              created_at: testRound.created_at
+              id: newRound.id,
+              daily_seed_id: newRound.daily_seed_id,
+              nonce_id: newRound.nonce_id,
+              status: newRound.status,
+              created_at: newRound.created_at
+            },
+            daily_seed: {
+              id: dailySeed.id,
+              date: dailySeed.date,
+              server_seed_hash: dailySeed.server_seed_hash
             }
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
