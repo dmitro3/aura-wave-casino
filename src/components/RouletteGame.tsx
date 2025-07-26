@@ -703,9 +703,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="w-full">
         {/* Main Game Area */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="space-y-6">
           {/* Recent Results Bubbles */}
           <div className="flex justify-end mb-4">
             <div className="glass border-0 rounded-lg p-3 flex items-center gap-3">
@@ -920,13 +920,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-
-
-
         </div>
       </div>
 
