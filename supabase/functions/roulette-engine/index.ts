@@ -44,6 +44,57 @@ serve(async (req) => {
     console.log(`🎰 Roulette Engine: ${action}`, body);
 
     switch (action) {
+      case 'test': {
+        // Simple test to check if function and database work
+        console.log('🧪 Running test...');
+        
+        try {
+          // Test 1: Basic database connection
+          const { data: testQuery, error: testError } = await supabase
+            .from('profiles')
+            .select('id')
+            .limit(1);
+          
+          if (testError) {
+            console.error('❌ Database test failed:', testError);
+            return new Response(JSON.stringify({ 
+              test: 'failed',
+              error: 'Database connection failed',
+              details: testError.message
+            }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          // Test 2: Check if roulette tables exist
+          const { data: roundsTest, error: roundsError } = await supabase
+            .from('roulette_rounds')
+            .select('id')
+            .limit(1);
+          
+          return new Response(JSON.stringify({ 
+            test: 'success',
+            database_connection: 'ok',
+            profiles_table: 'ok',
+            roulette_tables: roundsError ? 'missing' : 'ok',
+            roulette_error: roundsError?.message || null
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+          
+        } catch (error) {
+          console.error('❌ Test failed:', error);
+          return new Response(JSON.stringify({ 
+            test: 'failed',
+            error: error.message
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       case 'get_current_round': {
         console.log('🔍 Getting current round...');
         const round = await getCurrentRound(supabase);

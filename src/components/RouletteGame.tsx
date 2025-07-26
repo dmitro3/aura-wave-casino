@@ -75,9 +75,44 @@ export const RouletteGame = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Test server connection
+  const testServerConnection = async () => {
+    try {
+      console.log('🧪 Testing server connection...');
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'test' }
+      });
+
+      console.log('🧪 Test result:', { data, error });
+
+      if (error) {
+        console.error('🧪 Test failed:', error);
+        return false;
+      }
+
+      if (data.test === 'success') {
+        console.log('✅ Server connection test passed');
+        console.log('📊 Test details:', data);
+        return true;
+      } else {
+        console.error('❌ Server test failed:', data);
+        return false;
+      }
+    } catch (error) {
+      console.error('🧪 Test connection failed:', error);
+      return false;
+    }
+  };
+
   // Fetch current round
   const fetchCurrentRound = async () => {
     try {
+      // First test the connection
+      const connectionWorking = await testServerConnection();
+      if (!connectionWorking) {
+        throw new Error('Server connection test failed');
+      }
+
       console.log('🎰 Frontend: Calling roulette-engine...');
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_current_round' }
