@@ -193,25 +193,24 @@ export const RealtimeChat = () => {
                     </ProfileBorder>
                     
                      <div className={`flex-1 min-w-0 ${isOwnMessage ? 'text-right' : ''}`}>
-                        <div className={`flex items-center gap-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
+                        <div className={`flex items-center gap-1 mb-1 ${isOwnMessage ? 'justify-end' : ''} flex-wrap`}>
                           <ClickableUsername 
                             username={msg.username}
-                            className={`font-medium text-sm ${isOwnMessage ? 'text-primary' : ''}`}
+                            className={`font-medium text-xs ${isOwnMessage ? 'text-primary' : ''} truncate max-w-20`}
                           >
                             {msg.username}
                           </ClickableUsername>
-                         <Badge variant="outline" className="text-xs px-1 py-0">
-                           LVL {msg.user_level}
+                         <Badge variant="outline" className="text-xs px-1 py-0 text-[10px]">
+                           L{msg.user_level}
                          </Badge>
                          {badge && (
                            <div className={`flex items-center gap-1 text-xs ${badge.color}`}>
-                             <badge.icon className="w-3 h-3" />
-                             <span>{badge.label}</span>
+                             <badge.icon className="w-2.5 h-2.5" />
                            </div>
                          )}
                        </div>
                       
-                      <div className={`p-2 rounded-lg text-sm break-words max-w-xs ${
+                      <div className={`p-2 rounded-lg text-xs break-words max-w-full ${
                         isOwnMessage 
                           ? 'bg-primary/20 border border-primary/30 ml-auto' 
                           : 'bg-card/50 border'

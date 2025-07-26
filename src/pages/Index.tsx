@@ -196,7 +196,7 @@ export default function Index({ initialGame }: IndexProps) {
       </header>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-8 gap-6 mb-8">
         {/* Left Sidebar */}
         <div className="lg:col-span-1 space-y-4">
           {user && <NotificationsPanel />}
@@ -250,7 +250,7 @@ export default function Index({ initialGame }: IndexProps) {
         </div>
 
         {/* Games Area */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-6">
           <Tabs value={currentGame} onValueChange={handleGameChange} className="space-y-4">
             <TabsList className="glass w-full">
               <TabsTrigger value="coinflip" className="flex-1">
@@ -310,7 +310,7 @@ export default function Index({ initialGame }: IndexProps) {
         </div>
 
         {/* Right Sidebar - Real-time Chat */}
-        <div className="lg:col-span-2 h-[calc(100vh-12rem)]">
+        <div className="lg:col-span-1 h-[calc(100vh-20rem)]">
           <RealtimeChat />
         </div>
       </div>
