@@ -4,6 +4,7 @@ interface RouletteReelProps {
   isSpinning: boolean;
   winningSlot: number | null;
   showWinAnimation: boolean;
+  synchronizedPosition?: number | null;
 }
 
 // Roulette wheel configuration: 15 slots total in specific order
@@ -29,7 +30,7 @@ const TILE_WIDTH = 120;
 const CONTAINER_WIDTH = 600;
 const CENTER_OFFSET = CONTAINER_WIDTH / 2;
 
-export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: RouletteReelProps) {
+export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition }: RouletteReelProps) {
   const [position, setPosition] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const animationRef = useRef<number>();
@@ -49,42 +50,21 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
     });
   }
 
-    // Smooth animation with realistic physics - synced with backend result
+    // Synchronized animation using backend-calculated position
   useEffect(() => {
-    if (isSpinning && winningSlot !== null) {
-      console.log('🎰 Starting reel animation to predetermined slot:', winningSlot);
+    if (isSpinning && winningSlot !== null && synchronizedPosition !== null && synchronizedPosition !== undefined) {
+      console.log('🎰 Starting synchronized animation to:', winningSlot, 'at position:', synchronizedPosition);
       setIsAnimating(true);
       
       const animationDuration = 4000; // 4 seconds total animation
-      
-      // Find the position of the winning slot in our WHEEL_SLOTS array
-      const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningSlot);
-      if (winningSlotIndex === -1) {
-        console.error('❌ Winning slot not found in WHEEL_SLOTS:', winningSlot);
-        return;
-      }
-      
-      // Calculate where we need to land for the winning slot to be under the center line
-      // The center line is at CENTER_OFFSET from the left edge
-      // We want the winning slot to be centered under this line
-      const winningSlotTargetPosition = -(winningSlotIndex * TILE_WIDTH) + CENTER_OFFSET - (TILE_WIDTH / 2);
-      
-      // Add multiple full rotations for dramatic effect, but always land at the target
-      const fullRotations = 8;
-      const fullRotationDistance = WHEEL_SLOTS.length * TILE_WIDTH;
-      const totalRotationDistance = fullRotations * fullRotationDistance;
-      
-      // Start from current position and add rotation distance to reach final target
       const startPosition = position;
-      const finalPosition = startPosition - totalRotationDistance + (winningSlotTargetPosition - startPosition);
+      const finalPosition = synchronizedPosition;
       
-      console.log('🎯 Animation params:', {
+      console.log('🎯 Synchronized animation params:', {
         startPosition,
         finalPosition,
         winningSlot,
-        winningSlotIndex,
-        winningSlotTargetPosition,
-        totalRotationDistance
+        difference: finalPosition - startPosition
       });
 
       // Reset start time for new animation
@@ -108,9 +88,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
         if (progress < 1) {
           animationRef.current = requestAnimationFrame(animate);
         } else {
-          // Animation completed - land exactly on target
-          console.log('🎰 Animation completed. Final position:', currentPosition);
-          console.log('🎯 Target position was:', finalPosition);
+          // Animation completed - land exactly on synchronized target
+          console.log('🎰 Synchronized animation completed. Final position:', currentPosition);
+          console.log('🎯 Target synchronized position was:', finalPosition);
           setPosition(finalPosition); // Ensure exact landing
           setIsAnimating(false);
           startTimeRef.current = undefined;
@@ -124,7 +104,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
       
       animationRef.current = requestAnimationFrame(animate);
     }
-  }, [isSpinning, winningSlot]);
+  }, [isSpinning, winningSlot, synchronizedPosition]);
+
+  // Initialize position from synchronized position on first load
+  useEffect(() => {
+    if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating) {
+      console.log('🔄 Initializing position from synchronized state:', synchronizedPosition);
+      setPosition(synchronizedPosition);
+    }
+  }, [synchronizedPosition, isAnimating]);
 
   // Keep position between rounds - no reset
   useEffect(() => {

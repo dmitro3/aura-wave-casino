@@ -20,6 +20,7 @@ interface RouletteRound {
   result_slot?: number;
   result_color?: string;
   result_multiplier?: number;
+  reel_position?: number;
   betting_start_time: string;
   betting_end_time: string;
   spinning_end_time: string;
@@ -580,6 +581,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 isSpinning={currentRound.status === 'spinning'}
                 winningSlot={currentRound.result_slot || null}
                 showWinAnimation={currentRound.status === 'completed'}
+                synchronizedPosition={currentRound.reel_position || null}
               />
             </CardContent>
           </Card>

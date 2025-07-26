@@ -199,14 +199,58 @@ async function getCurrentRound(supabase: any) {
       // Generate provably fair result
       const result = await generateProvablyFairResult(supabase, activeRound);
       
-      // Update round to spinning with result
+      // Calculate final reel position for cross-user sync
+      const TILE_WIDTH = 120;
+      const CENTER_OFFSET = 300; // Half of 600px container width
+      const WHEEL_SLOTS_LENGTH = 15;
+      
+      // Find the position of the winning slot in our WHEEL_SLOTS array
+      const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === result.slot);
+      
+      // Calculate the final reel position that centers the winning slot precisely
+      // The winning slot should be perfectly centered under the center line
+      const winningSlotTargetPosition = -(winningSlotIndex * TILE_WIDTH) + CENTER_OFFSET - (TILE_WIDTH / 2);
+      
+      // For the first round or if no previous position, start from 0
+      // Otherwise, calculate from the previous round's final position
+      let previousReelPosition = 0;
+      const { data: previousRound } = await supabase
+        .from('roulette_rounds')
+        .select('reel_position')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (previousRound?.reel_position !== null) {
+        previousReelPosition = previousRound.reel_position;
+      }
+      
+      // Add multiple full rotations for dramatic effect
+      const fullRotations = 8;
+      const fullRotationDistance = WHEEL_SLOTS_LENGTH * TILE_WIDTH;
+      const totalRotationDistance = fullRotations * fullRotationDistance;
+      
+      // Calculate final position from previous position
+      const finalReelPosition = previousReelPosition - totalRotationDistance + (winningSlotTargetPosition - previousReelPosition);
+      
+      console.log('🎯 Calculated synchronized reel position:', {
+        previousReelPosition,
+        winningSlotIndex,
+        winningSlotTargetPosition,
+        finalReelPosition,
+        resultSlot: result.slot
+      });
+
+      // Update round to spinning with result and synchronized reel position
       const { data: updatedRound } = await supabase
         .from('roulette_rounds')
         .update({
           status: 'spinning',
           result_slot: result.slot,
           result_color: result.color,
-          result_multiplier: result.multiplier
+          result_multiplier: result.multiplier,
+          reel_position: finalReelPosition
         })
         .eq('id', activeRound.id)
         .select()
