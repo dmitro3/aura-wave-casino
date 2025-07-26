@@ -55,9 +55,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return () => window.removeEventListener('resize', measureContainer);
   }, []);
 
-  // Create a repeating loop of tiles (40 repetitions for smooth infinite scroll)
+  // Create a repeating loop of tiles (50 repetitions for smooth infinite scroll)
   const tiles = [];
-  for (let repeat = 0; repeat < 40; repeat++) {
+  for (let repeat = 0; repeat < 50; repeat++) {
     for (let i = 0; i < WHEEL_SLOTS.length; i++) {
       tiles.push({
         ...WHEEL_SLOTS[i],
@@ -67,12 +67,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }
 
-  // CSGORoll-style animation function
+  // Simple 3-second animation function
   const animateToTarget = useCallback((startPosition: number, targetPosition: number) => {
     const startTime = Date.now();
-    const duration = 6000; // 6 seconds like CSGORoll
+    const duration = 3000; // Exactly 3 seconds
     
-    console.log('🚀 Starting CSGORoll-style animation:', {
+    console.log('🚀 Starting 3-second animation:', {
       startPosition,
       targetPosition,
       distance: Math.abs(targetPosition - startPosition)
@@ -82,22 +82,21 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // CSGORoll-style easing: starts fast, maintains speed, then dramatic slowdown
+      // Simple easing: start slow, speed up, maintain, then slow down
       let easedProgress;
-      if (progress < 0.1) {
-        // Quick acceleration
-        easedProgress = progress / 0.1 * 0.1;
-      } else if (progress < 0.85) {
-        // Maintain high speed
-        easedProgress = 0.1 + (progress - 0.1) / 0.75 * 0.75;
+      if (progress < 0.2) {
+        // Start slow (0-20%)
+        easedProgress = progress * progress * 0.2;
+      } else if (progress < 0.8) {
+        // Maintain speed (20-80%)
+        easedProgress = 0.2 + (progress - 0.2) * 0.6;
       } else {
-        // Dramatic slowdown with bounce
-        const slowProgress = (progress - 0.85) / 0.15;
-        const bounce = 1 - Math.pow(1 - slowProgress, 3);
-        easedProgress = 0.85 + bounce * 0.15;
+        // Slow down (80-100%)
+        const slowProgress = (progress - 0.8) / 0.2;
+        easedProgress = 0.8 + slowProgress * slowProgress * 0.2;
       }
       
-      // Calculate current position
+      // Calculate current position (moving to the left = negative translateX)
       const currentPosition = startPosition + (targetPosition - startPosition) * easedProgress;
       setTranslateX(currentPosition);
 
@@ -123,7 +122,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Start animation when spinning begins
   useEffect(() => {
     if (isSpinning && winningSlot !== null) {
-      console.log('🚀 Starting CSGORoll-style animation to slot:', winningSlot);
+      console.log('🚀 Starting 3-second animation to slot:', winningSlot);
       
       // Find the winning slot in our wheel configuration
       const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
@@ -136,12 +135,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
       const baseTargetPosition = actualCenterOffset - winningSlotCenter;
       
-      // Add multiple full rotations for dramatic effect (like CSGORoll)
+      // Add multiple full rotations for dramatic effect
       const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
-      const rotations = 8; // 8 full rotations for dramatic effect
+      const rotations = 5; // 5 full rotations for dramatic effect
       const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
       
-      console.log('🎯 CSGORoll animation setup:', {
+      console.log('🎯 3-second animation setup:', {
         winningSlot,
         slotIndex,
         winningSlotCenter,
