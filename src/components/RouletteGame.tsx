@@ -86,6 +86,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [testData, setTestData] = useState<any>(null);
+  const [lastCompletedRound, setLastCompletedRound] = useState<RouletteRound | null>(null);
 
   // Fetch current round
   const fetchCurrentRound = async () => {
@@ -127,7 +128,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   };
 
   // Fetch bets for current round
-  const fetchRoundBets = async (roundId: string) => {
+  const fetchRoundBets = async (roundId: string, preserveUserBets = false) => {
     try {
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_round_bets', roundId }
@@ -139,31 +140,22 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       setRoundBets(data || []);
       calculateBetTotals(data || []);
       
-      // Calculate user's bets for this round (only update if different)
+      // Calculate user's bets for this round from database
       if (user) {
         const userRoundBets = (data || []).filter((bet: RouletteBet) => bet.user_id === user.id);
-        const userBetsByColor: Record<string, number> = {};
+        const dbUserBets: Record<string, number> = {};
         userRoundBets.forEach((bet: RouletteBet) => {
-          userBetsByColor[bet.bet_color] = (userBetsByColor[bet.bet_color] || 0) + bet.bet_amount;
+          dbUserBets[bet.bet_color] = (dbUserBets[bet.bet_color] || 0) + bet.bet_amount;
         });
-        console.log('👤 User bets for round:', userBetsByColor);
+        console.log('👤 Database user bets:', dbUserBets);
         
-        // Only update if the bets are different (to avoid overriding optimistic updates)
-        setUserBets(prevBets => {
-          const hasChanges = Object.keys(userBetsByColor).some(color => 
-            prevBets[color] !== userBetsByColor[color]
-          ) || Object.keys(prevBets).some(color => 
-            prevBets[color] !== (userBetsByColor[color] || 0)
-          );
-          
-          if (hasChanges) {
-            console.log('🔄 Updating user bets from database');
-            return userBetsByColor;
-          } else {
-            console.log('⏭️ Keeping current user bets (no changes)');
-            return prevBets;
-          }
-        });
+        // Always update with database values unless preserveUserBets is true
+        if (!preserveUserBets) {
+          console.log('🔄 Updating user bets from database');
+          setUserBets(dbUserBets);
+        } else {
+          console.log('⏭️ Preserving current user bets');
+        }
       }
     } catch (error: any) {
       console.error('Failed to fetch round bets:', error);
@@ -196,6 +188,31 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       console.log('🧪 Test data:', data);
     } catch (error: any) {
       console.error('Test failed:', error);
+    }
+  };
+
+  // Verify round fairness
+  const verifyRoundFairness = async (roundId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'verify_round', roundId }
+      });
+
+      if (error) throw error;
+      
+      // Show verification in a toast or modal
+      toast({
+        title: "🔍 Fairness Verification",
+        description: `Round ${data.round_number}: Server seed verified. Result: ${data.result_color} (slot ${data.result_slot})`,
+      });
+      
+      console.log('🔍 Fairness verification:', data);
+    } catch (error: any) {
+      toast({
+        title: "Verification Failed",
+        description: error.message || 'Failed to verify round',
+        variant: "destructive",
+      });
     }
   };
 
@@ -262,38 +279,51 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           // Check if this is a new round (different ID)
           const isNewRound = currentRound?.id !== round.id;
           
+          // Save completed round for fairness checking
+          if (oldRound?.status === 'spinning' && round.status === 'completed') {
+            console.log('✅ Round completed, saving for fairness check');
+            setLastCompletedRound(round);
+          }
+          
           setCurrentRound(round);
           
-          // Only fetch bets if it's a new round or status changed
+          // Handle different scenarios
           if (isNewRound) {
-            console.log('🆕 New round detected, fetching bets');
+            console.log('🆕 New round detected, clearing user bets and fetching fresh data');
+            setUserBets({});
             fetchRoundBets(round.id);
-          } else if (oldRound?.status !== round.status) {
-            console.log('🔄 Round status changed, fetching bets');
+          } else if (round.status === 'betting' && oldRound?.status !== 'betting') {
+            console.log('🎲 Betting phase started, preserving user bets');
+            fetchRoundBets(round.id, true);
+          } else if (round.status === 'spinning' && oldRound?.status === 'betting') {
+            console.log('🌀 Spinning started, fetching final bets');
+            fetchRoundBets(round.id);
+          } else if (round.status === 'completed') {
+            console.log('🏁 Round completed, fetching final results');
             fetchRoundBets(round.id);
           } else {
-            console.log('⏭️ Round update but keeping current bets');
+            console.log('⏭️ Round update but keeping current state');
           }
         }
       })
       .subscribe();
 
-    // Subscribe to bet updates (only for other users' bets)
+    // Subscribe to bet updates for live feed
     const betSubscription = supabase
       .channel('roulette_bets')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'roulette_bets'
       }, (payload) => {
-        console.log('💰 Bet update:', payload);
+        console.log('💰 New bet placed:', payload);
         
-        // Only fetch if this is not the current user's bet
-        if (payload.new && payload.new.user_id !== user?.id && currentRound?.id) {
-          console.log('👥 Other user bet, refreshing bets');
-          fetchRoundBets(currentRound.id);
-        } else if (payload.new && payload.new.user_id === user?.id) {
-          console.log('👤 Own bet detected, keeping local state');
+        // Always refresh bets to show live updates for all users
+        if (currentRound?.id) {
+          console.log('🔄 Refreshing bets for live updates');
+          // Preserve user bets during betting phase
+          const preserveUserBets = currentRound.status === 'betting';
+          fetchRoundBets(currentRound.id, preserveUserBets);
         }
       })
       .subscribe();
@@ -383,21 +413,24 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         description: `$${betAmount} on ${color}`,
       });
 
-      // Update user balance immediately for instant UI feedback
-      await onUpdateUser({ 
-        balance: profile.balance - betAmount 
+      // Update user balance immediately (same as TowerGame)
+      await onUpdateUser({
+        balance: profile.balance - betAmount,
+        total_wagered: profile.total_wagered + betAmount
       });
 
-      // Update local user bets immediately and preserve them
-      setUserBets(prev => ({
-        ...prev,
-        [color]: (prev[color] || 0) + betAmount
-      }));
+      // Update local user bets immediately and keep them persistent
+      setUserBets(prev => {
+        const newBets = {
+          ...prev,
+          [color]: (prev[color] || 0) + betAmount
+        };
+        console.log('🎯 Setting user bets locally:', newBets);
+        return newBets;
+      });
 
-      // Wait a bit for database to update, then fetch round bets
-      setTimeout(async () => {
-        await fetchRoundBets(currentRound.id);
-      }, 500);
+      // Force refresh of round bets to show live updates for all users
+      await fetchRoundBets(currentRound.id);
 
     } catch (error: any) {
       toast({
@@ -476,6 +509,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
               <Button onClick={testBets} variant="outline" size="sm">
                 🧪 Test Bets
               </Button>
+              {lastCompletedRound && (
+                <Button 
+                  onClick={() => verifyRoundFairness(lastCompletedRound.id)} 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-blue-50 hover:bg-blue-100"
+                >
+                  🔍 Verify Fairness
+                </Button>
+              )}
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 <span className="text-lg font-mono">
