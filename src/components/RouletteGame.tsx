@@ -78,6 +78,14 @@ export const RouletteGame = () => {
         if (statusData?.currentRound) {
           console.log('🎰 Current round from status check:', statusData.currentRound);
           setCurrentRound(statusData.currentRound);
+          
+          // If round is spinning or completed, ensure we have the result
+          if (statusData.currentRound.status === 'spinning' || statusData.currentRound.status === 'completed') {
+            setIsSpinning(statusData.currentRound.status === 'spinning');
+            if (statusData.currentRound.result_slot !== null && statusData.currentRound.result_slot !== undefined) {
+              setWinningSlot(statusData.currentRound.result_slot);
+            }
+          }
           return;
         }
 
@@ -93,6 +101,14 @@ export const RouletteGame = () => {
         if (activeRound) {
           console.log('🎰 Found active round:', activeRound);
           setCurrentRound(activeRound);
+          
+          // Set spinning state based on round status
+          if (activeRound.status === 'spinning') {
+            setIsSpinning(true);
+            if (activeRound.result_slot !== null && activeRound.result_slot !== undefined) {
+              setWinningSlot(activeRound.result_slot);
+            }
+          }
           return;
         }
 
@@ -114,6 +130,11 @@ export const RouletteGame = () => {
         } else {
           // Show the completed round temporarily
           setCurrentRound(recentRound);
+          if (recentRound.result_slot !== null && recentRound.result_slot !== undefined) {
+            setWinningSlot(recentRound.result_slot);
+            setShowWinAnimation(true);
+            setTimeout(() => setShowWinAnimation(false), 3000);
+          }
           // Start a new round after a short delay
           setTimeout(startNewRound, 5000);
         }
@@ -133,6 +154,12 @@ export const RouletteGame = () => {
         if (error) throw error;
         console.log('🎰 New round started:', data);
         setCurrentRound(data);
+        
+        // Reset state for new round
+        setIsSpinning(false);
+        setWinningSlot(null);
+        setShowWinAnimation(false);
+        setUserBets({});
       } catch (error) {
         console.error('❌ Failed to start round:', error);
       }
@@ -142,16 +169,40 @@ export const RouletteGame = () => {
     fetchCurrentRound();
 
     // Set up interval for checking round status more frequently
-    const statusInterval = setInterval(fetchCurrentRound, 5000); // Check every 5 seconds
-    
-    // Set up interval for starting new rounds less frequently  
-    const roundInterval = setInterval(fetchCurrentRound, 25000); // Check every 25 seconds
+    const statusInterval = setInterval(fetchCurrentRound, 3000); // Check every 3 seconds
     
     return () => {
       clearInterval(statusInterval);
-      clearInterval(roundInterval);
     };
   }, []);
+
+  // Fetch user's bets for current round on mount and when round changes
+  useEffect(() => {
+    const fetchUserBets = async () => {
+      if (!currentRound || !user) return;
+      
+      try {
+        const { data: userRoundBets } = await supabase
+          .from('roulette_bets')
+          .select('bet_color, bet_amount')
+          .eq('round_id', currentRound.id)
+          .eq('user_id', user.id);
+
+        if (userRoundBets) {
+          const userBetTotals: { [key: string]: number } = {};
+          userRoundBets.forEach(bet => {
+            userBetTotals[bet.bet_color] = (userBetTotals[bet.bet_color] || 0) + bet.bet_amount;
+          });
+          setUserBets(userBetTotals);
+          console.log('🎰 Restored user bets:', userBetTotals);
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch user bets:', error);
+      }
+    };
+
+    fetchUserBets();
+  }, [currentRound, user]);
 
   // Real-time subscriptions
   useEffect(() => {
@@ -277,26 +328,42 @@ export const RouletteGame = () => {
   // Handle round completion
   useEffect(() => {
     if (currentRound?.status === 'completed' && currentRound.result_slot !== undefined) {
+      console.log('🎰 Round completed with result:', currentRound.result_slot);
       setWinningSlot(currentRound.result_slot);
       setIsSpinning(false);
       
-      // Check if user won
-      const userWon = userBets[currentRound.result_color!] > 0;
-      if (userWon) {
+      // Check if user won any bets
+      const totalUserWinnings = Object.entries(userBets).reduce((total, [color, amount]) => {
+        if (color === currentRound.result_color) {
+          const multiplier = color === 'green' ? 14 : 2;
+          return total + (amount * multiplier);
+        }
+        return total;
+      }, 0);
+
+      if (totalUserWinnings > 0) {
         setShowWinAnimation(true);
-        const winAmount = userBets[currentRound.result_color!] * currentRound.result_multiplier!;
         toast({
           title: "🎉 You Won!",
-          description: `${currentRound.result_color} hit! You won $${winAmount.toFixed(2)}`,
+          description: `${currentRound.result_color} hit! You won $${totalUserWinnings.toFixed(2)}`,
         });
-        setTimeout(() => setShowWinAnimation(false), 3000);
+        setTimeout(() => setShowWinAnimation(false), 5000);
+      } else if (Object.keys(userBets).length > 0) {
+        // User had bets but lost
+        toast({
+          title: "Better luck next time!",
+          description: `${currentRound.result_color} hit. Try again next round!`,
+          variant: "destructive",
+        });
       }
       
-      // Reset user bets for next round
-      setTimeout(() => {
-        setUserBets({});
-        setWinningSlot(null);
-      }, 5000);
+      // Don't reset user bets immediately - let them see their bets for this round
+      // They'll be reset when a new round starts
+    } else if (currentRound?.status === 'spinning' && currentRound.result_slot !== undefined) {
+      // Round is spinning and we have a result - trigger animation
+      console.log('🎰 Round spinning with predetermined result:', currentRound.result_slot);
+      setWinningSlot(currentRound.result_slot);
+      setIsSpinning(true);
     }
   }, [currentRound, userBets]);
 
