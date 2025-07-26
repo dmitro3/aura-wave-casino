@@ -219,6 +219,102 @@ export default function Index({ initialGame }: IndexProps) {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Notification Button - Only show for authenticated users */}
+              {user && (
+                <Dialog open={notificationModalOpen} onOpenChange={setNotificationModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="relative p-2 h-10 w-10 glass rounded-lg"
+                    >
+                      {unreadCount > 0 ? (
+                        <BellDot className="w-4 h-4" />
+                      ) : (
+                        <Bell className="w-4 h-4" />
+                      )}
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center justify-between">
+                        <span>Notifications</span>
+                        {unreadCount > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={markAllNotificationsAsRead}
+                            className="text-xs"
+                          >
+                            Mark all read
+                          </Button>
+                        )}
+                      </DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="h-96">
+                      {notifications.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No notifications yet</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-3 rounded-lg border transition-colors ${
+                                notification.is_read
+                                  ? 'bg-card/20 border-border/50'
+                                  : 'bg-primary/10 border-primary/20'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-sm truncate">
+                                    {notification.title}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    {new Date(notification.created_at).toLocaleString()}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-1 ml-2">
+                                  {!notification.is_read && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => markNotificationAsRead(notification.id)}
+                                      className="p-1 h-6 w-6"
+                                    >
+                                      ✓
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteNotification(notification.id)}
+                                    className="p-1 h-6 w-6 text-red-400 hover:text-red-300"
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </DialogContent>
+                </Dialog>
+              )}
+
               {/* Balance Display - Only show for authenticated users */}
               {user && userData && (
                 <div className="flex items-center space-x-2 glass px-3 py-1 rounded-lg">
@@ -226,100 +322,6 @@ export default function Index({ initialGame }: IndexProps) {
                   <span className="font-semibold">
                     ${userData.balance.toFixed(2)}
                   </span>
-                  
-                  {/* Notification Button */}
-                  <Dialog open={notificationModalOpen} onOpenChange={setNotificationModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="relative p-1 h-8 w-8 ml-2"
-                      >
-                        {unreadCount > 0 ? (
-                          <BellDot className="w-4 h-4" />
-                        ) : (
-                          <Bell className="w-4 h-4" />
-                        )}
-                        {unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                          </span>
-                        )}
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle className="flex items-center justify-between">
-                          <span>Notifications</span>
-                          {unreadCount > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={markAllNotificationsAsRead}
-                              className="text-xs"
-                            >
-                              Mark all read
-                            </Button>
-                          )}
-                        </DialogTitle>
-                      </DialogHeader>
-                      <ScrollArea className="h-96">
-                        {notifications.length === 0 ? (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">No notifications yet</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {notifications.map((notification) => (
-                              <div
-                                key={notification.id}
-                                className={`p-3 rounded-lg border transition-colors ${
-                                  notification.is_read
-                                    ? 'bg-card/20 border-border/50'
-                                    : 'bg-primary/10 border-primary/20'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="font-medium text-sm truncate">
-                                      {notification.title}
-                                    </h4>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {notification.message}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-2">
-                                      {new Date(notification.created_at).toLocaleString()}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-1 ml-2">
-                                    {!notification.is_read && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => markNotificationAsRead(notification.id)}
-                                        className="p-1 h-6 w-6"
-                                      >
-                                        ✓
-                                      </Button>
-                                    )}
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => deleteNotification(notification.id)}
-                                      className="p-1 h-6 w-6 text-red-400 hover:text-red-300"
-                                    >
-                                      ×
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </DialogContent>
-                  </Dialog>
                 </div>
               )}
 
