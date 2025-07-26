@@ -201,15 +201,26 @@ async function getCurrentRound(supabase: any) {
       
       // Calculate final reel position for cross-user sync
       const TILE_WIDTH = 120;
-      const CENTER_OFFSET = 300; // Half of 600px container width
+      const CONTAINER_WIDTH = 600;
+      const CENTER_OFFSET = CONTAINER_WIDTH / 2; // Exact center at 300px
       const WHEEL_SLOTS_LENGTH = 15;
       
       // Find the position of the winning slot in our WHEEL_SLOTS array
       const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === result.slot);
       
+      if (winningSlotIndex === -1) {
+        console.error('❌ Winning slot not found in WHEEL_SLOTS:', result.slot);
+        console.error('Available slots:', WHEEL_SLOTS.map(s => s.slot));
+        throw new Error(`Winning slot ${result.slot} not found in wheel configuration`);
+      }
+      
       // Calculate the final reel position that centers the winning slot precisely
-      // The winning slot should be perfectly centered under the center line
-      const winningSlotTargetPosition = -(winningSlotIndex * TILE_WIDTH) + CENTER_OFFSET - (TILE_WIDTH / 2);
+      // We want the CENTER of the winning tile to align with the center line
+      // Tile starts at: winningSlotIndex * TILE_WIDTH
+      // Tile center is at: (winningSlotIndex * TILE_WIDTH) + (TILE_WIDTH / 2)
+      // To center it: -(tile_center_position) + CENTER_OFFSET
+      const tileCenterPosition = (winningSlotIndex * TILE_WIDTH) + (TILE_WIDTH / 2);
+      const winningSlotTargetPosition = -tileCenterPosition + CENTER_OFFSET;
       
       // For the first round or if no previous position, start from 0
       // Otherwise, calculate from the previous round's final position
@@ -235,11 +246,13 @@ async function getCurrentRound(supabase: any) {
       const finalReelPosition = previousReelPosition - totalRotationDistance + (winningSlotTargetPosition - previousReelPosition);
       
       console.log('🎯 Calculated synchronized reel position:', {
-        previousReelPosition,
+        resultSlot: result.slot,
         winningSlotIndex,
+        tileCenterPosition,
         winningSlotTargetPosition,
+        previousReelPosition,
         finalReelPosition,
-        resultSlot: result.slot
+        calculation: `slot ${result.slot} at index ${winningSlotIndex} should center at position ${winningSlotTargetPosition}`
       });
 
       // Update round to spinning with result and synchronized reel position

@@ -227,14 +227,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         )}
       </div>
 
-      {/* Win Celebration Banner */}
-      {showWinAnimation && winningSlot !== null && !isAnimating && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
-          <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-8 py-4 rounded-2xl font-bold text-2xl shadow-2xl border-4 border-yellow-300 animate-bounce">
-            🎯 {WHEEL_SLOTS[winningSlot]?.color.toUpperCase()} {WHEEL_SLOTS[winningSlot]?.slot} WINS! 🎯
-          </div>
-        </div>
-      )}
+
       
 
     </div>
