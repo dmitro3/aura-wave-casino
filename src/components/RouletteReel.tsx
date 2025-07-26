@@ -112,7 +112,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating) {
       console.log('🔄 Initializing position from synchronized state:', synchronizedPosition);
-      setPosition(synchronizedPosition);
+      
+      // Safeguard: if position is extremely negative, normalize it
+      const fullRotationDistance = WHEEL_SLOTS.length * TILE_WIDTH;
+      let normalizedPosition = synchronizedPosition;
+      
+      // Keep position within reasonable bounds (same as backend logic)
+      const maxNegativeRotations = -10 * fullRotationDistance;
+      if (normalizedPosition < maxNegativeRotations) {
+        const excessRotations = Math.floor((maxNegativeRotations - normalizedPosition) / fullRotationDistance);
+        normalizedPosition += excessRotations * fullRotationDistance;
+        console.log('🔄 Frontend normalized position:', { original: synchronizedPosition, normalized: normalizedPosition });
+      }
+      
+      setPosition(normalizedPosition);
     }
   }, [synchronizedPosition, isAnimating]);
 

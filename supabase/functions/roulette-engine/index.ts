@@ -325,6 +325,22 @@ async function getCurrentRound(supabase: any) {
         finalReelPosition -= fullRotationDistance;
       }
       
+      // Normalize position to prevent tiles from disappearing (keep within reasonable bounds)
+      // Frontend has 20 repeats, so we have plenty of buffer. Keep position between -10 and 0 full rotations
+      const maxNegativeRotations = -10 * fullRotationDistance; // -10 full rotations
+      if (finalReelPosition < maxNegativeRotations) {
+        const originalPosition = finalReelPosition;
+        // Bring back into range while maintaining the correct slot alignment
+        const excessRotations = Math.floor((maxNegativeRotations - finalReelPosition) / fullRotationDistance);
+        finalReelPosition += excessRotations * fullRotationDistance;
+        console.log('🔄 Normalized reel position to prevent disappearing tiles:', {
+          originalPosition,
+          normalizedPosition: finalReelPosition,
+          excessRotations,
+          maxNegativeRotations
+        });
+      }
+      
       console.log('🎯 Calculated synchronized reel position:', {
         resultSlot: result.slot,
         winningSlotIndex,
