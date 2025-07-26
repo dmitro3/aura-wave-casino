@@ -270,35 +270,20 @@ async function createNewRound(supabase: any) {
   try {
     console.log('🆕 Creating new round...');
     
-    // Get next round number
-    const { data: lastRound, error: lastRoundError } = await supabase
-      .from('roulette_rounds')
-      .select('round_number')
-      .order('round_number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (lastRoundError) {
-      console.error('❌ Error getting last round:', lastRoundError);
-      throw lastRoundError;
-    }
-
-    const roundNumber = (lastRound?.round_number || 0) + 1;
     const now = new Date();
     const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
     const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
 
     console.log('🆕 Creating round:', {
-      roundNumber,
       now: now.toISOString(),
       bettingEnd: bettingEnd.toISOString(),
       spinningEnd: spinningEnd.toISOString()
     });
 
+    // Let the database auto-increment round_number (BIGSERIAL)
     const { data: newRound, error: createError } = await supabase
       .from('roulette_rounds')
       .insert({
-        round_number: roundNumber,
         status: 'betting',
         betting_end_time: bettingEnd.toISOString(),
         spinning_end_time: spinningEnd.toISOString()
@@ -311,7 +296,7 @@ async function createNewRound(supabase: any) {
       throw createError;
     }
 
-    console.log('✅ Created new round:', newRound.id, 'number:', roundNumber);
+    console.log('✅ Created new round:', newRound.id, 'number:', newRound.round_number);
     return newRound;
   } catch (error) {
     console.error('❌ Error in createNewRound:', error);
