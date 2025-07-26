@@ -511,10 +511,11 @@ async function createNewRound(supabase: any) {
 async function placeBet(supabase: any, userId: string, roundId: string, betColor: string, betAmount: number, clientSeed?: string) {
   console.log(`💰 Placing bet: ${betAmount} on ${betColor} for user ${userId}`);
 
-  // SECURITY 1: Input validation and sanitization
-  if (!userId || typeof userId !== 'string' || userId.length < 10) {
-    throw new Error('Invalid user ID');
-  }
+  try {
+    // SECURITY 1: Input validation and sanitization
+    if (!userId || typeof userId !== 'string' || userId.length < 10) {
+      throw new Error('Invalid user ID');
+    }
   
   if (!roundId || typeof roundId !== 'string') {
     throw new Error('Invalid round ID');
@@ -530,11 +531,18 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
 
   // SECURITY 2: Rate limiting - prevent spam clicking
   const rateLimitKey = `bet_rate_limit_${userId}`;
-  const { data: rateLimitData } = await supabase
+  console.log('🔍 Checking rate limits for user:', userId);
+  
+  const { data: rateLimitData, error: rateLimitError } = await supabase
     .from('user_rate_limits')
     .select('last_bet_time, bet_count')
     .eq('user_id', userId)
     .single();
+
+  if (rateLimitError && rateLimitError.code !== 'PGRST116') {
+    console.error('❌ Rate limit check failed:', rateLimitError);
+    // Continue without rate limiting if there's an error
+  }
 
   const now = new Date();
   const oneSecondAgo = new Date(now.getTime() - 1000);
@@ -548,23 +556,35 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     }
     
     // Update rate limit record
-    await supabase
-      .from('user_rate_limits')
-      .upsert({
-        user_id: userId,
-        last_bet_time: now.toISOString(),
-        bet_count: (rateLimitData.bet_count || 0) + 1
-      });
+    try {
+      await supabase
+        .from('user_rate_limits')
+        .upsert({
+          user_id: userId,
+          last_bet_time: now.toISOString(),
+          bet_count: (rateLimitData.bet_count || 0) + 1
+        });
+    } catch (updateError) {
+      console.error('❌ Failed to update rate limit:', updateError);
+      // Continue without updating rate limit
+    }
   } else {
     // Create new rate limit record
-    await supabase
-      .from('user_rate_limits')
-      .insert({
-        user_id: userId,
-        last_bet_time: now.toISOString(),
-        bet_count: 1
-      });
+    try {
+      await supabase
+        .from('user_rate_limits')
+        .insert({
+          user_id: userId,
+          last_bet_time: now.toISOString(),
+          bet_count: 1
+        });
+    } catch (insertError) {
+      console.error('❌ Failed to create rate limit record:', insertError);
+      // Continue without rate limiting
+    }
   }
+
+  console.log('✅ Rate limiting check completed');
 
   // SECURITY 3: Verify round is in betting phase with time checks
   const { data: round, error: roundError } = await supabase
@@ -609,20 +629,40 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   }
 
   // SECURITY 5: Atomic balance check and deduction using database transaction
+  console.log('🔍 Attempting atomic balance check for:', {
+    userId,
+    betAmount,
+    roundId
+  });
+
   const { data: balanceResult, error: balanceError } = await supabase.rpc('atomic_bet_balance_check', {
     p_user_id: userId,
     p_bet_amount: betAmount,
     p_round_id: roundId
   });
 
-  if (balanceError || !balanceResult) {
+  console.log('🔍 Atomic balance check result:', {
+    data: balanceResult,
+    error: balanceError
+  });
+
+  if (balanceError) {
     console.error('❌ Atomic balance check failed:', balanceError);
-    throw new Error('Balance validation failed');
+    console.error('❌ Error details:', JSON.stringify(balanceError, null, 2));
+    throw new Error(`Balance validation failed: ${balanceError.message || balanceError.details || 'Unknown error'}`);
+  }
+
+  if (!balanceResult) {
+    console.error('❌ No result from atomic balance check');
+    throw new Error('Balance validation failed: No result returned');
   }
 
   if (!balanceResult.success) {
+    console.error('❌ Balance check returned failure:', balanceResult);
     throw new Error(balanceResult.error_message || 'Insufficient balance');
   }
+
+  console.log('✅ Atomic balance check successful:', balanceResult);
 
   // SECURITY 6: Check total bets per user per round limit
   const { data: userBetsCount, error: userBetsError } = await supabase
@@ -730,19 +770,25 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   }
 
   // SECURITY 11: Audit log for bet placement
-  await supabase
-    .from('audit_logs')
-    .insert({
-      user_id: userId,
-      action: 'place_bet',
-      details: {
-        round_id: roundId,
-        bet_color: betColor,
-        bet_amount: betAmount,
-        potential_payout: potentialPayout
-      },
-      timestamp: new Date().toISOString()
-    });
+  try {
+    await supabase
+      .from('audit_logs')
+      .insert({
+        user_id: userId,
+        action: 'place_bet',
+        details: {
+          round_id: roundId,
+          bet_color: betColor,
+          bet_amount: betAmount,
+          potential_payout: potentialPayout
+        },
+        timestamp: new Date().toISOString()
+      });
+    console.log('✅ Audit log created successfully');
+  } catch (auditError) {
+    console.error('❌ Failed to create audit log:', auditError);
+    // Continue without audit logging - don't fail the bet
+  }
 
   // Insert to live bet feed for real-time updates
   await supabase
@@ -764,6 +810,13 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     bet,
     message: 'Bet placed successfully'
   };
+  } catch (error) {
+    console.error('❌ Error placing bet:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to place bet'
+    };
+  }
 }
 
 async function completeRound(supabase: any, round: any) {
