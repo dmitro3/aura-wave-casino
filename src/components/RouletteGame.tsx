@@ -756,6 +756,50 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }
 
+  const forceAdvancedRound = async () => {
+    try {
+      console.log('🚀 Force creating advanced round...')
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'force_advanced_round' }
+      })
+
+      if (error) {
+        console.error('❌ Force advanced round error:', error)
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        })
+        return
+      }
+
+      console.log('✅ Force advanced round result:', data)
+      
+      if (data.success) {
+        toast({
+          title: "Success!",
+          description: `Advanced round created: ${data.round.id}`,
+          variant: "default"
+        })
+        console.log('📊 Advanced round details:', data.round)
+      } else {
+        toast({
+          title: "Failed",
+          description: data.error,
+          variant: "destructive"
+        })
+        console.error('❌ Details:', data.details)
+      }
+    } catch (error) {
+      console.error('❌ Force advanced round error:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create advanced round",
+        variant: "destructive"
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -837,6 +881,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   </Button>
                   <Button onClick={fixDailySeeds} variant="outline" size="sm">
                     Fix Daily Seeds
+                  </Button>
+                  <Button onClick={forceAdvancedRound} variant="outline" size="sm">
+                    Create Advanced Round
                   </Button>
                   <span className="text-sm text-muted-foreground">
                     {timeLeft > 0 ? `${timeLeft}s remaining` : 'Bets closed'}

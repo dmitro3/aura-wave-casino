@@ -343,6 +343,42 @@ serve(async (req) => {
         }
       }
 
+      case 'force_advanced_round': {
+        console.log('🚀 Force creating advanced round...')
+        
+        try {
+          // Create a test advanced round
+          const testRound = await createNewRound(supabase)
+          
+          console.log('✅ Advanced round created:', testRound)
+          
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Advanced round created successfully!',
+            round: {
+              id: testRound.id,
+              daily_seed_id: testRound.daily_seed_id,
+              nonce_id: testRound.nonce_id,
+              status: testRound.status,
+              created_at: testRound.created_at
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+          
+        } catch (error) {
+          console.error('❌ Force advanced round error:', error)
+          return new Response(JSON.stringify({
+            error: error.message,
+            details: error.details || 'Failed to create advanced round',
+            success: false
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,
@@ -533,9 +569,12 @@ async function createNewRound(supabase: any) {
   
   try {
     // Get or create today's daily seed
+    console.log('📅 Getting daily seed...');
     const dailySeed = await getOrCreateDailySeed(supabase);
+    console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
     
     // Get next nonce ID for today
+    console.log('🔢 Getting next nonce ID...');
     const { data: lastRound, error: lastRoundError } = await supabase
       .from('roulette_rounds')
       .select('nonce_id')
@@ -549,6 +588,7 @@ async function createNewRound(supabase: any) {
     }
 
     const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
+    console.log('✅ Next nonce ID:', nextNonceId);
   
   const now = new Date();
   const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
@@ -564,6 +604,7 @@ async function createNewRound(supabase: any) {
       nonce: nextNonceId // Keep for compatibility
     };
 
+    console.log('📝 Inserting round data:', roundData);
     const { data: newRound, error: insertError } = await supabase
       .from('roulette_rounds')
       .insert(roundData)
@@ -571,7 +612,8 @@ async function createNewRound(supabase: any) {
       .single();
 
     if (insertError) {
-      console.error('❌ Error creating new round:', insertError);
+      console.error('❌ Advanced round insert failed:', insertError);
+      console.error('❌ Round data that failed:', roundData);
       throw insertError;
     }
 
