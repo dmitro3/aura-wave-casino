@@ -28,6 +28,10 @@ const WHEEL_SLOTS = [
 const BETTING_DURATION = 15000; // 15 seconds betting
 const SPINNING_DURATION = 5000; // 5 seconds spinning animation
 
+// PLG.BET Style Provably Fair Constants
+const DAILY_SEED_LENGTH = 64; // 64 character hex string (256 bits)
+const LOTTO_LENGTH = 10; // 10 digit lotto number
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -194,10 +198,22 @@ async function getCurrentRound(supabase: any) {
 
     // Check if betting phase should end and spinning should start
     if (activeRound.status === 'betting' && now >= bettingEnd) {
-      console.log('🎲 Betting ended, generating result and starting spin');
+      console.log('🎲 Betting ended, generating PLG.BET result and starting spin');
       
-      // Generate provably fair result
-      const result = await generateProvablyFairResult(supabase, activeRound);
+      // Get daily seed for this round
+      const { data: dailySeed } = await supabase
+        .from('daily_seeds')
+        .select('*')
+        .eq('id', activeRound.daily_seed_id)
+        .single();
+
+      if (!dailySeed) {
+        throw new Error('Daily seed not found for round');
+      }
+
+      // Generate provably fair result using PLG.BET method
+      const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
+      const result = resultData.result;
       
       // Calculate final reel position for cross-user sync
       const TILE_WIDTH = 120;
@@ -304,11 +320,21 @@ async function getCurrentRound(supabase: any) {
 }
 
 async function createNewRound(supabase: any) {
-  console.log('🆕 Creating new round...');
+  console.log('🆕 Creating new PLG.BET style round...');
   
-  // Generate server seed and hash for provably fair system
-  const serverSeed = await generateServerSeed();
-  const serverSeedHash = await sha256Hash(serverSeed);
+  // Get or create today's daily seed
+  const dailySeed = await getOrCreateDailySeed(supabase);
+  
+  // Get next nonce ID for today
+  const { data: lastRound } = await supabase
+    .from('roulette_rounds')
+    .select('nonce_id')
+    .eq('daily_seed_id', dailySeed.id)
+    .order('nonce_id', { ascending: false })
+    .limit(1)
+    .single();
+
+  const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
   
   const now = new Date();
   const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
@@ -320,9 +346,10 @@ async function createNewRound(supabase: any) {
       status: 'betting',
       betting_end_time: bettingEnd.toISOString(),
       spinning_end_time: spinningEnd.toISOString(),
-      server_seed: serverSeed,
-      server_seed_hash: serverSeedHash,
-      nonce: 1 // Start with nonce 1 for this server seed
+      daily_seed_id: dailySeed.id,
+      nonce_id: nextNonceId,
+      server_seed_hash: dailySeed.server_seed_hash, // Show the daily seed hash
+      nonce: nextNonceId // Keep for compatibility
     })
     .select()
     .single();
@@ -587,24 +614,87 @@ async function completeRound(supabase: any, round: any) {
   console.log(`🎉 Round completed with ${totalBetsCount} bets totaling ${totalBetsAmount}`);
 }
 
-async function generateProvablyFairResult(supabase: any, round: any) {
-  console.log('🎲 Generating provably fair result');
+// PLG.BET Style Provably Fair Result Generation
+async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId: number) {
+  console.log('🎲 Generating PLG.BET style provably fair result');
   
-  // Create hash input: server_seed + client_seed + nonce
-  // Use consistent default client seed
-  const defaultClientSeed = 'default_client_seed';
-  const hashInput = `${round.server_seed}:${defaultClientSeed}:${round.nonce}`;
+  // PLG.BET Formula: hash("sha256", server_seed."-".lotto."-".round_id)
+  const hashInput = `${dailySeed.server_seed}-${dailySeed.lotto}-${nonceId}`;
   const hash = await sha256Hash(hashInput);
   
-  // Convert first 8 characters of hash to number and mod by 15
+  // Convert first 8 characters of hash to number and mod by 15 (PLG.BET method)
   const hashNumber = parseInt(hash.substring(0, 8), 16);
   const resultSlot = hashNumber % 15;
   const result = WHEEL_SLOTS[resultSlot];
   
-  console.log(`🎯 Generated result: slot ${resultSlot}, color ${result.color}`);
-  console.log(`📊 Hash calculation: "${hashInput}" -> ${hash.substring(0, 16)}... -> ${hashNumber} % 15 = ${resultSlot}`);
+  console.log(`🎯 PLG.BET Result Generated:`);
+  console.log(`📊 Server Seed: ${dailySeed.server_seed}`);
+  console.log(`🎰 Lotto: ${dailySeed.lotto}`);
+  console.log(`🔢 Nonce (Round ID): ${nonceId}`);
+  console.log(`🔗 Hash Input: "${hashInput}"`);
+  console.log(`#️⃣ SHA256 Hash: ${hash}`);
+  console.log(`🎲 Hash Number: ${hashNumber} (0x${hash.substring(0, 8)})`);
+  console.log(`🎯 Final Result: ${hashNumber} % 15 = ${resultSlot} (${result.color} ${result.slot})`);
   
-  return result;
+  return { result, hashInput, hash, hashNumber };
+}
+
+// PLG.BET Daily Seed Management
+async function getOrCreateDailySeed(supabase: any) {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  // Try to get existing daily seed
+  const { data: existingSeed } = await supabase
+    .from('daily_seeds')
+    .select('*')
+    .eq('date', today)
+    .single();
+
+  if (existingSeed) {
+    console.log(`📅 Using existing daily seed for ${today}`);
+    return existingSeed;
+  }
+
+  // Generate new daily seed and lotto
+  console.log(`🆕 Creating new daily seed for ${today}`);
+  
+  const serverSeed = await generateSecureServerSeed();
+  const serverSeedHash = await sha256Hash(serverSeed);
+  const lotto = await generateSecureLotto();
+  const lottoHash = await sha256Hash(lotto);
+
+  const { data: newDailySeed } = await supabase
+    .from('daily_seeds')
+    .insert({
+      date: today,
+      server_seed: serverSeed,
+      server_seed_hash: serverSeedHash,
+      lotto: lotto,
+      lotto_hash: lottoHash,
+      is_revealed: false
+    })
+    .select()
+    .single();
+
+  console.log(`✅ Created daily seed: hash=${serverSeedHash.substring(0, 16)}..., lotto_hash=${lottoHash.substring(0, 16)}...`);
+  
+  return newDailySeed;
+}
+
+async function revealDailySeed(supabase: any, date: string) {
+  console.log(`🔓 Revealing daily seed for ${date}`);
+  
+  const { data: updatedSeed } = await supabase
+    .from('daily_seeds')
+    .update({
+      is_revealed: true,
+      revealed_at: new Date().toISOString()
+    })
+    .eq('date', date)
+    .select()
+    .single();
+
+  return updatedSeed;
 }
 
 async function setClientSeed(supabase: any, userId: string, clientSeed: string) {
@@ -632,16 +722,32 @@ async function setClientSeed(supabase: any, userId: string, clientSeed: string) 
 }
 
 async function verifyRound(supabase: any, roundId: string, clientSeed?: string) {
-  console.log(`🔍 Verifying round ${roundId}`);
+  console.log(`🔍 PLG.BET Verifying round ${roundId}`);
 
+  // Get round with daily seed info
   const { data: round } = await supabase
     .from('roulette_rounds')
-    .select('*')
+    .select(`
+      *,
+      daily_seeds (
+        date,
+        server_seed,
+        server_seed_hash,
+        lotto,
+        lotto_hash,
+        is_revealed
+      )
+    `)
     .eq('id', roundId)
     .single();
 
   if (!round) {
     throw new Error('Round not found');
+  }
+
+  const dailySeed = round.daily_seeds;
+  if (!dailySeed) {
+    throw new Error('Daily seed not found for round');
   }
 
   // For ongoing rounds, show basic info but no server seed
@@ -650,19 +756,20 @@ async function verifyRound(supabase: any, roundId: string, clientSeed?: string) 
       round_id: round.id,
       round_number: round.round_number,
       server_seed: null, // Hidden until round completes
-      server_seed_hash: round.server_seed_hash,
-      nonce: round.nonce,
+      server_seed_hash: dailySeed.server_seed_hash,
+      lotto: null, // Hidden until round completes
+      lotto_hash: dailySeed.lotto_hash,
+      nonce_id: round.nonce_id,
       result_slot: round.result_slot,
       result_color: round.result_color,
       status: round.status,
-      client_seed: clientSeed || 'default_client_seed',
-      is_completed: false
+      is_completed: false,
+      daily_date: dailySeed.date
     };
   }
 
-  // For completed rounds, show full verification
-  const usedClientSeed = clientSeed || 'default_client_seed';
-  const hashInput = `${round.server_seed}:${usedClientSeed}:${round.nonce}`;
+  // For completed rounds, show full PLG.BET verification
+  const hashInput = `${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}`;
   
   let hashResult = '';
   let hashNumber = 0;
@@ -670,38 +777,59 @@ async function verifyRound(supabase: any, roundId: string, clientSeed?: string) 
   
   try {
     hashResult = await sha256Hash(hashInput);
-    // Take first 8 chars and convert to number
+    // Take first 8 chars and convert to number (PLG.BET method)
     hashNumber = parseInt(hashResult.substring(0, 8), 16);
     calculatedSlot = hashNumber % 15;
   } catch (error) {
-    console.error('Error calculating verification:', error);
+    console.error('Error calculating PLG.BET verification:', error);
   }
 
   return {
     round_id: round.id,
     round_number: round.round_number,
-    server_seed: round.server_seed,
-    server_seed_hash: round.server_seed_hash,
-    nonce: round.nonce,
+    server_seed: dailySeed.server_seed,
+    server_seed_hash: dailySeed.server_seed_hash,
+    lotto: dailySeed.lotto,
+    lotto_hash: dailySeed.lotto_hash,
+    nonce_id: round.nonce_id,
     result_slot: round.result_slot,
     result_color: round.result_color,
     status: round.status,
-    client_seed: usedClientSeed,
+    daily_date: dailySeed.date,
     is_completed: true,
-    // Verification calculation
+    // PLG.BET Verification calculation
     hash_input: hashInput,
     hash_result: hashResult,
     hash_number: hashNumber,
     calculated_slot: calculatedSlot,
-    verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID'
+    verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID',
+    plg_formula: `hash("sha256", "${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}")`
   };
+}
+
+// PLG.BET Secure Generation Functions
+async function generateSecureServerSeed(): Promise<string> {
+  // Generate 64-character hex string (256 bits) like PLG.BET
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function generateSecureLotto(): Promise<string> {
+  // Generate 10-digit lotto number like PLG.BET
+  const bytes = new Uint8Array(5);
+  crypto.getRandomValues(bytes);
+  let lotto = '';
+  for (let i = 0; i < 5; i++) {
+    lotto += bytes[i].toString().padStart(2, '0');
+  }
+  return lotto.substring(0, 10); // Ensure exactly 10 digits
 }
 
 // Utility functions
 async function generateServerSeed(): Promise<string> {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  // Legacy function - redirect to secure version
+  return await generateSecureServerSeed();
 }
 
 async function sha256Hash(input: string): Promise<string> {
