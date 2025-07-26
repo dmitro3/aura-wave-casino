@@ -528,21 +528,42 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     throw new Error('Invalid bet amount');
   }
 
-  // SECURITY 2: Rate limiting - prevent spam clicking using recent bets
+  // SECURITY 2: Rate limiting - prevent spam clicking
+  const rateLimitKey = `bet_rate_limit_${userId}`;
+  const { data: rateLimitData } = await supabase
+    .from('user_rate_limits')
+    .select('last_bet_time, bet_count')
+    .eq('user_id', userId)
+    .single();
+
   const now = new Date();
   const oneSecondAgo = new Date(now.getTime() - 1000);
-  const { data: recentBets, error: recentBetsError } = await supabase
-    .from('roulette_bets')
-    .select('created_at')
-    .eq('user_id', userId)
-    .gte('created_at', oneSecondAgo.toISOString())
-    .limit(1);
-
-  if (recentBetsError) {
-    console.error('❌ Error checking recent bets:', recentBetsError);
-    // Continue without rate limiting check
-  } else if (recentBets && recentBets.length > 0) {
-    throw new Error('Rate limit exceeded. Please wait before placing another bet.');
+  
+  if (rateLimitData) {
+    const lastBetTime = new Date(rateLimitData.last_bet_time);
+    
+    // Allow max 1 bet per second
+    if (lastBetTime > oneSecondAgo) {
+      throw new Error('Rate limit exceeded. Please wait before placing another bet.');
+    }
+    
+    // Update rate limit record
+    await supabase
+      .from('user_rate_limits')
+      .upsert({
+        user_id: userId,
+        last_bet_time: now.toISOString(),
+        bet_count: (rateLimitData.bet_count || 0) + 1
+      });
+  } else {
+    // Create new rate limit record
+    await supabase
+      .from('user_rate_limits')
+      .insert({
+        user_id: userId,
+        last_bet_time: now.toISOString(),
+        bet_count: 1
+      });
   }
 
   // SECURITY 3: Verify round is in betting phase with time checks
@@ -588,35 +609,19 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   }
 
   // SECURITY 5: Atomic balance check and deduction using database transaction
-  // Get user profile and validate balance with row locking
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('balance, total_wagered')
-    .eq('id', userId)
-    .single();
+  const { data: balanceResult, error: balanceError } = await supabase.rpc('atomic_bet_balance_check', {
+    p_user_id: userId,
+    p_bet_amount: betAmount,
+    p_round_id: roundId
+  });
 
-  if (profileError || !profile) {
-    console.error('❌ Error fetching profile:', profileError);
-    throw new Error('Failed to verify current balance');
+  if (balanceError || !balanceResult) {
+    console.error('❌ Atomic balance check failed:', balanceError);
+    throw new Error('Balance validation failed');
   }
 
-  if (profile.balance < betAmount) {
-    throw new Error(`Insufficient balance. Current: $${profile.balance.toFixed(2)}`);
-  }
-
-  // Deduct balance atomically
-  const { error: balanceUpdateError } = await supabase
-    .from('profiles')
-    .update({
-      balance: profile.balance - betAmount,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', userId)
-    .eq('balance', profile.balance); // Optimistic locking
-
-  if (balanceUpdateError) {
-    console.error('❌ Balance update failed:', balanceUpdateError);
-    throw new Error('Balance update failed - please try again');
+  if (!balanceResult.success) {
+    throw new Error(balanceResult.error_message || 'Insufficient balance');
   }
 
   // SECURITY 6: Check total bets per user per round limit
@@ -685,17 +690,10 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     console.error('❌ Error creating bet:', betError);
     
     // SECURITY 10: Rollback balance deduction if bet creation fails
-    const { error: rollbackError } = await supabase
-      .from('profiles')
-      .update({
-        balance: profile.balance, // Restore original balance
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
-    
-    if (rollbackError) {
-      console.error('❌ Failed to rollback balance:', rollbackError);
-    }
+    await supabase.rpc('rollback_bet_balance', {
+      p_user_id: userId,
+      p_bet_amount: betAmount
+    });
     
     throw new Error('Failed to place bet - balance has been restored');
   }
@@ -731,8 +729,7 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     userProfile = profileData;
   }
 
-  // SECURITY 11: Audit log for bet placement (disabled until audit_logs table is created)
-  /*
+  // SECURITY 11: Audit log for bet placement
   await supabase
     .from('audit_logs')
     .insert({
@@ -746,7 +743,6 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
       },
       timestamp: new Date().toISOString()
     });
-  */
 
   // Insert to live bet feed for real-time updates
   await supabase
