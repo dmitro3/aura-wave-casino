@@ -85,6 +85,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [betAmount, setBetAmount] = useState(10);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [testData, setTestData] = useState<any>(null);
 
   // Fetch current round
   const fetchCurrentRound = async () => {
@@ -164,6 +165,21 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       setRecentResults(data || []);
     } catch (error: any) {
       console.error('Failed to fetch recent results:', error);
+    }
+  };
+
+  // Test function to check bet storage
+  const testBets = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'test_bets' }
+      });
+
+      if (error) throw error;
+      setTestData(data);
+      console.log('🧪 Test data:', data);
+    } catch (error: any) {
+      console.error('Test failed:', error);
     }
   };
 
@@ -423,6 +439,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
               <Badge variant="outline">Round #{currentRound.round_number}</Badge>
             </span>
             <div className="flex items-center gap-4">
+              <Button onClick={testBets} variant="outline" size="sm">
+                🧪 Test Bets
+              </Button>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 <span className="text-lg font-mono">
