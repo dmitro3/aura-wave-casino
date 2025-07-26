@@ -9,11 +9,11 @@ import { Clock, Users, Wallet, Shield, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
-import RouletteReel from './RouletteReel';
-import ProvablyFairModal from './ProvablyFairModal';
-import ProvablyFairHistoryModal from './ProvablyFairHistoryModal';
+import { RouletteReel } from './RouletteReel';
+import { ProvablyFairModal } from './ProvablyFairModal';
+import { ProvablyFairHistoryModal } from './ProvablyFairHistoryModal';
 
 interface RouletteRound {
   id: string;
