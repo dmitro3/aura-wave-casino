@@ -93,6 +93,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [betAmount, setBetAmount] = useState(10);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [winningColor, setWinningColor] = useState<string | null>(null);
   const [testData, setTestData] = useState<any>(null);
   const [lastCompletedRound, setLastCompletedRound] = useState<RouletteRound | null>(null);
   
@@ -355,6 +356,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             console.log('✅ Round completed, saving for fairness check');
             setLastCompletedRound(round);
             
+            // Set winning color for button highlighting
+            if (round.result_color) {
+              setWinningColor(round.result_color);
+              // Clear winning color after 5 seconds
+              setTimeout(() => setWinningColor(null), 5000);
+            }
+            
             // Handle payouts for this user (TowerGame pattern)
             handleRoundPayout(round);
           }
@@ -367,6 +375,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             setUserBets({});
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
+            setWinningColor(null); // Clear winning color for new round
             fetchRoundBets(round.id);
           } else if (round.status === 'betting' && oldRound?.status !== 'betting') {
             console.log('🎲 Betting phase started');
@@ -608,10 +617,21 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   };
 
   const getBetColorClass = (color: string) => {
+    const isWinning = winningColor === color;
+    
     switch (color) {
-      case 'green': return 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white border-green-400';
-      case 'red': return 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white border-red-400';
-      case 'black': return 'bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white border-gray-500';
+      case 'green': 
+        return isWinning 
+          ? 'bg-gradient-to-r from-green-400 to-green-500 hover:from-green-300 hover:to-green-400 text-white border-green-300 ring-4 ring-green-300 shadow-xl shadow-green-400/50 animate-pulse'
+          : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white border-green-400';
+      case 'red': 
+        return isWinning 
+          ? 'bg-gradient-to-r from-red-400 to-red-500 hover:from-red-300 hover:to-red-400 text-white border-red-300 ring-4 ring-red-300 shadow-xl shadow-red-400/50 animate-pulse'
+          : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white border-red-400';
+      case 'black': 
+        return isWinning 
+          ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-400 hover:to-gray-500 text-white border-gray-400 ring-4 ring-gray-400 shadow-xl shadow-gray-400/50 animate-pulse'
+          : 'bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white border-gray-500';
       default: return '';
     }
   };

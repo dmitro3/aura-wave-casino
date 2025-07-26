@@ -27,7 +27,7 @@ const WHEEL_SLOTS = [
 ];
 
 const TILE_WIDTH = 120;
-const CONTAINER_WIDTH = 800;
+const CONTAINER_WIDTH = 1200; // Increased from 800 for more visibility
 const CENTER_OFFSET = CONTAINER_WIDTH / 2;
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition }: RouletteReelProps) {
@@ -140,7 +140,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   };
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto">
+    <div className="relative w-full max-w-7xl mx-auto">
       {/* Reel Container */}
       <div className="relative h-36 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl">
         
@@ -148,19 +148,22 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
           {/* Top arrow */}
           <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-yellow-500"></div>
+            <div className="w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-emerald-400"></div>
           </div>
           
           {/* Bottom arrow */}
           <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-yellow-500"></div>
+            <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-emerald-400"></div>
           </div>
           
           {/* Center line */}
-          <div className="absolute inset-0 bg-yellow-500 shadow-lg"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-emerald-300 via-emerald-400 to-emerald-300 shadow-lg"></div>
           
           {/* Glow effect */}
-          <div className="absolute inset-0 bg-yellow-500 shadow-yellow-500/50 shadow-2xl blur-sm"></div>
+          <div className="absolute inset-0 bg-emerald-400 shadow-emerald-400/50 shadow-2xl blur-sm animate-pulse"></div>
+          
+          {/* Side glow */}
+          <div className="absolute inset-y-0 -left-2 -right-2 bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent blur-md"></div>
         </div>
 
         {/* Moving Tiles */}
@@ -176,22 +179,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             // Check if this tile is the winning one and should be highlighted
             const tilePosition = position + tile.globalIndex * TILE_WIDTH;
             const tileCenterPosition = tilePosition + TILE_WIDTH / 2;
+            const distanceFromCenter = Math.abs(tileCenterPosition - CENTER_OFFSET);
+            
+            // Check if tile is at center during spinning for scaling animation
+            const isCenterTile = isAnimating && distanceFromCenter < TILE_WIDTH / 2;
+            
             const isWinningTile = showWinAnimation && 
                                   tile.slot === winningSlot && 
                                   !isAnimating &&
                                   // Only highlight the tile that's actually at the center line
-                                  Math.abs(tileCenterPosition - CENTER_OFFSET) < TILE_WIDTH / 3;
+                                  distanceFromCenter < TILE_WIDTH / 3;
             
             return (
               <div
                 key={tile.uniqueKey}
-                className={`flex-shrink-0 h-28 flex flex-col items-center justify-center border-r-2 border-gray-600 relative transition-all duration-300 ${getTileColorClass(tile.color)} ${
-                  isWinningTile ? 'scale-110 ring-4 ring-yellow-400 shadow-2xl shadow-yellow-400/50 z-20' : ''
+                className={`flex-shrink-0 h-28 flex flex-col items-center justify-center border-r-2 border-gray-600 relative transition-all duration-150 ${getTileColorClass(tile.color)} ${
+                  isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : 
+                  isCenterTile ? 'scale-105 z-10' : ''
                 }`}
                 style={{ width: `${TILE_WIDTH}px` }}
               >
                 <div className={`text-2xl font-bold drop-shadow-lg ${
-                  isWinningTile ? 'text-yellow-200 scale-125' : ''
+                  isWinningTile ? 'text-emerald-200 scale-125' : ''
                 }`}>
                   {tile.slot}
                 </div>
@@ -201,8 +210,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                 {/* Win animation effects */}
                 {isWinningTile && (
                   <>
-                    <div className="absolute inset-0 bg-yellow-400/20 animate-pulse rounded"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/30 to-transparent animate-ping"></div>
+                    <div className="absolute inset-0 bg-emerald-400/20 animate-pulse rounded"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-400/30 to-transparent animate-ping"></div>
                   </>
                 )}
               </div>
