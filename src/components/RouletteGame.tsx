@@ -94,8 +94,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const currentRoundRef = useRef<string | null>(null);
   const userBetsRef = useRef<Record<string, number>>({});
 
-  // Filter roulette bets from live feed (TowerGame pattern)
-  const rouletteBets = (liveBetFeed || []).filter(bet => bet.game_type === 'roulette');
+  // Filter roulette bets from live feed (only current round)
+  const rouletteBets = (liveBetFeed || []).filter(bet => 
+    bet.game_type === 'roulette' && 
+    bet.game_data?.round_id === currentRound?.id
+  );
   const greenBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'green');
   const redBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'red');
   const blackBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'black');
@@ -677,9 +680,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <span className="text-lg font-bold capitalize">{color}</span>
                         <span className="text-sm">{getMultiplierText(color)}</span>
                       </div>
-                      {userBets[color] && (
+                      {(userBets[color] || userBetsRef.current[color]) && (
                         <span className="text-xs opacity-90 bg-white/20 px-2 py-1 rounded">
-                          Your bet: ${userBets[color].toFixed(2)}
+                          Your bet: ${(userBets[color] || userBetsRef.current[color] || 0).toFixed(2)}
                         </span>
                       )}
                     </Button>

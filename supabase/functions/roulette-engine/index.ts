@@ -134,9 +134,18 @@ serve(async (req) => {
           .order('created_at', { ascending: false })
           .limit(5);
 
+        // Check live bet feed data
+        const { data: liveFeed } = await supabase
+          .from('live_bet_feed')
+          .select('*')
+          .eq('game_type', 'roulette')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
         return new Response(JSON.stringify({
           recent_bets: allBets || [],
           recent_rounds: allRounds || [],
+          live_feed: liveFeed || [],
           test_passed: true
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -319,40 +328,67 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     .select()
     .single();
 
-  // Get user profile for live feed
-  const { data: userProfile, error: profileError } = await supabase
+  // Get user profile for live feed with fallback to auth.users
+  let userProfile = null;
+  let profileError = null;
+  
+  // First try profiles table
+  const { data: profileData, error: profileErr } = await supabase
     .from('profiles')
     .select('username, avatar_url')
     .eq('id', userId)
     .single();
 
-  if (profileError) {
-    console.error('❌ Error fetching user profile:', profileError);
+  if (profileErr) {
+    console.error('❌ Error fetching from profiles:', profileErr);
+    
+    // Fallback to auth.users table  
+    const { data: userData, error: userErr } = await supabase.auth.admin.getUserById(userId);
+    if (userData?.user) {
+      userProfile = {
+        username: userData.user.email?.split('@')[0] || `User${userId.slice(-4)}`,
+        avatar_url: userData.user.user_metadata?.avatar_url || null
+      };
+    } else {
+      console.error('❌ Error fetching from auth.users:', userErr);
+      // Final fallback
+      userProfile = {
+        username: `User${userId.slice(-4)}`,
+        avatar_url: null
+      };
+    }
+  } else {
+    userProfile = profileData;
   }
 
   console.log(`👤 User profile for live feed:`, userProfile);
+  console.log(`💰 Bet amount: ${betAmount} (type: ${typeof betAmount})`);
 
   // Add to live bet feed (TowerGame pattern)
+  const liveFeedData = {
+    user_id: userId,
+    username: userProfile?.username || `User${userId.slice(-4)}`,
+    game_type: 'roulette',
+    bet_amount: Number(betAmount), // Ensure it's a number
+    result: 'pending',
+    profit: 0,
+    game_data: {
+      bet_color: betColor,
+      round_id: roundId,
+      potential_payout: potentialPayout
+    }
+  };
+
+  console.log(`📡 About to insert into live feed:`, liveFeedData);
+
   const { error: feedError } = await supabase
     .from('live_bet_feed')
-    .insert({
-      user_id: userId,
-      username: userProfile?.username || 'Anonymous',
-      game_type: 'roulette',
-      bet_amount: betAmount,
-      result: 'pending',
-      profit: 0,
-      game_data: {
-        bet_color: betColor,
-        round_id: roundId,
-        potential_payout: potentialPayout
-      }
-    });
+    .insert(liveFeedData);
 
   if (feedError) {
     console.error('❌ Error inserting into live feed:', feedError);
   } else {
-    console.log(`📡 Added to live feed: ${userProfile?.username} bet $${betAmount} on ${betColor}`);
+    console.log(`✅ Successfully added to live feed: ${userProfile?.username} bet $${betAmount} on ${betColor}`);
   }
 
   console.log(`✅ Bet placed: ${bet.id} and added to live feed`);
@@ -448,16 +484,6 @@ async function completeRound(supabase: any, round: any) {
       total_bets_count: totalBetsCount,
       total_bets_amount: totalBetsAmount
     });
-
-  // Clear live bet feed for this round after a short delay (so users can see results)
-  setTimeout(async () => {
-    await supabase
-      .from('live_bet_feed')
-      .delete()
-      .eq('game_type', 'roulette')
-      .eq('game_data->round_id', round.id);
-    console.log(`🧹 Cleared live feed for round ${round.id}`);
-  }, 5000); // 5 second delay to show results
 
   console.log(`🎉 Round completed with ${totalBetsCount} bets totaling ${totalBetsAmount}`);
 }
