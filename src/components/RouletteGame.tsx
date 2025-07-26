@@ -726,6 +726,17 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                     <div className="flex items-center gap-2 text-sm">
                       <Wallet className="w-4 h-4" />
                       <span>Balance: ${profile.balance.toFixed(2)}</span>
+                      <button 
+                        onClick={async () => {
+                          const { data, error } = await supabase.functions.invoke('roulette-engine', {
+                            body: { action: 'test_advanced_creation' }
+                          });
+                          console.log('🧪 Advanced creation test:', { data, error });
+                        }}
+                        className="ml-2 text-xs bg-blue-500 text-white px-2 py-1 rounded"
+                      >
+                        Test
+                      </button>
                     </div>
                   )}
                   <span className="text-sm text-muted-foreground">

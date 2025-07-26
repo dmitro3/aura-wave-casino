@@ -186,6 +186,104 @@ serve(async (req) => {
         });
       }
 
+      case 'test_advanced_creation': {
+        const logs = [];
+        
+        try {
+          logs.push('🔬 Starting advanced round creation test...');
+          
+          // Test daily seed creation
+          logs.push('📅 Testing daily seed creation...');
+          const dailySeed = await getOrCreateDailySeed(supabase);
+          logs.push(`✅ Daily seed obtained: ${dailySeed.id} (${dailySeed.date})`);
+          
+          // Check if columns exist
+          logs.push('🔍 Checking if daily_seed_id column exists...');
+          const { data: columnTest, error: columnError } = await supabase
+            .from('roulette_rounds')
+            .select('daily_seed_id, nonce_id')
+            .limit(1);
+            
+          if (columnError) {
+            logs.push(`❌ Column check failed: ${columnError.message}`);
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Missing columns',
+              details: columnError.message,
+              logs: logs
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          logs.push('✅ Columns exist');
+          
+          // Test the actual insert
+          logs.push('🧪 Testing round insert...');
+          const now = new Date();
+          const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
+          const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
+
+          const testRoundData = {
+            status: 'betting',
+            betting_end_time: bettingEnd.toISOString(),
+            spinning_end_time: spinningEnd.toISOString(),
+            daily_seed_id: dailySeed.id,
+            nonce_id: 999, // Test nonce
+            server_seed_hash: dailySeed.server_seed_hash,
+            nonce: 999
+          };
+          
+          logs.push(`📝 Test insert data: ${JSON.stringify(testRoundData)}`);
+          
+          const { data: testRound, error: insertError } = await supabase
+            .from('roulette_rounds')
+            .insert(testRoundData)
+            .select()
+            .single();
+
+          if (insertError) {
+            logs.push(`❌ Insert failed: ${insertError.message}`);
+            logs.push(`❌ Error code: ${insertError.code}`);
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Insert failed',
+              details: insertError,
+              logs: logs
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          logs.push(`✅ Test round created: ${testRound.id} with daily_seed_id: ${testRound.daily_seed_id}`);
+          
+          // Clean up test round
+          await supabase.from('roulette_rounds').delete().eq('id', testRound.id);
+          logs.push('🗑️ Test round cleaned up');
+          
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Advanced round creation works!',
+            logs: logs
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+          
+        } catch (error) {
+          logs.push(`❌ Unexpected error: ${error.message}`);
+          return new Response(JSON.stringify({
+            success: false,
+            error: error.message,
+            logs: logs
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
 
 
       default:
