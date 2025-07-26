@@ -67,12 +67,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }
 
-  // Simple 3-second animation function
-  const animateToTarget = useCallback((startPosition: number, targetPosition: number) => {
+  // Real rolling animation function
+  const animateRolling = useCallback((startPosition: number, targetPosition: number) => {
     const startTime = Date.now();
     const duration = 3000; // Exactly 3 seconds
     
-    console.log('🚀 Starting 3-second animation:', {
+    console.log('🚀 Starting real rolling animation:', {
       startPosition,
       targetPosition,
       distance: Math.abs(targetPosition - startPosition)
@@ -82,29 +82,32 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Simple easing: start slow, speed up, maintain, then slow down
+      // Calculate velocity-based easing for realistic rolling
       let easedProgress;
       if (progress < 0.2) {
-        // Start slow (0-20%)
-        easedProgress = progress * progress * 0.2;
+        // Start slow (0-20%) - accelerate
+        const phaseProgress = progress / 0.2;
+        easedProgress = phaseProgress * phaseProgress * 0.2;
       } else if (progress < 0.8) {
-        // Maintain speed (20-80%)
+        // Maintain speed (20-80%) - constant velocity
         easedProgress = 0.2 + (progress - 0.2) * 0.6;
       } else {
-        // Slow down (80-100%)
-        const slowProgress = (progress - 0.8) / 0.2;
-        easedProgress = 0.8 + slowProgress * slowProgress * 0.2;
+        // Slow down (80-100%) - decelerate
+        const phaseProgress = (progress - 0.8) / 0.2;
+        easedProgress = 0.8 + (1 - Math.pow(1 - phaseProgress, 2)) * 0.2;
       }
       
-      // Calculate current position (moving to the left = negative translateX)
+      // Calculate current position with smooth movement
       const currentPosition = startPosition + (targetPosition - startPosition) * easedProgress;
+      
+      // Apply the position change smoothly
       setTranslateX(currentPosition);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
         // Animation complete - ensure exact landing
-        console.log('✅ Animation complete');
+        console.log('✅ Rolling animation complete');
         setTranslateX(targetPosition);
         setIsAnimating(false);
       }
@@ -122,7 +125,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Start animation when spinning begins
   useEffect(() => {
     if (isSpinning && winningSlot !== null) {
-      console.log('🚀 Starting 3-second animation to slot:', winningSlot);
+      console.log('🚀 Starting real rolling animation to slot:', winningSlot);
       
       // Find the winning slot in our wheel configuration
       const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
@@ -140,20 +143,21 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const rotations = 5; // 5 full rotations for dramatic effect
       const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
       
-      console.log('🎯 3-second animation setup:', {
+      console.log('🎯 Rolling animation setup:', {
         winningSlot,
         slotIndex,
         winningSlotCenter,
         baseTargetPosition,
         finalTargetPosition,
         currentPosition: translateX,
-        rotations
+        rotations,
+        distance: Math.abs(finalTargetPosition - translateX)
       });
 
-      // Start animation
-      animateToTarget(translateX, finalTargetPosition);
+      // Start the real rolling animation
+      animateRolling(translateX, finalTargetPosition);
     }
-  }, [isSpinning, winningSlot, actualCenterOffset, translateX, animateToTarget]);
+  }, [isSpinning, winningSlot, actualCenterOffset, translateX, animateRolling]);
 
   // Clean up animation when round ends
   useEffect(() => {
