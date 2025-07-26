@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, Users, Wallet, Shield, TrendingUp, History } from 'lucide-react';
+import { Clock, Users, Wallet, Shield, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
@@ -636,6 +636,15 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   };
 
+  const getResultBubbleClass = (color: string) => {
+    switch (color) {
+      case 'green': return 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/50';
+      case 'red': return 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-500/50';
+      case 'black': return 'bg-gradient-to-br from-gray-700 to-gray-900 shadow-gray-500/50';
+      default: return 'bg-gradient-to-br from-gray-500 to-gray-700 shadow-gray-500/50';
+    }
+  };
+
 
 
   if (loading) {
@@ -699,13 +708,37 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         <div className="lg:col-span-3 space-y-6">
           {/* Roulette Reel */}
           <Card className="glass border-0">
-            <CardContent className="p-6">
+            <CardContent className="p-6 relative">
               <RouletteReel 
                 isSpinning={currentRound.status === 'spinning'}
                 winningSlot={currentRound.result_slot || null}
                 showWinAnimation={currentRound.status === 'completed'}
                 synchronizedPosition={currentRound.reel_position || null}
               />
+              
+              {/* Recent Results Bubbles */}
+              <div className="absolute top-4 right-4 flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium mr-2">Recent:</span>
+                <div className="flex items-center gap-1">
+                  {recentResults.slice(0, 8).map((result, index) => (
+                    <div
+                      key={result.id}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg ${getResultBubbleClass(result.result_color)} animate-in slide-in-from-right-5`}
+                      style={{
+                        animationDelay: `${index * 100}ms`,
+                        animationFillMode: 'both'
+                      }}
+                      onClick={() => openRoundDetails(result)}
+                      title={`Round #${result.round_number} - Click for details`}
+                    >
+                      {result.result_slot}
+                    </div>
+                  ))}
+                  {recentResults.length === 0 && (
+                    <span className="text-xs text-muted-foreground">No results yet</span>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -889,41 +922,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Recent Results */}
-          <Card className="glass border-0">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <History className="w-4 h-4" />
-                Recent Results
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-48">
-                <div className="space-y-2">
-                                  {recentResults.map((result) => (
-                  <div 
-                    key={result.id} 
-                    className="flex items-center justify-between p-2 rounded border cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => openRoundDetails(result)}
-                    title="Click to view round details"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${getResultColorClass(result.result_color)}`}></div>
-                      <span className="text-sm font-medium">{result.result_slot}</span>
-                      <span className="text-xs text-muted-foreground">#{result.round_number}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {result.total_bets_count} bets
-                    </div>
-                  </div>
-                ))}
-                  {recentResults.length === 0 && (
-                    <p className="text-muted-foreground text-center py-4">No results yet</p>
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+
 
 
         </div>
