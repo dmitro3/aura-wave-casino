@@ -1007,68 +1007,78 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             <CardContent className="space-y-6">
               {/* Bet Amount Controls */}
               {user && profile ? (
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4 justify-center">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setBetAmount(Math.max(0.01, Math.floor(betAmount / 2 * 100) / 100))}
-                    disabled={currentRound.status !== 'betting'}
-                  >
-                    ÷2
-                  </Button>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Bet:</span>
-                    <Input
-                      type="number"
-                      value={betAmount}
-                      onChange={(e) => {
-                        const newAmount = Number(e.target.value);
-                        const maxBalance = profile?.balance || 0;
-                        setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
-                      }}
-                      min="0.01"
-                      max={profile?.balance || 0}
-                      step="0.01"
-                      className="w-20 sm:w-24 text-center"
-                      disabled={currentRound.status !== 'betting'}
-                    />
-                  </div>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setBetAmount(Math.min(profile?.balance || 0, betAmount * 2))}
-                    disabled={currentRound.status !== 'betting'}
-                  >
-                    ×2
-                  </Button>
-                  
-                  <div className="flex flex-wrap gap-1 sm:gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setBetAmount(10)}
-                      disabled={currentRound.status !== 'betting'}
-                    >
-                      $10
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setBetAmount(50)}
-                      disabled={currentRound.status !== 'betting'}
-                    >
-                      $50
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setBetAmount(Math.min(100, profile.balance))}
-                      disabled={currentRound.status !== 'betting'}
-                    >
-                      $100
-                    </Button>
+                <div className="flex items-center justify-center">
+                  <div className="relative glass rounded-2xl p-6 border border-primary/20 shadow-xl backdrop-blur-lg">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-2xl"></div>
+                    
+                    <div className="relative flex items-center gap-4">
+                      {/* Divide by 2 Button */}
+                      <Button 
+                        variant="ghost" 
+                        size="lg"
+                        onClick={() => setBetAmount(Math.max(0.01, Math.floor(betAmount / 2 * 100) / 100))}
+                        disabled={currentRound.status !== 'betting'}
+                        className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/30 text-red-400 font-bold shadow-lg transition-all duration-200 hover:scale-105"
+                      >
+                        ÷2
+                      </Button>
+                      
+                      {/* Bet Amount Input Container */}
+                      <div className="flex flex-col items-center gap-2">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Bet Amount
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/30 rounded-xl blur-sm"></div>
+                          <div className="relative bg-black/50 border-2 border-primary/40 rounded-xl p-3 flex items-center gap-2">
+                            <span className="text-lg font-bold text-primary">$</span>
+                            <Input
+                              type="number"
+                              value={betAmount}
+                              onChange={(e) => {
+                                const newAmount = Number(e.target.value);
+                                const maxBalance = profile?.balance || 0;
+                                setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                              }}
+                              min="0.01"
+                              max={profile?.balance || 0}
+                              step="0.01"
+                              className="w-24 text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-white"
+                              disabled={currentRound.status !== 'betting'}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Max: ${profile?.balance?.toFixed(2) || '0.00'}
+                        </div>
+                      </div>
+                      
+                      {/* Multiply by 2 Button */}
+                      <Button 
+                        variant="ghost" 
+                        size="lg"
+                        onClick={() => setBetAmount(Math.min(profile?.balance || 0, betAmount * 2))}
+                        disabled={currentRound.status !== 'betting'}
+                        className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-bold shadow-lg transition-all duration-200 hover:scale-105"
+                      >
+                        ×2
+                      </Button>
+                    </div>
+                    
+                    {/* Betting Status Indicator */}
+                    <div className="mt-4 text-center">
+                      {currentRound.status === 'betting' ? (
+                        <div className="flex items-center justify-center gap-2 text-emerald-400">
+                          <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-medium">Betting Open</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2 text-red-400">
+                          <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                          <span className="text-sm font-medium">Betting Closed</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
