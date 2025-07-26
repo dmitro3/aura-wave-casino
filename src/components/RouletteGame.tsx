@@ -1082,7 +1082,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
               {/* Betting Options with Live Feeds */}
               <div className="grid grid-cols-3 gap-4">
-                {(['green', 'red', 'black'] as const).map((color) => (
+                {(['red', 'green', 'black'] as const).map((color) => (
                   <div key={color} className="space-y-2">
                     <Button
                       onClick={() => placeBet(color)}
