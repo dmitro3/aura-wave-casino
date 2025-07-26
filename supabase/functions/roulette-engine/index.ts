@@ -39,12 +39,15 @@ serve(async (req) => {
   );
 
   try {
-    const { action, userId, betColor, betAmount, roundId } = await req.json();
-    console.log(`🎰 Roulette Engine: ${action}`);
+    const body = await req.json();
+    const { action, userId, betColor, betAmount, roundId } = body;
+    console.log(`🎰 Roulette Engine: ${action}`, body);
 
     switch (action) {
       case 'get_current_round': {
+        console.log('🔍 Getting current round...');
         const round = await getCurrentRound(supabase);
+        console.log('✅ Current round result:', round);
         return new Response(JSON.stringify(round), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -66,7 +69,8 @@ serve(async (req) => {
           throw new Error('Round ID required');
         }
 
-        const { data: bets } = await supabase
+        console.log('🔍 Getting round bets for:', roundId);
+        const { data: bets, error } = await supabase
           .from('roulette_bets')
           .select(`
             *,
@@ -75,18 +79,31 @@ serve(async (req) => {
           .eq('round_id', roundId)
           .order('created_at', { ascending: false });
 
+        if (error) {
+          console.error('❌ Error fetching bets:', error);
+          throw error;
+        }
+
+        console.log('✅ Found bets:', bets?.length || 0);
         return new Response(JSON.stringify(bets || []), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
       case 'get_recent_results': {
-        const { data: results } = await supabase
+        console.log('🔍 Getting recent results...');
+        const { data: results, error } = await supabase
           .from('roulette_results')
           .select('*')
           .order('created_at', { ascending: false })
           .limit(15);
 
+        if (error) {
+          console.error('❌ Error fetching results:', error);
+          throw error;
+        }
+
+        console.log('✅ Found results:', results?.length || 0);
         return new Response(JSON.stringify(results || []), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -100,7 +117,10 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error('❌ Roulette Engine Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.toString()
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -108,102 +128,144 @@ serve(async (req) => {
 });
 
 async function getCurrentRound(supabase: any) {
-  console.log('🔍 Getting current round');
-  
-  // Check for active round (betting or spinning)
-  const { data: activeRound } = await supabase
-    .from('roulette_rounds')
-    .select('*')
-    .in('status', ['betting', 'spinning'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    console.log('🔍 Getting current round - checking for active rounds...');
+    
+    // Check for active round (betting or spinning)
+    const { data: activeRound, error: activeError } = await supabase
+      .from('roulette_rounds')
+      .select('*')
+      .in('status', ['betting', 'spinning'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (activeRound) {
-    const now = new Date();
-    const bettingEnd = new Date(activeRound.betting_end_time);
-    const spinningEnd = new Date(activeRound.spinning_end_time);
-
-    console.log('📋 Active round found:', {
-      id: activeRound.id,
-      status: activeRound.status,
-      bettingEnd: bettingEnd.toISOString(),
-      spinningEnd: spinningEnd.toISOString(),
-      now: now.toISOString()
-    });
-
-    // Check if betting phase should end and spinning should start
-    if (activeRound.status === 'betting' && now >= bettingEnd) {
-      console.log('🎲 Betting ended, generating result and starting spin');
-      
-      // Generate result securely
-      const randomBytes = new Uint32Array(1);
-      crypto.getRandomValues(randomBytes);
-      const resultSlot = randomBytes[0] % 15;
-      const result = WHEEL_CONFIG[resultSlot];
-      
-      console.log(`🎯 Generated result: slot ${resultSlot}, color ${result.color}`);
-
-      // Update round to spinning with result
-      const { data: updatedRound } = await supabase
-        .from('roulette_rounds')
-        .update({
-          status: 'spinning',
-          result_slot: resultSlot,
-          result_color: result.color,
-          result_multiplier: result.multiplier
-        })
-        .eq('id', activeRound.id)
-        .select()
-        .single();
-
-      return updatedRound;
+    if (activeError) {
+      console.error('❌ Error querying active rounds:', activeError);
+      throw activeError;
     }
 
-    // Check if spinning phase should end
-    if (activeRound.status === 'spinning' && now >= spinningEnd) {
-      console.log('🏁 Spinning ended, completing round');
-      await completeRound(supabase, activeRound);
-      
-      // Create new round immediately
-      return await createNewRound(supabase);
+    console.log('📋 Active round query result:', activeRound);
+
+    if (activeRound) {
+      const now = new Date();
+      const bettingEnd = new Date(activeRound.betting_end_time);
+      const spinningEnd = new Date(activeRound.spinning_end_time);
+
+      console.log('📋 Active round found:', {
+        id: activeRound.id,
+        status: activeRound.status,
+        bettingEnd: bettingEnd.toISOString(),
+        spinningEnd: spinningEnd.toISOString(),
+        now: now.toISOString()
+      });
+
+      // Check if betting phase should end and spinning should start
+      if (activeRound.status === 'betting' && now >= bettingEnd) {
+        console.log('🎲 Betting ended, generating result and starting spin');
+        
+        // Generate result securely
+        const randomBytes = new Uint32Array(1);
+        crypto.getRandomValues(randomBytes);
+        const resultSlot = randomBytes[0] % 15;
+        const result = WHEEL_CONFIG[resultSlot];
+        
+        console.log(`🎯 Generated result: slot ${resultSlot}, color ${result.color}`);
+
+        // Update round to spinning with result
+        const { data: updatedRound, error: updateError } = await supabase
+          .from('roulette_rounds')
+          .update({
+            status: 'spinning',
+            result_slot: resultSlot,
+            result_color: result.color,
+            result_multiplier: result.multiplier
+          })
+          .eq('id', activeRound.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('❌ Error updating round to spinning:', updateError);
+          throw updateError;
+        }
+
+        console.log('✅ Round updated to spinning');
+        return updatedRound;
+      }
+
+      // Check if spinning phase should end
+      if (activeRound.status === 'spinning' && now >= spinningEnd) {
+        console.log('🏁 Spinning ended, completing round');
+        await completeRound(supabase, activeRound);
+        
+        // Create new round immediately
+        return await createNewRound(supabase);
+      }
+
+      return activeRound;
     }
 
-    return activeRound;
+    // No active round, create new one
+    console.log('🆕 No active round found, creating new one');
+    return await createNewRound(supabase);
+  } catch (error) {
+    console.error('❌ Error in getCurrentRound:', error);
+    throw error;
   }
-
-  // No active round, create new one
-  console.log('🆕 Creating new round');
-  return await createNewRound(supabase);
 }
 
 async function createNewRound(supabase: any) {
-  // Get next round number
-  const { data: lastRound } = await supabase
-    .from('roulette_rounds')
-    .select('round_number')
-    .order('round_number', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    console.log('🆕 Creating new round...');
+    
+    // Get next round number
+    const { data: lastRound, error: lastRoundError } = await supabase
+      .from('roulette_rounds')
+      .select('round_number')
+      .order('round_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  const roundNumber = (lastRound?.round_number || 0) + 1;
-  const now = new Date();
-  const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
-  const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
+    if (lastRoundError) {
+      console.error('❌ Error getting last round:', lastRoundError);
+      throw lastRoundError;
+    }
 
-  const { data: newRound } = await supabase
-    .from('roulette_rounds')
-    .insert({
-      round_number: roundNumber,
-      status: 'betting',
-      betting_end_time: bettingEnd.toISOString(),
-      spinning_end_time: spinningEnd.toISOString()
-    })
-    .select()
-    .single();
+    const roundNumber = (lastRound?.round_number || 0) + 1;
+    const now = new Date();
+    const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
+    const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
 
-  console.log('✅ Created new round:', newRound.id, 'number:', roundNumber);
-  return newRound;
+    console.log('🆕 Creating round:', {
+      roundNumber,
+      now: now.toISOString(),
+      bettingEnd: bettingEnd.toISOString(),
+      spinningEnd: spinningEnd.toISOString()
+    });
+
+    const { data: newRound, error: createError } = await supabase
+      .from('roulette_rounds')
+      .insert({
+        round_number: roundNumber,
+        status: 'betting',
+        betting_end_time: bettingEnd.toISOString(),
+        spinning_end_time: spinningEnd.toISOString()
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('❌ Error creating new round:', createError);
+      throw createError;
+    }
+
+    console.log('✅ Created new round:', newRound.id, 'number:', roundNumber);
+    return newRound;
+  } catch (error) {
+    console.error('❌ Error in createNewRound:', error);
+    throw error;
+  }
 }
 
 async function placeBet(supabase: any, userId: string, roundId: string, betColor: string, betAmount: number) {

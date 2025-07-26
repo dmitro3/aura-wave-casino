@@ -78,11 +78,17 @@ export const RouletteGame = () => {
   // Fetch current round
   const fetchCurrentRound = async () => {
     try {
+      console.log('🎰 Frontend: Calling roulette-engine...');
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_current_round' }
       });
 
-      if (error) throw error;
+      console.log('🎰 Frontend: Response from server:', { data, error });
+
+      if (error) {
+        console.error('🎰 Frontend: Server error:', error);
+        throw error;
+      }
       
       console.log('🎰 Current round:', data);
       setCurrentRound(data);
@@ -93,10 +99,30 @@ export const RouletteGame = () => {
       }
     } catch (error: any) {
       console.error('Failed to fetch current round:', error);
+      
+      // More detailed error message
+      let errorMessage = 'Failed to connect to the game server';
+      if (error?.message) {
+        errorMessage = error.message;
+      }
+      if (error?.details) {
+        errorMessage += ` (${error.details})`;
+      }
+      
       toast({
         title: "Connection Error",
-        description: "Failed to connect to the game server",
+        description: errorMessage,
         variant: "destructive",
+      });
+      
+      // Set a dummy round for testing if we can't connect to server
+      setCurrentRound({
+        id: 'test-round',
+        round_number: 1,
+        status: 'betting',
+        betting_end_time: new Date(Date.now() + 15000).toISOString(),
+        spinning_end_time: new Date(Date.now() + 21000).toISOString(),
+        created_at: new Date().toISOString()
       });
     }
   };
