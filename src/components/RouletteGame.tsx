@@ -99,6 +99,19 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     bet.game_type === 'roulette' && 
     bet.game_data?.round_id === currentRound?.id
   );
+  
+  // Debug bet amounts
+  useEffect(() => {
+    if (rouletteBets.length > 0) {
+      console.log('🎯 Live bet feed data:', rouletteBets.map(bet => ({
+        username: bet.username,
+        bet_amount: bet.bet_amount,
+        bet_amount_type: typeof bet.bet_amount,
+        game_data: bet.game_data
+      })));
+    }
+  }, [rouletteBets]);
+  
   const greenBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'green');
   const redBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'red');
   const blackBets = rouletteBets.filter(bet => bet.game_data?.bet_color === 'black');

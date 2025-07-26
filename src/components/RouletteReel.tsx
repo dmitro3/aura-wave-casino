@@ -6,23 +6,23 @@ interface RouletteReelProps {
   showWinAnimation: boolean;
 }
 
-// Roulette wheel configuration: 15 slots total
+// Roulette wheel configuration: 15 slots total in specific order
 const WHEEL_SLOTS = [
   { slot: 0, color: 'green', multiplier: '14x' },
-  { slot: 1, color: 'red', multiplier: '2x' },
-  { slot: 2, color: 'black', multiplier: '2x' },
-  { slot: 3, color: 'red', multiplier: '2x' },
-  { slot: 4, color: 'black', multiplier: '2x' },
+  { slot: 11, color: 'black', multiplier: '2x' },
   { slot: 5, color: 'red', multiplier: '2x' },
-  { slot: 6, color: 'black', multiplier: '2x' },
+  { slot: 10, color: 'black', multiplier: '2x' },
+  { slot: 6, color: 'red', multiplier: '2x' },
+  { slot: 9, color: 'black', multiplier: '2x' },
   { slot: 7, color: 'red', multiplier: '2x' },
   { slot: 8, color: 'black', multiplier: '2x' },
-  { slot: 9, color: 'red', multiplier: '2x' },
-  { slot: 10, color: 'black', multiplier: '2x' },
-  { slot: 11, color: 'red', multiplier: '2x' },
+  { slot: 1, color: 'red', multiplier: '2x' },
+  { slot: 14, color: 'black', multiplier: '2x' },
+  { slot: 2, color: 'red', multiplier: '2x' },
+  { slot: 13, color: 'black', multiplier: '2x' },
+  { slot: 3, color: 'red', multiplier: '2x' },
   { slot: 12, color: 'black', multiplier: '2x' },
-  { slot: 13, color: 'red', multiplier: '2x' },
-  { slot: 14, color: 'black', multiplier: '2x' }
+  { slot: 4, color: 'red', multiplier: '2x' }
 ];
 
 const TILE_WIDTH = 120;
@@ -61,15 +61,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
       const finalCycles = 10; // Number of full wheel rotations
       const cycleDistance = WHEEL_SLOTS.length * TILE_WIDTH;
       const totalDistance = finalCycles * cycleDistance;
-      const targetSlotOffset = winningSlot * TILE_WIDTH;
+      
+      // Find the position of the winning slot in our WHEEL_SLOTS array
+      const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningSlot);
+      if (winningSlotIndex === -1) {
+        console.error('❌ Winning slot not found in WHEEL_SLOTS:', winningSlot);
+        return;
+      }
+      
+      const targetSlotOffset = winningSlotIndex * TILE_WIDTH;
       const finalPosition = -(totalDistance + targetSlotOffset) + CENTER_OFFSET;
       
-      console.log('🎯 Animation params:', {
-        finalPosition,
-        totalDistance,
-        targetSlotOffset,
-        winningSlot
-      });
+              console.log('🎯 Animation params:', {
+          finalPosition,
+          totalDistance,
+          targetSlotOffset,
+          winningSlot,
+          winningSlotIndex
+        });
 
       // Reset start time for new animation
       startTimeRef.current = undefined;
@@ -177,7 +186,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
                                   tile.slot === winningSlot && 
                                   !isAnimating &&
                                   // Only highlight the tile that's actually at the center
-                                  Math.abs((position + tile.globalIndex * TILE_WIDTH) - (-CENTER_OFFSET + TILE_WIDTH/2)) < TILE_WIDTH/2;
+                                  Math.abs((position + tile.globalIndex * TILE_WIDTH) + CENTER_OFFSET) < TILE_WIDTH/4;
             
             return (
               <div

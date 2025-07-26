@@ -6,23 +6,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Roulette wheel configuration: 15 slots total
+// Roulette wheel configuration: 15 slots total in specific order
 const WHEEL_SLOTS = [
   { slot: 0, color: 'green', multiplier: 14 },
-  { slot: 1, color: 'red', multiplier: 2 },
-  { slot: 2, color: 'black', multiplier: 2 },
-  { slot: 3, color: 'red', multiplier: 2 },
-  { slot: 4, color: 'black', multiplier: 2 },
+  { slot: 11, color: 'black', multiplier: 2 },
   { slot: 5, color: 'red', multiplier: 2 },
-  { slot: 6, color: 'black', multiplier: 2 },
+  { slot: 10, color: 'black', multiplier: 2 },
+  { slot: 6, color: 'red', multiplier: 2 },
+  { slot: 9, color: 'black', multiplier: 2 },
   { slot: 7, color: 'red', multiplier: 2 },
   { slot: 8, color: 'black', multiplier: 2 },
-  { slot: 9, color: 'red', multiplier: 2 },
-  { slot: 10, color: 'black', multiplier: 2 },
-  { slot: 11, color: 'red', multiplier: 2 },
+  { slot: 1, color: 'red', multiplier: 2 },
+  { slot: 14, color: 'black', multiplier: 2 },
+  { slot: 2, color: 'red', multiplier: 2 },
+  { slot: 13, color: 'black', multiplier: 2 },
+  { slot: 3, color: 'red', multiplier: 2 },
   { slot: 12, color: 'black', multiplier: 2 },
-  { slot: 13, color: 'red', multiplier: 2 },
-  { slot: 14, color: 'black', multiplier: 2 }
+  { slot: 4, color: 'red', multiplier: 2 }
 ];
 
 const BETTING_DURATION = 15000; // 15 seconds betting
