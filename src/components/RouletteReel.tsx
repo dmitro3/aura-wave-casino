@@ -29,21 +29,20 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
   const [isAnimating, setIsAnimating] = useState(false);
   const animationRef = useRef<number>();
   const startTimeRef = useRef<number>();
-  const initialPositionRef = useRef<number>(0);
-  const targetPositionRef = useRef<number>(0);
 
-  const SLOT_WIDTH = 120;
-  const TOTAL_SLOTS = REEL_SLOTS.length;
-  const ANIMATION_DURATION = 4000; // 4 seconds
-  const SPIN_CYCLES = 4; // Number of full rotations before stopping
+  const TILE_WIDTH = 100;
+  const TOTAL_TILES = REEL_SLOTS.length;
+  const TOTAL_ANIMATION_DURATION = 5000; // 5 seconds total
+  const ACCELERATION_PHASE = 800; // 0.8 seconds to reach max speed
+  const DECELERATION_PHASE = 3200; // 3.2 seconds to slow down
+  const HIGH_SPEED_PHASE = TOTAL_ANIMATION_DURATION - ACCELERATION_PHASE - DECELERATION_PHASE; // 1 second at max speed
 
-  // Easing function for realistic deceleration (ease-out-cubic)
-  const easeOutCubic = (t: number): number => {
-    return 1 - Math.pow(1 - t, 3);
-  };
-
-  // Reset reel position
-  const resetPosition = () => {
+  // Physics-inspired easing functions
+  const easeInQuart = (t: number): number => t * t * t * t; // Rapid acceleration
+  const easeOutQuart = (t: number): number => 1 - Math.pow(1 - t, 4); // Natural deceleration with friction
+  
+  const resetReel = () => {
+    console.log('🎰 Resetting reel to initial position');
     setPosition(0);
     setIsAnimating(false);
     if (animationRef.current) {
@@ -51,73 +50,92 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
     }
   };
 
-  // Start the spinning animation
-  const startAnimation = (targetSlot: number) => {
+  const startReelAnimation = (targetSlot: number) => {
     if (isAnimating) return;
-
-    console.log('🎰 Starting reel animation to slot:', targetSlot);
     
-    // Calculate the exact position where the target slot should be centered
-    const containerCenterX = window.innerWidth > 1024 ? 240 : 180; // Adjust based on screen size
-    const targetSlotPosition = targetSlot * SLOT_WIDTH;
-    const totalSpinDistance = SPIN_CYCLES * TOTAL_SLOTS * SLOT_WIDTH;
-    const finalPosition = -(totalSpinDistance + targetSlotPosition - containerCenterX);
-
-    console.log('🎰 Animation params:', {
-      targetSlot,
-      targetSlotPosition,
-      totalSpinDistance,
-      containerCenterX,
-      finalPosition,
-      currentPosition: position
-    });
-
+    console.log('🎰 Starting physics-based reel animation to slot:', targetSlot);
+    
     setIsAnimating(true);
-    initialPositionRef.current = position;
-    targetPositionRef.current = finalPosition;
     startTimeRef.current = performance.now();
+    
+    // Calculate distances and speeds for realistic physics
+    const containerCenter = 300; // Center of visible area
+    const singleCycleDistance = TOTAL_TILES * TILE_WIDTH;
+    const totalCycles = 8; // More cycles for dramatic effect
+    const totalSpinDistance = totalCycles * singleCycleDistance;
+    const targetTilePosition = targetSlot * TILE_WIDTH;
+    const finalTargetPosition = -(totalSpinDistance + targetTilePosition - containerCenter);
+    
+    console.log('🎰 Physics calculation:', {
+      targetSlot,
+      containerCenter,
+      singleCycleDistance,
+      totalCycles,
+      totalSpinDistance,
+      targetTilePosition,
+      finalTargetPosition
+    });
 
     const animate = (currentTime: number) => {
       if (!startTimeRef.current) return;
 
       const elapsed = currentTime - startTimeRef.current;
-      const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+      const progress = Math.min(elapsed / TOTAL_ANIMATION_DURATION, 1);
       
-      // Apply easing for realistic deceleration
-      const easedProgress = easeOutCubic(progress);
+      let currentPosition = 0;
       
-      // Calculate current position
-      const currentPosition = initialPositionRef.current + 
-        (targetPositionRef.current - initialPositionRef.current) * easedProgress;
+      if (elapsed <= ACCELERATION_PHASE) {
+        // Phase 1: Rapid acceleration (ease-in-quart)
+        const accelerationProgress = elapsed / ACCELERATION_PHASE;
+        const accelerationEase = easeInQuart(accelerationProgress);
+        const accelerationDistance = (totalSpinDistance * 0.15) * accelerationEase; // 15% of total distance during acceleration
+        currentPosition = -accelerationDistance;
+        
+      } else if (elapsed <= ACCELERATION_PHASE + HIGH_SPEED_PHASE) {
+        // Phase 2: High-speed constant momentum
+        const accelerationDistance = totalSpinDistance * 0.15;
+        const highSpeedProgress = (elapsed - ACCELERATION_PHASE) / HIGH_SPEED_PHASE;
+        const highSpeedDistance = (totalSpinDistance * 0.35) * highSpeedProgress; // 35% at constant high speed
+        currentPosition = -(accelerationDistance + highSpeedDistance);
+        
+      } else {
+        // Phase 3: Realistic deceleration with friction (ease-out-quart)
+        const accelerationDistance = totalSpinDistance * 0.15;
+        const highSpeedDistance = totalSpinDistance * 0.35;
+        const decelerationProgress = (elapsed - ACCELERATION_PHASE - HIGH_SPEED_PHASE) / DECELERATION_PHASE;
+        const decelerationEase = easeOutQuart(decelerationProgress);
+        
+        // Remaining 50% distance during deceleration, ending at exact target
+        const remainingDistance = finalTargetPosition + accelerationDistance + highSpeedDistance;
+        const decelerationDistance = remainingDistance * decelerationEase;
+        
+        currentPosition = -(accelerationDistance + highSpeedDistance + decelerationDistance);
+      }
       
       setPosition(currentPosition);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
-        // Animation complete
-        console.log('🎰 Animation completed, final position:', currentPosition);
+        // Animation complete - ensure exact final position
+        console.log('🎰 Animation completed! Final position:', finalTargetPosition);
+        setPosition(finalTargetPosition);
         setIsAnimating(false);
-        // Ensure exact final position
-        setPosition(targetPositionRef.current);
       }
     };
 
     animationRef.current = requestAnimationFrame(animate);
   };
 
-  // Handle spinning state changes
+  // Handle state changes
   useEffect(() => {
-    console.log('🎰 Reel state:', { isSpinning, winningSlot, isAnimating });
+    console.log('🎰 Reel state change:', { isSpinning, winningSlot, isAnimating });
 
     if (isSpinning && winningSlot !== null && !isAnimating) {
-      startAnimation(winningSlot);
+      startReelAnimation(winningSlot);
     } else if (!isSpinning && !showWinAnimation) {
-      // Reset after some delay when round is completely over
-      const timer = setTimeout(() => {
-        resetPosition();
-      }, 2000);
-      return () => clearTimeout(timer);
+      // Reset after round ends
+      setTimeout(resetReel, 2000);
     }
 
     return () => {
@@ -127,7 +145,7 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
     };
   }, [isSpinning, winningSlot, showWinAnimation]);
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       if (animationRef.current) {
@@ -136,88 +154,92 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
     };
   }, []);
 
-  const getSlotColorClass = (color: string) => {
+  const getTileColorClass = (color: string) => {
     switch (color) {
       case 'green': 
-        return 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-white border-emerald-300 shadow-lg shadow-emerald-500/30';
+        return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 text-white shadow-lg';
       case 'red': 
-        return 'bg-gradient-to-b from-red-400 to-red-600 text-white border-red-300 shadow-lg shadow-red-500/30';
+        return 'bg-gradient-to-br from-red-500 to-red-700 border-red-300 text-white shadow-lg';
       case 'black': 
-        return 'bg-gradient-to-b from-gray-700 to-gray-900 text-white border-gray-500 shadow-lg shadow-gray-500/30';
+        return 'bg-gradient-to-br from-gray-800 to-black border-gray-600 text-white shadow-lg';
       default: 
         return 'bg-gray-500 text-white';
     }
   };
 
-  // Create extended slots for seamless scrolling
-  const extendedSlots = [];
-  for (let cycle = 0; cycle < 8; cycle++) {
-    extendedSlots.push(...REEL_SLOTS.map((slot, index) => ({
-      ...slot,
-      uniqueKey: `${cycle}-${index}`
-    })));
+  // Create seamless repeating tiles for smooth scrolling
+  const seamlessTiles = [];
+  const totalRepeats = 12; // More repeats for longer seamless animation
+  for (let repeat = 0; repeat < totalRepeats; repeat++) {
+    REEL_SLOTS.forEach((slot, index) => {
+      seamlessTiles.push({
+        ...slot,
+        uniqueKey: `${repeat}-${index}`
+      });
+    });
   }
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto">
-      {/* Reel Container */}
-      <div className="relative h-32 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-2xl border-4 border-yellow-400 overflow-hidden shadow-2xl">
+    <div className="relative w-full max-w-4xl mx-auto">
+      
+      {/* Main Reel Container */}
+      <div className="relative h-24 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl border-3 border-yellow-500 overflow-hidden shadow-2xl">
         
-        {/* Center Selection Indicator */}
-        <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-32 z-20 pointer-events-none">
-          {/* Top arrow */}
-          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-b-12 border-l-transparent border-r-transparent border-b-yellow-400 drop-shadow-lg"></div>
+        {/* Static Center Highlight Frame */}
+        <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-24 z-30 pointer-events-none">
+          {/* Top indicator */}
+          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+            <div className="w-0 h-0 border-l-6 border-r-6 border-b-8 border-l-transparent border-r-transparent border-b-yellow-500"></div>
           </div>
           
-          {/* Bottom arrow */}
-          <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-t-12 border-l-transparent border-r-transparent border-t-yellow-400 drop-shadow-lg"></div>
+          {/* Bottom indicator */}
+          <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+            <div className="w-0 h-0 border-l-6 border-r-6 border-t-8 border-l-transparent border-r-transparent border-t-yellow-500"></div>
           </div>
           
-          {/* Center highlight area */}
-          <div className="absolute inset-y-0 inset-x-0 border-l-2 border-r-2 border-yellow-400 bg-yellow-400/10 backdrop-blur-sm">
-            <div className="absolute inset-y-0 left-1/2 transform -translate-x-0.5 w-1 bg-yellow-400/80"></div>
+          {/* Center frame */}
+          <div className="absolute inset-0 border-l-2 border-r-2 border-yellow-500 bg-yellow-500/5 backdrop-blur-sm">
+            <div className="absolute inset-y-0 left-1/2 transform -translate-x-0.5 w-1 bg-yellow-500/60"></div>
           </div>
         </div>
 
-        {/* Rolling Reel */}
+        {/* Horizontal Rolling Tiles */}
         <div 
-          className="flex h-full relative"
+          className="flex h-full items-center"
           style={{
             transform: `translateX(${position}px)`,
             willChange: isAnimating ? 'transform' : 'auto',
           }}
         >
-          {extendedSlots.map((slot, index) => {
-            const isWinningSlot = !isAnimating && showWinAnimation && slot.slot === winningSlot;
+          {seamlessTiles.map((tile) => {
+            const isWinningTile = !isAnimating && showWinAnimation && tile.slot === winningSlot;
             return (
               <div
-                key={slot.uniqueKey}
-                className={`flex-shrink-0 h-full flex flex-col items-center justify-center border-r border-gray-600 relative transition-all duration-300 ${getSlotColorClass(slot.color)} ${
-                  isWinningSlot ? 'scale-110 z-10 ring-4 ring-yellow-400 shadow-2xl shadow-yellow-400/50' : ''
+                key={tile.uniqueKey}
+                className={`flex-shrink-0 h-16 flex flex-col items-center justify-center border-r border-gray-700 relative transition-all duration-500 ${getTileColorClass(tile.color)} ${
+                  isWinningTile ? 'scale-110 ring-3 ring-yellow-400 shadow-2xl shadow-yellow-400/50 z-20' : ''
                 }`}
-                style={{ width: `${SLOT_WIDTH}px` }}
+                style={{ width: `${TILE_WIDTH}px` }}
               >
-                {/* Slot number */}
-                <div className={`text-3xl font-bold mb-1 drop-shadow-lg transition-transform duration-300 ${
-                  isWinningSlot ? 'scale-110 text-yellow-200' : ''
+                {/* Tile Number */}
+                <div className={`text-xl font-bold drop-shadow-md transition-all duration-300 ${
+                  isWinningTile ? 'text-yellow-200 scale-125' : ''
                 }`}>
-                  {slot.slot}
+                  {tile.slot}
                 </div>
                 
-                {/* Multiplier */}
-                <div className={`text-xs font-semibold px-2 py-1 rounded-full bg-black/30 backdrop-blur-sm transition-all duration-300 ${
-                  isWinningSlot ? 'bg-yellow-400/30 text-yellow-200 scale-110' : 'text-white/90'
+                {/* Multiplier Badge */}
+                <div className={`text-xs font-medium px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm transition-all duration-300 ${
+                  isWinningTile ? 'bg-yellow-400/40 text-yellow-200 scale-110' : 'text-white/80'
                 }`}>
-                  {slot.multiplier}
+                  {tile.multiplier}
                 </div>
                 
-                {/* Winning glow effect */}
-                {isWinningSlot && (
+                {/* Winning Glow Effects */}
+                {isWinningTile && (
                   <>
-                    <div className="absolute inset-0 bg-yellow-400/20 animate-pulse rounded-lg"></div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/10 to-transparent animate-ping"></div>
+                    <div className="absolute inset-0 bg-yellow-400/15 animate-pulse rounded"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent animate-ping"></div>
                   </>
                 )}
               </div>
@@ -225,45 +247,50 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
           })}
         </div>
 
-        {/* Motion blur effect during animation */}
+        {/* High-Speed Motion Effects */}
         {isAnimating && (
           <>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/5 to-transparent animate-pulse pointer-events-none" style={{ animationDuration: '0.5s' }}></div>
+            {/* Speed blur lines */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent animate-pulse pointer-events-none"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/8 to-transparent animate-pulse pointer-events-none" style={{ animationDuration: '0.4s' }}></div>
+            
+            {/* Motion streaks */}
+            <div className="absolute top-1/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+            <div className="absolute bottom-1/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
           </>
         )}
 
-        {/* Side vignette for depth */}
-        <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-gray-900/90 to-transparent pointer-events-none"></div>
-        <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-gray-900/90 to-transparent pointer-events-none"></div>
+        {/* Side fade gradients for infinite effect */}
+        <div className="absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-gray-800 to-transparent pointer-events-none z-10"></div>
+        <div className="absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-gray-800 to-transparent pointer-events-none z-10"></div>
       </div>
 
-      {/* Win Celebration */}
+      {/* Win Celebration Overlay */}
       {showWinAnimation && winningSlot !== null && !isAnimating && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 animate-in fade-in duration-500">
-          <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-8 py-4 rounded-2xl font-bold text-2xl shadow-2xl border-4 border-yellow-300 animate-bounce">
-            🎉 {REEL_SLOTS[winningSlot]?.color.toUpperCase()} {REEL_SLOTS[winningSlot]?.slot} WINS! 🎉
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40 animate-in fade-in duration-700">
+          <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-6 py-3 rounded-xl font-bold text-xl shadow-2xl border-3 border-yellow-300 animate-bounce">
+            🎯 {REEL_SLOTS[winningSlot]?.color.toUpperCase()} {REEL_SLOTS[winningSlot]?.slot} WINS! 🎯
           </div>
         </div>
       )}
       
-      {/* Status Display */}
-      <div className="text-center mt-6 space-y-2">
-        <p className="text-xl font-semibold">
+      {/* Status Information */}
+      <div className="text-center mt-4 space-y-1">
+        <p className="text-lg font-semibold">
           {isAnimating ? (
-            <span className="text-blue-400 animate-pulse">🎰 Spinning the reel...</span>
+            <span className="text-cyan-400 animate-pulse">🎰 Rolling at high speed...</span>
           ) : winningSlot !== null ? (
             <span className="text-emerald-400">
-              🎯 Result: {REEL_SLOTS[winningSlot]?.color} {REEL_SLOTS[winningSlot]?.slot} ({REEL_SLOTS[winningSlot]?.multiplier})
+              🏆 Winner: {REEL_SLOTS[winningSlot]?.color} {REEL_SLOTS[winningSlot]?.slot} ({REEL_SLOTS[winningSlot]?.multiplier})
             </span>
           ) : (
-            <span className="text-gray-400">🎮 Place your bets and watch the reel spin!</span>
+            <span className="text-gray-400">🎮 Ready to spin! Place your bets...</span>
           )}
         </p>
         
         {isAnimating && (
           <p className="text-sm text-gray-500 animate-pulse">
-            Watch the reel slow down and land on the winning number...
+            Building momentum... watch it slow down naturally...
           </p>
         )}
       </div>
