@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, Users, Wallet, Shield, TrendingUp, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { UserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { RouletteReel } from './RouletteReel';
@@ -60,9 +60,14 @@ interface BetTotals {
   black: { total: number; count: number; users: RouletteBet[] };
 }
 
-export function RouletteGame() {
+interface RouletteGameProps {
+  userData: UserProfile | null;
+  onUpdateUser: (updatedData: Partial<UserProfile>) => Promise<void>;
+}
+
+export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const { user } = useAuth();
-  const { userData: profile, updateUserProfile } = useUserProfile();
+  const profile = userData;
   const { toast } = useToast();
 
   // Game state
@@ -258,32 +263,10 @@ export function RouletteGame() {
       })
       .subscribe();
 
-    // Subscribe to profile updates (for balance changes)
-    let profileSubscription: any = null;
-    if (user) {
-      profileSubscription = supabase
-        .channel(`profile_${user.id}`)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`
-        }, (payload) => {
-          console.log('💳 Balance update:', payload);
-          if (payload.new) {
-            updateUserProfile(payload.new as any);
-          }
-        })
-        .subscribe();
-    }
-
     return () => {
       roundSubscription.unsubscribe();
       betSubscription.unsubscribe();
       resultsSubscription.unsubscribe();
-      if (profileSubscription) {
-        profileSubscription.unsubscribe();
-      }
     };
   }, [user, currentRound?.id]);
 
@@ -358,8 +341,8 @@ export function RouletteGame() {
         [color]: (prev[color] || 0) + betAmount
       }));
 
-      // Update user balance immediately on frontend to reflect the bet
-      updateUserProfile({ 
+      // Update user balance immediately for instant UI feedback
+      await onUpdateUser({ 
         balance: profile.balance - betAmount 
       });
 

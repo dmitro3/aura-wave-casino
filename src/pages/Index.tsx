@@ -279,7 +279,11 @@ export default function Index({ initialGame }: IndexProps) {
             </TabsContent>
 
             <TabsContent value="roulette">
-              <RouletteGame />
+              {user && userData ? (
+                <RouletteGame userData={userData} onUpdateUser={updateUserProfile} />
+              ) : (
+                <RouletteGame userData={null} onUpdateUser={() => Promise.resolve()} />
+              )}
             </TabsContent>
 
             <TabsContent value="tower">
