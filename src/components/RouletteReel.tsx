@@ -92,6 +92,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           // Animation completed - land exactly on synchronized target
           console.log('🎰 Synchronized animation completed. Final position:', currentPosition);
           console.log('🎯 Target synchronized position was:', finalPosition);
+          console.log('🎯 Winning slot should be:', winningSlot, 'under center line');
           setPosition(finalPosition); // Ensure exact landing
           setIsAnimating(false);
           startTimeRef.current = undefined;
