@@ -100,21 +100,29 @@ export function useUserProfile() {
         },
         (payload) => {
           console.log('👤 PROFILE UPDATE RECEIVED:', payload);
+          console.log('👤 Old balance:', payload.old?.balance, 'New balance:', payload.new?.balance);
           
           if (payload.new && payload.old) {
             // Only update profile-specific data (balance, username, etc.)
             if (payload.new.balance !== payload.old.balance) {
               console.log('✅ UPDATING BALANCE FROM', payload.old.balance, 'TO', payload.new.balance);
+              console.log('💰 Balance change detected - updating user data');
               setUserData(prev => {
                 if (!prev) return null;
-                return {
+                const updated = {
                   ...prev,
                   balance: payload.new.balance,
                   username: payload.new.username,
                   badges: payload.new.badges,
                 };
+                console.log('💰 Updated user data:', { oldBalance: prev.balance, newBalance: updated.balance });
+                return updated;
               });
+            } else {
+              console.log('ℹ️ Profile update received but balance unchanged');
             }
+          } else {
+            console.log('⚠️ Profile update missing old or new data');
           }
         }
       )

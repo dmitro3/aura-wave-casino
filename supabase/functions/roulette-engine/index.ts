@@ -523,27 +523,45 @@ async function completeRound(supabase: any, round: any) {
       p_is_winner: isWinner
     });
 
-    // Process winnings (update balance only)
+    // Process winnings (update balance with real-time trigger)
     if (isWinner && actualPayout > 0) {
-      const { data: profile } = await supabase
+      console.log(`🎯 Processing winner: ${bet.user_id}, payout: ${actualPayout}`);
+      
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('balance')
         .eq('id', bet.user_id)
         .single();
 
+      if (profileError) {
+        console.error('❌ Error fetching profile for balance update:', profileError);
+        continue;
+      }
+
       if (profile) {
-        const newBalance = profile.balance + actualPayout;
-        const { error: balanceError } = await supabase
+        const oldBalance = profile.balance;
+        const newBalance = oldBalance + actualPayout;
+        
+        console.log(`💰 Updating balance for ${bet.user_id}: ${oldBalance} + ${actualPayout} = ${newBalance}`);
+        
+        const { error: balanceError, data: updatedProfile } = await supabase
           .from('profiles')
           .update({
-            balance: newBalance
+            balance: newBalance,
+            updated_at: new Date().toISOString() // Force timestamp update for real-time trigger
           })
-          .eq('id', bet.user_id);
+          .eq('id', bet.user_id)
+          .select('balance')
+          .single();
 
         if (balanceError) {
           console.error('❌ Error updating balance:', balanceError);
         } else {
-          console.log(`💰 Winner: ${bet.user_id} won ${actualPayout} (profit: ${profit}), balance: ${profile.balance} → ${newBalance}`);
+          console.log(`✅ Balance successfully updated for ${bet.user_id}: ${oldBalance} → ${updatedProfile?.balance || newBalance}`);
+          console.log(`🔔 Real-time update should trigger for user ${bet.user_id}`);
+          
+          // Small delay to ensure real-time update propagates
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
     } else {
