@@ -674,40 +674,67 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                       )}
                     </Button>
                     
-                    {/* Live Bet Totals */}
+                    {/* Live totals calculated from live feed */}
                     <div className="text-center text-xs space-y-1">
                       <div className="font-medium">
-                        ${betTotals[color].total.toFixed(0)} total
+                        ${(color === 'green' ? greenBets : color === 'red' ? redBets : blackBets).reduce((sum, bet) => sum + bet.bet_amount, 0).toFixed(0)} total
                       </div>
                       <div className="text-muted-foreground">
-                        {betTotals[color].count} bets
+                        {(color === 'green' ? greenBets : color === 'red' ? redBets : blackBets).length} bets
                       </div>
                     </div>
 
-                    {/* Live Bet Feed for this color */}
-                    <ScrollArea className="h-32 border rounded p-2">
-                      <div className="space-y-1">
-                        {betTotals[color].users.slice(0, 5).map((bet) => (
-                          <div key={bet.id} className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1">
-                              <Avatar className="w-4 h-4">
-                                <AvatarImage src={bet.profiles?.avatar_url} />
-                                <AvatarFallback className="text-xs">
-                                  {bet.profiles?.username?.charAt(0).toUpperCase() || '?'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="truncate max-w-16">
-                                {bet.profiles?.username || 'Anonymous'}
-                              </span>
+                    {/* Live Bet Feed (TowerGame pattern) */}
+                    <Card className="glass border-0">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium flex items-center justify-between">
+                          <span className="capitalize">{color} Bets</span>
+                          <Badge variant="outline" className="text-xs">
+                            {(color === 'green' ? greenBets : color === 'red' ? redBets : blackBets).length} live
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-0">
+                        <ScrollArea className="h-32">
+                          {(color === 'green' ? greenBets : color === 'red' ? redBets : blackBets).length === 0 ? (
+                            <div className="text-center py-6 text-muted-foreground">
+                              <div className="w-6 h-6 mx-auto mb-2 opacity-50 text-lg">🎰</div>
+                              <p className="text-xs">No bets yet</p>
                             </div>
-                            <span className="font-medium">${bet.bet_amount}</span>
-                          </div>
-                        ))}
-                        {betTotals[color].users.length === 0 && (
-                          <p className="text-muted-foreground text-center py-2">No bets yet</p>
-                        )}
-                      </div>
-                    </ScrollArea>
+                          ) : (
+                            <div className="space-y-1">
+                              {(color === 'green' ? greenBets : color === 'red' ? redBets : blackBets).slice(0, 8).map((bet, index) => (
+                                <div
+                                  key={index}
+                                  className="p-2 rounded-lg border bg-card/20 hover:bg-card/30 transition-colors animate-fade-in"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary/30 to-primary/50 flex items-center justify-center text-xs font-bold border border-primary/50">
+                                        {bet.username[0].toUpperCase()}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="font-medium text-xs text-primary truncate">
+                                          {bet.username}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                          ${bet.bet_amount.toFixed(0)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                      <div className={`font-bold text-xs ${bet.result === 'win' ? 'text-emerald-400' : bet.result === 'loss' ? 'text-red-400' : 'text-yellow-400'}`}>
+                                        {bet.result === 'win' ? '+' : bet.result === 'loss' ? '-' : '~'}${Math.abs(bet.profit || 0).toFixed(0)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
                   </div>
                 ))}
               </div>
