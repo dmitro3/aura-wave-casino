@@ -198,22 +198,44 @@ async function getCurrentRound(supabase: any) {
 
     // Check if betting phase should end and spinning should start
     if (activeRound.status === 'betting' && now >= bettingEnd) {
-      console.log('🎲 Betting ended, generating PLG.BET result and starting spin');
+      console.log('🎲 Betting ended, generating result and starting spin');
       
-      // Get daily seed for this round
-      const { data: dailySeed } = await supabase
-        .from('daily_seeds')
-        .select('*')
-        .eq('id', activeRound.daily_seed_id)
-        .single();
+      let result;
+      
+      // Try PLG.BET method first
+      if (activeRound.daily_seed_id && activeRound.nonce_id) {
+        try {
+          console.log('🎯 Using PLG.BET method');
+          
+          // Get daily seed for this round
+          const { data: dailySeed, error: seedError } = await supabase
+            .from('daily_seeds')
+            .select('*')
+            .eq('id', activeRound.daily_seed_id)
+            .single();
 
-      if (!dailySeed) {
-        throw new Error('Daily seed not found for round');
+          if (seedError) {
+            throw new Error(`Daily seed fetch error: ${seedError.message}`);
+          }
+
+          if (!dailySeed) {
+            throw new Error('Daily seed not found for round');
+          }
+
+          // Generate provably fair result using PLG.BET method
+          const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
+          result = resultData.result;
+          
+        } catch (error) {
+          console.error('❌ PLG.BET result generation failed, falling back to legacy:', error);
+          // Fall back to legacy method
+          result = await generateLegacyResult(supabase, activeRound);
+        }
+      } else {
+        console.log('🔄 Using legacy method (no PLG.BET data)');
+        // Use legacy method if no PLG.BET data
+        result = await generateLegacyResult(supabase, activeRound);
       }
-
-      // Generate provably fair result using PLG.BET method
-      const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
-      const result = resultData.result;
       
       // Calculate final reel position for cross-user sync
       const TILE_WIDTH = 120;
@@ -322,27 +344,30 @@ async function getCurrentRound(supabase: any) {
 async function createNewRound(supabase: any) {
   console.log('🆕 Creating new PLG.BET style round...');
   
-  // Get or create today's daily seed
-  const dailySeed = await getOrCreateDailySeed(supabase);
-  
-  // Get next nonce ID for today
-  const { data: lastRound } = await supabase
-    .from('roulette_rounds')
-    .select('nonce_id')
-    .eq('daily_seed_id', dailySeed.id)
-    .order('nonce_id', { ascending: false })
-    .limit(1)
-    .single();
+  try {
+    // Get or create today's daily seed
+    const dailySeed = await getOrCreateDailySeed(supabase);
+    
+    // Get next nonce ID for today
+    const { data: lastRound, error: lastRoundError } = await supabase
+      .from('roulette_rounds')
+      .select('nonce_id')
+      .eq('daily_seed_id', dailySeed.id)
+      .order('nonce_id', { ascending: false })
+      .limit(1)
+      .single();
 
-  const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
+    if (lastRoundError && lastRoundError.code !== 'PGRST116') {
+      console.error('❌ Error fetching last round:', lastRoundError);
+    }
+
+    const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
   
   const now = new Date();
   const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
   const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
 
-  const { data: newRound } = await supabase
-    .from('roulette_rounds')
-    .insert({
+    const roundData = {
       status: 'betting',
       betting_end_time: bettingEnd.toISOString(),
       spinning_end_time: spinningEnd.toISOString(),
@@ -350,12 +375,54 @@ async function createNewRound(supabase: any) {
       nonce_id: nextNonceId,
       server_seed_hash: dailySeed.server_seed_hash, // Show the daily seed hash
       nonce: nextNonceId // Keep for compatibility
-    })
-    .select()
-    .single();
+    };
 
-  console.log('✅ Created new round:', newRound.id);
-  return newRound;
+    const { data: newRound, error: insertError } = await supabase
+      .from('roulette_rounds')
+      .insert(roundData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('❌ Error creating new round:', insertError);
+      throw insertError;
+    }
+
+    console.log('✅ Created new round:', newRound.id);
+    return newRound;
+
+  } catch (error) {
+    console.error('❌ PLG.BET round creation failed, falling back to legacy system:', error);
+    
+    // Fallback to legacy system if PLG.BET fails
+    const serverSeed = await generateServerSeed();
+    const serverSeedHash = await sha256Hash(serverSeed);
+    
+    const now = new Date();
+    const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
+    const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
+
+    const { data: legacyRound, error: legacyError } = await supabase
+      .from('roulette_rounds')
+      .insert({
+        status: 'betting',
+        betting_end_time: bettingEnd.toISOString(),
+        spinning_end_time: spinningEnd.toISOString(),
+        server_seed: serverSeed,
+        server_seed_hash: serverSeedHash,
+        nonce: 1
+      })
+      .select()
+      .single();
+
+    if (legacyError) {
+      console.error('❌ Legacy round creation also failed:', legacyError);
+      throw legacyError;
+    }
+
+    console.log('✅ Created legacy round:', legacyRound.id);
+    return legacyRound;
+  }
 }
 
 async function placeBet(supabase: any, userId: string, roundId: string, betColor: string, betAmount: number, clientSeed?: string) {
@@ -639,6 +706,42 @@ async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId
   return { result, hashInput, hash, hashNumber };
 }
 
+// Legacy Result Generation (fallback)
+async function generateLegacyResult(supabase: any, round: any) {
+  console.log('🎲 Generating legacy provably fair result');
+  
+  // Use server seed from round or generate new one
+  let serverSeed = round.server_seed;
+  if (!serverSeed) {
+    serverSeed = await generateServerSeed();
+    // Update round with generated seed
+    await supabase
+      .from('roulette_rounds')
+      .update({ server_seed: serverSeed })
+      .eq('id', round.id);
+  }
+  
+  // Create hash input: server_seed + default_client_seed + nonce
+  const defaultClientSeed = 'default_client_seed';
+  const hashInput = `${serverSeed}:${defaultClientSeed}:${round.nonce || 1}`;
+  const hash = await sha256Hash(hashInput);
+  
+  // Convert first 8 characters of hash to number and mod by 15
+  const hashNumber = parseInt(hash.substring(0, 8), 16);
+  const resultSlot = hashNumber % 15;
+  const result = WHEEL_SLOTS[resultSlot];
+  
+  console.log(`🎯 Legacy Result Generated:`);
+  console.log(`📊 Server Seed: ${serverSeed}`);
+  console.log(`🔢 Nonce: ${round.nonce || 1}`);
+  console.log(`🔗 Hash Input: "${hashInput}"`);
+  console.log(`#️⃣ SHA256 Hash: ${hash}`);
+  console.log(`🎲 Hash Number: ${hashNumber} (0x${hash.substring(0, 8)})`);
+  console.log(`🎯 Final Result: ${hashNumber} % 15 = ${resultSlot} (${result.color} ${result.slot})`);
+  
+  return result;
+}
+
 // PLG.BET Daily Seed Management
 async function getOrCreateDailySeed(supabase: any) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -722,34 +825,61 @@ async function setClientSeed(supabase: any, userId: string, clientSeed: string) 
 }
 
 async function verifyRound(supabase: any, roundId: string, clientSeed?: string) {
-  console.log(`🔍 PLG.BET Verifying round ${roundId}`);
+  console.log(`🔍 Verifying round ${roundId}`);
 
-  // Get round with daily seed info
-  const { data: round } = await supabase
-    .from('roulette_rounds')
-    .select(`
-      *,
-      daily_seeds (
-        date,
-        server_seed,
-        server_seed_hash,
-        lotto,
-        lotto_hash,
-        is_revealed
-      )
-    `)
-    .eq('id', roundId)
-    .single();
+  // Try PLG.BET verification first
+  try {
+    // Get round with daily seed info
+    const { data: round } = await supabase
+      .from('roulette_rounds')
+      .select(`
+        *,
+        daily_seeds (
+          date,
+          server_seed,
+          server_seed_hash,
+          lotto,
+          lotto_hash,
+          is_revealed
+        )
+      `)
+      .eq('id', roundId)
+      .single();
 
-  if (!round) {
-    throw new Error('Round not found');
+    if (!round) {
+      throw new Error('Round not found');
+    }
+
+    const dailySeed = round.daily_seeds;
+    
+    // If we have PLG.BET data, use it
+    if (dailySeed && round.nonce_id) {
+      console.log(`🎯 Using PLG.BET verification for round ${roundId}`);
+      return await verifyPLGBETRound(round, dailySeed);
+    } else {
+      console.log(`🔄 Using legacy verification for round ${roundId}`);
+      return await verifyLegacyRound(round, clientSeed);
+    }
+    
+  } catch (error) {
+    console.error('❌ PLG.BET verification failed, trying legacy:', error);
+    
+    // Fallback to legacy verification
+    const { data: round } = await supabase
+      .from('roulette_rounds')
+      .select('*')
+      .eq('id', roundId)
+      .single();
+
+    if (!round) {
+      throw new Error('Round not found');
+    }
+
+    return await verifyLegacyRound(round, clientSeed);
   }
+}
 
-  const dailySeed = round.daily_seeds;
-  if (!dailySeed) {
-    throw new Error('Daily seed not found for round');
-  }
-
+async function verifyPLGBETRound(round: any, dailySeed: any) {
   // For ongoing rounds, show basic info but no server seed
   if (round.status !== 'completed') {
     return {
@@ -804,6 +934,59 @@ async function verifyRound(supabase: any, roundId: string, clientSeed?: string) 
     calculated_slot: calculatedSlot,
     verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID',
     plg_formula: `hash("sha256", "${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}")`
+  };
+}
+
+async function verifyLegacyRound(round: any, clientSeed?: string) {
+  // For ongoing rounds, show basic info but no server seed
+  if (round.status !== 'completed') {
+    return {
+      round_id: round.id,
+      round_number: round.round_number,
+      server_seed: null, // Hidden until round completes
+      server_seed_hash: round.server_seed_hash,
+      nonce: round.nonce,
+      result_slot: round.result_slot,
+      result_color: round.result_color,
+      status: round.status,
+      is_completed: false
+    };
+  }
+
+  // For completed rounds, show full legacy verification
+  const usedClientSeed = clientSeed || 'default_client_seed';
+  const hashInput = `${round.server_seed}:${usedClientSeed}:${round.nonce}`;
+  
+  let hashResult = '';
+  let hashNumber = 0;
+  let calculatedSlot = 0;
+  
+  try {
+    hashResult = await sha256Hash(hashInput);
+    // Take first 8 chars and convert to number
+    hashNumber = parseInt(hashResult.substring(0, 8), 16);
+    calculatedSlot = hashNumber % 15;
+  } catch (error) {
+    console.error('Error calculating legacy verification:', error);
+  }
+
+  return {
+    round_id: round.id,
+    round_number: round.round_number,
+    server_seed: round.server_seed,
+    server_seed_hash: round.server_seed_hash,
+    nonce: round.nonce,
+    result_slot: round.result_slot,
+    result_color: round.result_color,
+    status: round.status,
+    client_seed: usedClientSeed,
+    is_completed: true,
+    // Legacy Verification calculation
+    hash_input: hashInput,
+    hash_result: hashResult,
+    hash_number: hashNumber,
+    calculated_slot: calculatedSlot,
+    verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID'
   };
 }
 
