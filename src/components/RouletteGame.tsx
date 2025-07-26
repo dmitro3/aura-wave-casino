@@ -767,7 +767,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             <CardContent className="p-6">
               <RouletteReel 
                 isSpinning={currentRound.status === 'spinning'}
-                winningSlot={currentRound.result_slot || null}
+                winningSlot={currentRound.result_slot !== undefined ? currentRound.result_slot : null}
                 showWinAnimation={currentRound.status === 'completed'}
                 synchronizedPosition={currentRound.reel_position || null}
                 extendedWinAnimation={extendedWinAnimation}

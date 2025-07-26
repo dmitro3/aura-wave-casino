@@ -53,20 +53,36 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
     // Synchronized animation using backend-calculated position
   useEffect(() => {
-    if (isSpinning && winningSlot !== null && synchronizedPosition !== null && synchronizedPosition !== undefined) {
+    if (isSpinning && winningSlot !== null && winningSlot !== undefined && synchronizedPosition !== null && synchronizedPosition !== undefined) {
       console.log('🎰 Starting synchronized animation to:', winningSlot, 'at position:', synchronizedPosition);
       setIsAnimating(true);
       
-      const animationDuration = 4000; // 4 seconds total animation
       const startPosition = position;
-      const finalPosition = synchronizedPosition;
+      let finalPosition = synchronizedPosition;
       
-      console.log('🎯 Synchronized animation params:', {
+      // FORCE CONSISTENT LEFT MOVEMENT: Ensure final position is always left of start
+      const fullRotationDistance = WHEEL_SLOTS.length * TILE_WIDTH; // 15 * 120 = 1800px
+      while (finalPosition >= startPosition) {
+        finalPosition -= fullRotationDistance;
+      }
+      
+      // Calculate total distance (should always be negative for left movement)
+      const totalDistance = Math.abs(finalPosition - startPosition);
+      
+      console.log('🎯 Consistent animation setup:', {
         startPosition,
-        finalPosition,
-        winningSlot,
-        difference: finalPosition - startPosition
+        originalFinal: synchronizedPosition,
+        adjustedFinal: finalPosition,
+        totalDistance,
+        direction: 'LEFT (guaranteed)',
+        winningSlot
       });
+
+      // Animation phases with specific durations
+      const SPEEDUP_DURATION = 500;    // 0.5 seconds speed up
+      const FAST_DURATION = 1000;      // 1 second fast rolling  
+      const SLOWDOWN_DURATION = 2000;  // 2 seconds slowing down
+      const TOTAL_DURATION = SPEEDUP_DURATION + FAST_DURATION + SLOWDOWN_DURATION; // 3.5 seconds total
 
       // Reset start time for new animation
       startTimeRef.current = undefined;
@@ -77,12 +93,26 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         }
         
         const elapsed = currentTime - startTimeRef.current;
-        const progress = Math.min(elapsed / animationDuration, 1);
+        const progress = Math.min(elapsed / TOTAL_DURATION, 1);
         
-        // Realistic easing: start fast, then slow down smoothly
-        const easeProgress = 1 - Math.pow(1 - progress, 3);
+        let easeProgress = 0;
         
-        // Calculate current position from start to final
+        if (elapsed <= SPEEDUP_DURATION) {
+          // Phase 1: Speed up (0-0.5s) - Ease in
+          const phaseProgress = elapsed / SPEEDUP_DURATION;
+          easeProgress = phaseProgress * phaseProgress; // Quadratic ease in
+        } else if (elapsed <= SPEEDUP_DURATION + FAST_DURATION) {
+          // Phase 2: Fast rolling (0.5-1.5s) - Linear
+          const phaseProgress = (elapsed - SPEEDUP_DURATION) / FAST_DURATION;
+          easeProgress = 0.25 + phaseProgress * 0.5; // 25% to 75% of total distance
+        } else {
+          // Phase 3: Slow down (1.5-3.5s) - Ease out
+          const phaseProgress = (elapsed - SPEEDUP_DURATION - FAST_DURATION) / SLOWDOWN_DURATION;
+          const easeOut = 1 - Math.pow(1 - phaseProgress, 3); // Cubic ease out
+          easeProgress = 0.75 + easeOut * 0.25; // 75% to 100% of total distance
+        }
+        
+        // Calculate current position (always moving left)
         const currentPosition = startPosition + (finalPosition - startPosition) * easeProgress;
         setPosition(currentPosition);
         
@@ -90,7 +120,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           animationRef.current = requestAnimationFrame(animate);
         } else {
           // Animation completed - land exactly on synchronized target
-          console.log('🎰 Synchronized animation completed. Final position:', currentPosition);
+          console.log('🎰 Consistent animation completed. Final position:', currentPosition);
           console.log('🎯 Target synchronized position was:', finalPosition);
           console.log('🎯 Winning slot should be:', winningSlot, 'under center line');
           
