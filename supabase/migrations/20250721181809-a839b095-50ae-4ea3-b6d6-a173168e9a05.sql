@@ -2,14 +2,12 @@
 CREATE TABLE public.roulette_rounds (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   round_number BIGSERIAL NOT NULL,
-  status TEXT NOT NULL DEFAULT 'betting', -- betting, spinning, revealing, completed
+  status TEXT NOT NULL DEFAULT 'betting', -- betting, spinning, completed
   result_slot INTEGER, -- 0-14 (slot index that won)
   result_color TEXT, -- green, red, black
   result_multiplier NUMERIC, -- 14, 2, 2
-  result_hash TEXT, -- provably fair hash
   betting_end_time TIMESTAMP WITH TIME ZONE,
   spinning_end_time TIMESTAMP WITH TIME ZONE,
-  revealing_end_time TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );

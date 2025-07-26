@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, Users, TrendingUp, Wallet, Plus, Minus } from 'lucide-react';
+import { Clock, Users, Wallet, Plus, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,14 +16,12 @@ import { RouletteResultHistory } from './RouletteResultHistory';
 interface RouletteRound {
   id: string;
   round_number: number;
-  status: 'betting' | 'spinning' | 'revealing' | 'completed';
+  status: 'betting' | 'spinning' | 'completed';
   result_slot?: number;
   result_color?: string;
   result_multiplier?: number;
-  result_hash?: string;
   betting_end_time: string;
   spinning_end_time: string;
-  revealing_end_time: string;
   created_at: string;
 }
 
@@ -173,8 +171,6 @@ export const RouletteGame = () => {
         targetTime = new Date(currentRound.betting_end_time).getTime();
       } else if (currentRound.status === 'spinning') {
         targetTime = new Date(currentRound.spinning_end_time).getTime();
-      } else if (currentRound.status === 'revealing') {
-        targetTime = new Date(currentRound.revealing_end_time).getTime();
       } else {
         setTimeLeft(0);
         return;
@@ -182,7 +178,7 @@ export const RouletteGame = () => {
 
       const remaining = Math.max(0, Math.floor((targetTime - now) / 1000));
       setTimeLeft(remaining);
-    }, 100); // Update every 100ms for smooth countdown
+    }, 100);
 
     return () => clearInterval(interval);
   }, [currentRound]);
@@ -252,7 +248,6 @@ export const RouletteGame = () => {
           filter: `id=eq.${user.id}`
         }, (payload) => {
           console.log('💳 Balance update:', payload);
-          // Update profile in context
           if (payload.new) {
             updateUserProfile(payload.new as any);
           }
@@ -283,7 +278,7 @@ export const RouletteGame = () => {
 
     initializeGame();
 
-    // Refresh current round every 2 seconds to ensure sync
+    // Refresh current round every 2 seconds
     const refreshInterval = setInterval(fetchCurrentRound, 2000);
     return () => clearInterval(refreshInterval);
   }, []);
@@ -369,21 +364,8 @@ export const RouletteGame = () => {
     switch (currentRound.status) {
       case 'betting': return 'Betting Open';
       case 'spinning': return 'Spinning...';
-      case 'revealing': return 'Revealing Result...';
       case 'completed': return 'Round Complete';
       default: return currentRound.status;
-    }
-  };
-
-  const getStatusColor = () => {
-    if (!currentRound) return 'secondary';
-    
-    switch (currentRound.status) {
-      case 'betting': return 'default';
-      case 'spinning': return 'secondary';
-      case 'revealing': return 'secondary';
-      case 'completed': return 'outline';
-      default: return 'secondary';
     }
   };
 
@@ -425,7 +407,7 @@ export const RouletteGame = () => {
                   {timeLeft}s
                 </span>
               </div>
-              <Badge variant={getStatusColor()}>
+              <Badge variant={currentRound.status === 'betting' ? 'default' : 'secondary'}>
                 {getStatusText()}
               </Badge>
             </div>
@@ -442,7 +424,7 @@ export const RouletteGame = () => {
               <RouletteReel 
                 isSpinning={currentRound.status === 'spinning'}
                 winningSlot={currentRound.result_slot || null}
-                showWinAnimation={currentRound.status === 'revealing' || currentRound.status === 'completed'}
+                showWinAnimation={currentRound.status === 'completed'}
               />
             </CardContent>
           </Card>

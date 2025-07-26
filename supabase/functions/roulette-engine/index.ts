@@ -25,9 +25,8 @@ const WHEEL_CONFIG = [
   { slot: 14, color: 'black', multiplier: 2 }
 ];
 
-const BETTING_DURATION = 15000; // 15 seconds
-const SPINNING_DURATION = 8000; // 8 seconds for animation
-const RESULT_DISPLAY_DURATION = 5000; // 5 seconds to show result
+const BETTING_DURATION = 15000; // 15 seconds betting
+const SPINNING_DURATION = 6000; // 6 seconds spinning animation
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -45,7 +44,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'get_current_round': {
-        const round = await getCurrentOrCreateRound(supabase);
+        const round = await getCurrentRound(supabase);
         return new Response(JSON.stringify(round), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -108,64 +107,62 @@ serve(async (req) => {
   }
 });
 
-async function getCurrentOrCreateRound(supabase: any) {
-  console.log('🔍 Getting or creating current round');
+async function getCurrentRound(supabase: any) {
+  console.log('🔍 Getting current round');
   
-  // Check for active round
+  // Check for active round (betting or spinning)
   const { data: activeRound } = await supabase
     .from('roulette_rounds')
     .select('*')
-    .in('status', ['betting', 'spinning', 'revealing'])
+    .in('status', ['betting', 'spinning'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (activeRound) {
-    console.log('📋 Found active round:', activeRound.id, 'status:', activeRound.status);
-    
-    // Check if round needs status update
     const now = new Date();
     const bettingEnd = new Date(activeRound.betting_end_time);
     const spinningEnd = new Date(activeRound.spinning_end_time);
-    const revealingEnd = new Date(activeRound.revealing_end_time);
 
+    console.log('📋 Active round found:', {
+      id: activeRound.id,
+      status: activeRound.status,
+      bettingEnd: bettingEnd.toISOString(),
+      spinningEnd: spinningEnd.toISOString(),
+      now: now.toISOString()
+    });
+
+    // Check if betting phase should end and spinning should start
     if (activeRound.status === 'betting' && now >= bettingEnd) {
-      // Generate result and move to spinning phase
       console.log('🎲 Betting ended, generating result and starting spin');
-      const result = generateProvablyFairResult(activeRound.id, activeRound.round_number);
       
-      await supabase
+      // Generate result securely
+      const randomBytes = new Uint32Array(1);
+      crypto.getRandomValues(randomBytes);
+      const resultSlot = randomBytes[0] % 15;
+      const result = WHEEL_CONFIG[resultSlot];
+      
+      console.log(`🎯 Generated result: slot ${resultSlot}, color ${result.color}`);
+
+      // Update round to spinning with result
+      const { data: updatedRound } = await supabase
         .from('roulette_rounds')
         .update({
           status: 'spinning',
-          result_slot: result.slot,
+          result_slot: resultSlot,
           result_color: result.color,
-          result_multiplier: result.multiplier,
-          result_hash: result.hash
+          result_multiplier: result.multiplier
         })
-        .eq('id', activeRound.id);
+        .eq('id', activeRound.id)
+        .select()
+        .single();
 
-      activeRound.status = 'spinning';
-      activeRound.result_slot = result.slot;
-      activeRound.result_color = result.color;
-      activeRound.result_multiplier = result.multiplier;
-      activeRound.result_hash = result.hash;
+      return updatedRound;
     }
-    
+
+    // Check if spinning phase should end
     if (activeRound.status === 'spinning' && now >= spinningEnd) {
-      // Move to revealing phase
-      console.log('🎯 Spinning ended, revealing result');
-      await supabase
-        .from('roulette_rounds')
-        .update({ status: 'revealing' })
-        .eq('id', activeRound.id);
-
-      activeRound.status = 'revealing';
-    }
-    
-    if (activeRound.status === 'revealing' && now >= revealingEnd) {
-      // Complete round and process payouts
-      console.log('🏁 Round completed, processing payouts');
+      console.log('🏁 Spinning ended, completing round');
       await completeRound(supabase, activeRound);
       
       // Create new round immediately
@@ -193,7 +190,6 @@ async function createNewRound(supabase: any) {
   const now = new Date();
   const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
   const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
-  const revealingEnd = new Date(spinningEnd.getTime() + RESULT_DISPLAY_DURATION);
 
   const { data: newRound } = await supabase
     .from('roulette_rounds')
@@ -201,35 +197,13 @@ async function createNewRound(supabase: any) {
       round_number: roundNumber,
       status: 'betting',
       betting_end_time: bettingEnd.toISOString(),
-      spinning_end_time: spinningEnd.toISOString(),
-      revealing_end_time: revealingEnd.toISOString()
+      spinning_end_time: spinningEnd.toISOString()
     })
     .select()
     .single();
 
   console.log('✅ Created new round:', newRound.id, 'number:', roundNumber);
   return newRound;
-}
-
-function generateProvablyFairResult(roundId: string, roundNumber: number) {
-  // Generate cryptographically secure random result
-  const randomBytes = new Uint32Array(1);
-  crypto.getRandomValues(randomBytes);
-  const resultSlot = randomBytes[0] % 15; // 0-14
-  const result = WHEEL_CONFIG[resultSlot];
-
-  // Create provably fair hash
-  const seed = `${roundId}-${roundNumber}-${Date.now()}`;
-  const hash = btoa(seed); // Simple hash for demo (use proper crypto in production)
-
-  console.log(`🎲 Generated result: slot ${resultSlot}, color ${result.color}, hash: ${hash.slice(0, 8)}...`);
-
-  return {
-    slot: resultSlot,
-    color: result.color,
-    multiplier: result.multiplier,
-    hash: hash
-  };
 }
 
 async function placeBet(supabase: any, userId: string, roundId: string, betColor: string, betAmount: number) {
@@ -266,15 +240,13 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   const potentialPayout = betAmount * multiplier;
 
   // Deduct balance and update total wagered
-  const { error: balanceError } = await supabase
+  await supabase
     .from('profiles')
     .update({
       balance: profile.balance - betAmount,
       total_wagered: (profile.total_wagered || 0) + betAmount
     })
     .eq('id', userId);
-
-  if (balanceError) throw balanceError;
 
   // Create bet record
   const { data: bet } = await supabase
@@ -317,8 +289,6 @@ async function completeRound(supabase: any, round: any) {
     .select('*')
     .eq('round_id', round.id);
 
-  let totalPayouts = 0;
-
   // Process each bet
   for (const bet of bets || []) {
     const isWinner = bet.bet_color === round.result_color;
@@ -351,11 +321,10 @@ async function completeRound(supabase: any, round: any) {
           })
           .eq('id', bet.user_id);
 
-        totalPayouts += actualPayout;
         console.log(`💰 Winner: ${bet.user_id} won ${actualPayout} (profit: ${profit})`);
       }
     }
   }
 
-  console.log(`🎉 Round completed. Total payouts: ${totalPayouts}`);
+  console.log(`🎉 Round completed`);
 }

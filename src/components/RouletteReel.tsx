@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
 interface RouletteReelProps {
   isSpinning: boolean;
@@ -27,66 +27,51 @@ const REEL_SLOTS = [
 export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: RouletteReelProps) => {
   const [position, setPosition] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [debugInfo, setDebugInfo] = useState('');
-  const animationRef = useRef<number>();
 
   const TILE_WIDTH = 120;
 
-  // Debug logging
+  // Main animation logic
   useEffect(() => {
-    const info = `Props: spinning=${isSpinning}, slot=${winningSlot}, showWin=${showWinAnimation}, animating=${isAnimating}, pos=${position.toFixed(0)}`;
-    setDebugInfo(info);
-    console.log('🎰 RouletteReel:', info);
-  }, [isSpinning, winningSlot, showWinAnimation, isAnimating, position]);
+    console.log('🎰 Reel state:', { isSpinning, winningSlot, isAnimating, position });
 
-  // Simple CSS-based animation that actually works
-  const startAnimation = () => {
-    console.log('🎰 Starting CSS animation');
-    setIsAnimating(true);
-    
-    // Calculate final position
-    const containerCenter = 360;
-    const cycles = 6;
-    const totalDistance = cycles * REEL_SLOTS.length * TILE_WIDTH;
-    
-    let finalPosition = -totalDistance + containerCenter;
-    if (winningSlot !== null) {
-      const targetOffset = winningSlot * TILE_WIDTH;
-      finalPosition = -totalDistance - targetOffset + containerCenter;
-    }
-    
-    console.log('🎰 Moving to position:', finalPosition);
-    setPosition(finalPosition);
-    
-    // Stop animation after duration
-    setTimeout(() => {
-      console.log('🎰 Animation completed');
-      setIsAnimating(false);
-    }, 4000);
-  };
-
-  // Reset
-  const resetReel = () => {
-    console.log('🎰 Resetting reel');
-    setPosition(0);
-    setIsAnimating(false);
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-  };
-
-  // Main controller
-  useEffect(() => {
-    console.log('🎰 Controller check:', { isSpinning, isAnimating, winningSlot });
-    
     if (isSpinning && !isAnimating) {
       console.log('🎰 ✅ STARTING ANIMATION');
-      startAnimation();
-    } else if (!isSpinning && !showWinAnimation && (isAnimating || position !== 0)) {
-      console.log('🎰 Resetting after round end');
-      setTimeout(resetReel, 2000);
+      setIsAnimating(true);
+      
+      // Calculate final position
+      const containerCenter = 300; // Center of container
+      const totalCycles = 6; // Number of full spins
+      const cycleDistance = REEL_SLOTS.length * TILE_WIDTH; // One full cycle
+      const totalDistance = totalCycles * cycleDistance;
+      
+      let finalPosition = -totalDistance + containerCenter;
+      
+      // If we have a winning slot, land on it precisely
+      if (winningSlot !== null) {
+        const targetOffset = winningSlot * TILE_WIDTH;
+        finalPosition = -totalDistance - targetOffset + containerCenter;
+        console.log('🎯 Landing on slot:', winningSlot, 'final position:', finalPosition);
+      }
+      
+      // Start animation
+      setPosition(finalPosition);
+      
+      // Stop animation after duration
+      setTimeout(() => {
+        console.log('🎰 Animation completed');
+        setIsAnimating(false);
+      }, 5000); // 5 second animation
     }
-  }, [isSpinning, isAnimating, showWinAnimation]);
+    
+    // Reset when round ends
+    if (!isSpinning && !showWinAnimation && position !== 0) {
+      console.log('🎰 Resetting reel');
+      setTimeout(() => {
+        setPosition(0);
+        setIsAnimating(false);
+      }, 2000);
+    }
+  }, [isSpinning, winningSlot, showWinAnimation, isAnimating, position]);
 
   const getTileColorClass = (color: string) => {
     switch (color) {
@@ -101,7 +86,7 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
     }
   };
 
-  // Create tiles
+  // Create repeating tiles for seamless scrolling
   const tiles = [];
   const repeats = 25;
   for (let repeat = 0; repeat < repeats; repeat++) {
@@ -116,9 +101,9 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
   return (
     <div className="relative w-full max-w-6xl mx-auto">
       
-      {/* Debug Panel */}
+      {/* Debug Info */}
       <div className="mb-4 p-2 bg-gray-900 rounded text-sm text-white font-mono">
-        {debugInfo}
+        spinning: {String(isSpinning)} | slot: {winningSlot ?? 'null'} | animating: {String(isAnimating)} | pos: {position.toFixed(0)}px
       </div>
 
       {/* Reel Container */}
@@ -139,8 +124,8 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
 
         {/* Moving Tiles */}
         <div 
-          className={`flex h-full items-center transition-transform ${
-            isAnimating ? 'duration-[4000ms] ease-out' : 'duration-none'
+          className={`flex h-full items-center ${
+            isAnimating ? 'transition-transform duration-[5000ms] ease-out' : 'transition-none'
           }`}
           style={{
             transform: `translateX(${position}px)`,
@@ -151,7 +136,7 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
             return (
               <div
                 key={tile.uniqueKey}
-                className={`flex-shrink-0 h-24 flex flex-col items-center justify-center border-r-2 border-gray-600 relative transition-all duration-300 ${getTileColorClass(tile.color)} ${
+                className={`flex-shrink-0 h-24 flex flex-col items-center justify-center border-r-2 border-gray-600 relative ${getTileColorClass(tile.color)} ${
                   isWinning ? 'scale-110 ring-4 ring-yellow-400 shadow-2xl shadow-yellow-400/50 z-20' : ''
                 }`}
                 style={{ width: `${TILE_WIDTH}px` }}
@@ -181,7 +166,6 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
         {isAnimating && (
           <>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/8 to-transparent animate-pulse pointer-events-none"></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent animate-pulse pointer-events-none"></div>
             <div className="absolute top-1/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse"></div>
             <div className="absolute bottom-1/4 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent animate-pulse"></div>
           </>
