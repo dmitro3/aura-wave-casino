@@ -220,23 +220,21 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         });
         console.log('👤 Database user bets:', dbUserBets);
         
-        // Smart user bet handling - merge database with current local state
-        const currentLocalBets = userBetsRef.current;
-        const mergedBets = { ...dbUserBets };
+        // Only update user bets if there's actually a difference to prevent flickering
+        const currentBets = userBetsRef.current;
+        const hasChanges = Object.keys(dbUserBets).some(color => 
+          dbUserBets[color] !== (currentBets[color] || 0)
+        ) || Object.keys(currentBets).some(color =>
+          (currentBets[color] || 0) !== (dbUserBets[color] || 0)
+        );
         
-        // If this is the same round and we have local bets, prefer local values
-        if (currentRoundRef.current === roundId && currentLocalBets) {
-          Object.keys(currentLocalBets).forEach(color => {
-            if (currentLocalBets[color] > (dbUserBets[color] || 0)) {
-              mergedBets[color] = currentLocalBets[color];
-              console.log(`🔒 Keeping local bet for ${color}: ${currentLocalBets[color]} (DB: ${dbUserBets[color] || 0})`);
-            }
-          });
+        if (hasChanges || Object.keys(currentBets).length === 0) {
+          console.log('🔄 Updating user bets (changes detected):', dbUserBets);
+          setUserBets(dbUserBets);
+          userBetsRef.current = dbUserBets;
+        } else {
+          console.log('✅ User bets unchanged, keeping current state');
         }
-        
-        console.log('🔄 Final user bets:', mergedBets);
-        setUserBets(mergedBets);
-        userBetsRef.current = mergedBets;
       }
     } catch (error: any) {
       console.error('Failed to fetch round bets:', error);
