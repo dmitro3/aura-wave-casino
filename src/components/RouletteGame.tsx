@@ -54,6 +54,64 @@ export const RouletteGame = () => {
 
   // Auto-start new rounds every 20 seconds
   useEffect(() => {
+    const fetchCurrentRound = async () => {
+      try {
+        // First check round status and handle transitions
+        const { data: statusData, error: statusError } = await supabase.functions.invoke('roulette-engine', {
+          body: { action: 'check_round_status' }
+        });
+        
+        if (statusError) throw statusError;
+        
+        if (statusData?.currentRound) {
+          console.log('🎰 Current round from status check:', statusData.currentRound);
+          setCurrentRound(statusData.currentRound);
+          return;
+        }
+
+        // If no active round from status check, try to get the latest round from database
+        const { data: activeRound } = await supabase
+          .from('roulette_rounds')
+          .select('*')
+          .in('status', ['betting', 'spinning'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (activeRound) {
+          console.log('🎰 Found active round:', activeRound);
+          setCurrentRound(activeRound);
+          return;
+        }
+
+        // If no active round, check if there's a recent completed round
+        const { data: recentRound } = await supabase
+          .from('roulette_rounds')
+          .select('*')
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // If the most recent round is more than 30 seconds old, or no round exists, start a new one
+        const shouldStartNewRound = !recentRound || 
+          (new Date().getTime() - new Date(recentRound.created_at).getTime()) > 30000;
+
+        if (shouldStartNewRound) {
+          await startNewRound();
+        } else {
+          // Show the completed round temporarily
+          setCurrentRound(recentRound);
+          // Start a new round after a short delay
+          setTimeout(startNewRound, 5000);
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch current round:', error);
+        // Try to start a new round as fallback
+        await startNewRound();
+      }
+    };
+
     const startNewRound = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('roulette-engine', {
@@ -62,17 +120,25 @@ export const RouletteGame = () => {
         
         if (error) throw error;
         console.log('🎰 New round started:', data);
+        setCurrentRound(data);
       } catch (error) {
         console.error('❌ Failed to start round:', error);
       }
     };
 
-    // Start initial round
-    startNewRound();
+    // Fetch current round on component mount
+    fetchCurrentRound();
 
-    // Set up interval for new rounds
-    const interval = setInterval(startNewRound, 20000);
-    return () => clearInterval(interval);
+    // Set up interval for checking round status more frequently
+    const statusInterval = setInterval(fetchCurrentRound, 5000); // Check every 5 seconds
+    
+    // Set up interval for starting new rounds less frequently  
+    const roundInterval = setInterval(fetchCurrentRound, 25000); // Check every 25 seconds
+    
+    return () => {
+      clearInterval(statusInterval);
+      clearInterval(roundInterval);
+    };
   }, []);
 
   // Real-time subscriptions

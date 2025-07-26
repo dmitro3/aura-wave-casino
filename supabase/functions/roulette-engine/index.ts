@@ -44,9 +44,25 @@ serve(async (req) => {
 
     switch (action) {
       case 'start_round': {
+        // Check if there's already an active round
+        const { data: existingRound } = await supabase
+          .from('roulette_rounds')
+          .select('*')
+          .in('status', ['betting', 'spinning'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingRound) {
+          console.log(`🎰 Returning existing active round: ${existingRound.id}`);
+          return new Response(JSON.stringify(existingRound), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
         // Create a new betting round
-        const bettingEndTime = new Date(Date.now() + 10000); // 10 seconds betting
-        const spinEndTime = new Date(Date.now() + 17000); // 7 seconds spinning after betting ends
+        const bettingEndTime = new Date(Date.now() + 15000); // 15 seconds betting
+        const spinEndTime = new Date(Date.now() + 20000); // 5 seconds spinning after betting ends
 
         const { data: newRound, error } = await supabase
           .from('roulette_rounds')
@@ -61,11 +77,56 @@ serve(async (req) => {
         if (error) throw error;
 
         console.log(`🎰 New round started: ${newRound.id}`);
-        
-        // Schedule round completion
-        setTimeout(() => processRoundCompletion(newRound.id), 17000);
 
         return new Response(JSON.stringify(newRound), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'check_round_status': {
+        // Check if any rounds need to be transitioned to spinning or completed
+        const now = new Date();
+        
+        // Check for rounds that should move from betting to spinning
+        const { data: bettingRounds } = await supabase
+          .from('roulette_rounds')
+          .select('*')
+          .eq('status', 'betting')
+          .lt('betting_end_time', now.toISOString());
+
+        for (const round of bettingRounds || []) {
+          await supabase
+            .from('roulette_rounds')
+            .update({ status: 'spinning' })
+            .eq('id', round.id);
+          
+          console.log(`🎰 Round ${round.id} moved to spinning phase`);
+        }
+
+        // Check for rounds that should be completed
+        const { data: spinningRounds } = await supabase
+          .from('roulette_rounds')
+          .select('*')
+          .eq('status', 'spinning')
+          .lt('spin_end_time', now.toISOString());
+
+        for (const round of spinningRounds || []) {
+          await processRoundCompletion(round.id);
+        }
+
+        // Return current round status
+        const { data: currentRound } = await supabase
+          .from('roulette_rounds')
+          .select('*')
+          .in('status', ['betting', 'spinning'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          currentRound: currentRound 
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
@@ -136,11 +197,6 @@ serve(async (req) => {
         return new Response(JSON.stringify(bet), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
-      }
-
-      case 'complete_round': {
-        const roundId = await req.json().then(body => body.roundId);
-        return await processRoundCompletion(roundId);
       }
 
       default:
