@@ -90,7 +90,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   });
 
   // UI state
-  const [betAmount, setBetAmount] = useState(0.01);
+  const [betAmount, setBetAmount] = useState<number | ''>('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [winningColor, setWinningColor] = useState<string | null>(null);
@@ -613,7 +613,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
     // SECURITY 5: Validate bet amount
     const currentBalance = balanceRef.current;
-    if (betAmount < 0.01 || betAmount > 1000000) {
+    if (betAmount === '' || betAmount < 0.01 || betAmount > 1000000) {
       toast({
         title: "Invalid Bet Amount",
         description: "Bet must be between $0.01 and $1,000,000",
@@ -622,7 +622,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       return;
     }
 
-    if (betAmount > currentBalance) {
+    if (Number(betAmount) > currentBalance) {
       toast({
         title: "Insufficient Balance",
         description: `Your balance is $${currentBalance.toFixed(2)}`,
@@ -641,7 +641,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       return;
     }
 
-    if (userBetLimits.totalThisRound + betAmount > MAX_TOTAL_BET_PER_ROUND) {
+    if (userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND) {
       toast({
         title: "Round Limit Exceeded",
         description: `Maximum $${MAX_TOTAL_BET_PER_ROUND} total per round`,
@@ -679,7 +679,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         throw new Error('Failed to verify current balance');
       }
 
-      if (currentProfile.balance < betAmount) {
+      if (currentProfile.balance < Number(betAmount)) {
         throw new Error(`Insufficient balance. Current: $${currentProfile.balance.toFixed(2)}`);
       }
 
@@ -692,7 +692,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           action: 'place_bet',
           userId: user.id,
           betColor: color,
-          betAmount: betAmount,
+          betAmount: Number(betAmount),
           roundId: currentRound.id
         }
       });
@@ -713,7 +713,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       setUserBets(prev => {
         const newBets = {
           ...prev,
-          [color]: (prev[color] || 0) + betAmount
+          [color]: (prev[color] || 0) + Number(betAmount)
         };
         userBetsRef.current = newBets;
         return newBets;
@@ -721,18 +721,18 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
       // Update bet limits tracking
       setUserBetLimits(prev => ({
-        totalThisRound: prev.totalThisRound + betAmount,
+        totalThisRound: prev.totalThisRound + Number(betAmount),
         betCount: prev.betCount + 1
       }));
 
       // Update balance optimistically
-      const newBalance = currentProfile.balance - betAmount;
+      const newBalance = currentProfile.balance - Number(betAmount);
       balanceRef.current = newBalance;
       
       // Update profile balance through the parent component
       await onUpdateUser({
         balance: newBalance,
-        total_wagered: profile.total_wagered + betAmount
+        total_wagered: profile.total_wagered + Number(betAmount)
       });
 
       currentRoundRef.current = currentRound.id;
@@ -1058,14 +1058,19 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                   type="number"
                                   value={betAmount}
                                   onChange={(e) => {
-                                    const newAmount = Number(e.target.value);
-                                    const maxBalance = profile?.balance || 0;
-                                    setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                                    const value = e.target.value;
+                                    if (value === '') {
+                                      setBetAmount('');
+                                    } else {
+                                      const newAmount = Number(value);
+                                      const maxBalance = profile?.balance || 0;
+                                      setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                                    }
                                   }}
                                   min="0.01"
                                   max={profile?.balance || 0}
                                   step="0.01"
-                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-primary focus:text-emerald-400 placeholder:text-primary/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 pr-6 text-primary focus:text-emerald-400 placeholder:text-primary/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   style={{
                                     MozAppearance: 'textfield'
                                   }}
@@ -1074,29 +1079,31 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                 />
                                 
                                 {/* Custom Spin Buttons */}
-                                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex flex-col">
+                                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex flex-col gap-px">
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const newAmount = betAmount + 0.01;
+                                      const currentAmount = betAmount === '' ? 0 : Number(betAmount);
+                                      const newAmount = currentAmount + 0.01;
                                       const maxBalance = profile?.balance || 0;
                                       setBetAmount(newAmount > maxBalance ? maxBalance : newAmount);
                                     }}
                                     disabled={currentRound.status !== 'betting'}
-                                    className="w-4 h-3 flex items-center justify-center bg-gradient-to-b from-primary/30 to-primary/20 hover:from-primary/50 hover:to-primary/30 active:from-primary/60 active:to-primary/40 rounded-t text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                                    className="w-5 h-4 flex items-center justify-center bg-gradient-to-b from-primary/40 to-primary/30 hover:from-primary/60 hover:to-primary/50 active:from-primary/80 active:to-primary/70 rounded-sm border border-primary/20 text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                                   >
-                                    ▲
+                                    <span className="text-[10px]">▲</span>
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      const newAmount = Math.max(0.01, betAmount - 0.01);
+                                      const currentAmount = betAmount === '' ? 0.02 : Number(betAmount);
+                                      const newAmount = Math.max(0.01, currentAmount - 0.01);
                                       setBetAmount(newAmount);
                                     }}
                                     disabled={currentRound.status !== 'betting'}
-                                    className="w-4 h-3 flex items-center justify-center bg-gradient-to-b from-primary/20 to-primary/30 hover:from-primary/30 hover:to-primary/50 active:from-primary/40 active:to-primary/60 rounded-b text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150"
+                                    className="w-5 h-4 flex items-center justify-center bg-gradient-to-b from-primary/30 to-primary/40 hover:from-primary/50 hover:to-primary/60 active:from-primary/70 active:to-primary/80 rounded-sm border border-primary/20 text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                                   >
-                                    ▼
+                                    <span className="text-[10px]">▼</span>
                                   </button>
                                 </div>
                               </div>
@@ -1113,7 +1120,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => setBetAmount(Math.max(0.01, Math.floor(betAmount / 2 * 100) / 100))}
+                          onClick={() => setBetAmount(Math.max(0.01, Math.floor(Number(betAmount) / 2 * 100) / 100))}
                           disabled={currentRound.status !== 'betting'}
                           className="h-9 w-14 rounded-lg bg-gradient-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/30 text-red-400 font-bold text-sm transition-all duration-200 hover:scale-105"
                         >
@@ -1123,7 +1130,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => setBetAmount(Math.min(profile?.balance || 0, betAmount * 2))}
+                          onClick={() => setBetAmount(Math.min(profile?.balance || 0, Number(betAmount) * 2))}
                           disabled={currentRound.status !== 'betting'}
                           className="h-9 w-14 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-bold text-sm transition-all duration-200 hover:scale-105"
                         >
@@ -1150,10 +1157,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         !profile || 
                         currentRound.status !== 'betting' || 
                         isPlacingBet ||
-                        betAmount > balanceRef.current ||
-                        betAmount < 0.01 ||
+                        betAmount === '' ||
+                        Number(betAmount) > balanceRef.current ||
+                        Number(betAmount) < 0.01 ||
                         userBetLimits.betCount >= MAX_BETS_PER_ROUND ||
-                        userBetLimits.totalThisRound + betAmount > MAX_TOTAL_BET_PER_ROUND ||
+                        userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND ||
                         Date.now() - lastBetTime < MIN_BET_INTERVAL
                       }
                       className={`w-full h-12 flex flex-col gap-1 border-2 transition-all duration-200 ${getBetColorClass(color)} ${
@@ -1163,11 +1171,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         !user ? 'Sign in to bet' :
                         currentRound.status !== 'betting' ? 'Betting closed' :
                         isPlacingBet ? 'Processing bet...' :
-                        betAmount > balanceRef.current ? 'Insufficient balance' :
+                        betAmount === '' ? 'Enter bet amount' :
+                        Number(betAmount) > balanceRef.current ? 'Insufficient balance' :
                         userBetLimits.betCount >= MAX_BETS_PER_ROUND ? 'Max bets reached' :
-                        userBetLimits.totalThisRound + betAmount > MAX_TOTAL_BET_PER_ROUND ? 'Round limit reached' :
+                        userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND ? 'Round limit reached' :
                         Date.now() - lastBetTime < MIN_BET_INTERVAL ? 'Rate limited' :
-                        `Bet $${betAmount} on ${color}`
+                        `Bet $${betAmount === '' ? '0.00' : Number(betAmount).toFixed(2)} on ${color}`
                       }
                     >
                       <div className="flex items-center gap-2">
