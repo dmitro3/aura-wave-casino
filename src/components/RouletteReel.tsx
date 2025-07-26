@@ -123,85 +123,98 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [synchronizedPosition, isAnimating, actualCenterOffset]);
 
-  // MAIN ANIMATION SYSTEM - Fixed pattern every round
+  // MAIN ANIMATION SYSTEM - Fixed to land at exact correct position
   useEffect(() => {
     if (isSpinning && winningSlot !== null && synchronizedPosition !== null) {
-      console.log('🚀 STARTING CONSISTENT ANIMATION PATTERN');
-      console.log('Target slot:', winningSlot);
-      console.log('Target position:', synchronizedPosition);
+      console.log('🎰 STARTING ANIMATION TO EXACT POSITION');
+      console.log('Winning slot:', winningSlot);
+      console.log('Backend calculated position:', synchronizedPosition);
       
       setIsAnimating(true);
       
       const startPos = reelPosition;
       
-      // Calculate precise target position with center adjustment
+      // The backend has calculated the EXACT position where the winning slot will be centered
+      // We need to adjust this position for our actual container size
       const centerDifference = actualCenterOffset - BACKEND_CENTER_OFFSET;
-      const targetPos = synchronizedPosition + centerDifference;
+      const exactTargetPosition = synchronizedPosition + centerDifference;
       
-      // ALWAYS MOVE LEFT - ensure consistent pattern
-      let finalPos = targetPos;
-      const oneFullRotation = WHEEL_SLOTS.length * TILE_WIDTH; // 1800px
-      const minimumRotations = 6; // At least 6 rotations for visual effect
-      
-      // Keep adding rotations until we're guaranteed to move left
-      while (finalPos >= startPos - (minimumRotations * oneFullRotation)) {
-        finalPos -= oneFullRotation;
-      }
-      
-      const totalDistance = Math.abs(finalPos - startPos);
-      
-      console.log('🎯 Animation pattern setup:', {
-        start: startPos,
-        target: targetPos,
-        final: finalPos,
-        distance: totalDistance,
-        rotations: (totalDistance / oneFullRotation).toFixed(1),
-        direction: 'LEFT (guaranteed)'
+      console.log('🎯 Position adjustment:', {
+        backendPosition: synchronizedPosition,
+        backendCenter: BACKEND_CENTER_OFFSET,
+        actualCenter: actualCenterOffset,
+        centerDifference: centerDifference,
+        adjustedTarget: exactTargetPosition
       });
       
-      // Animation timing - EXACT PATTERN every round
-      const SPEED_UP_TIME = 500;    // 0.5s
-      const FAST_TIME = 1000;       // 1.0s  
-      const SLOW_DOWN_TIME = 1500;  // 1.5s
-      const TOTAL_TIME = SPEED_UP_TIME + FAST_TIME + SLOW_DOWN_TIME; // 3.0s
+      // ALWAYS MOVE LEFT - Add full rotations until we guarantee left movement
+      let finalPosition = exactTargetPosition;
+      const oneFullRotation = WHEEL_SLOTS.length * TILE_WIDTH; // 1800px
+      const minimumRotations = 5; // At least 5 rotations for visual effect
+      
+      // Keep subtracting rotations until we move left enough
+      while (finalPosition >= startPos - (minimumRotations * oneFullRotation)) {
+        finalPosition -= oneFullRotation;
+      }
+      
+      const totalDistance = Math.abs(finalPosition - startPos);
+      const rotationCount = totalDistance / oneFullRotation;
+      
+      console.log('🚀 Final animation setup:', {
+        startPosition: startPos,
+        exactTarget: exactTargetPosition,
+        finalTarget: finalPosition,
+        totalDistance: totalDistance,
+        rotations: rotationCount.toFixed(1),
+        direction: 'LEFT'
+      });
+      
+      // Animation timing with proper speed control
+      const TOTAL_ANIMATION_TIME = 3000; // 3 seconds total
+      const SPEEDUP_PHASE = 500;         // 0.5s speed up
+      const FAST_PHASE = 1000;           // 1.0s fast rolling  
+      const SLOWDOWN_PHASE = 1500;       // 1.5s slow down
       
       const startTime = Date.now();
       
-      const runAnimation = () => {
+      const animate = () => {
         const elapsed = Date.now() - startTime;
         
-        if (elapsed >= TOTAL_TIME) {
-          // Animation finished - land exactly on target
-          setReelPosition(finalPos);
+        if (elapsed >= TOTAL_ANIMATION_TIME) {
+          // Animation complete - set exact final position
+          setReelPosition(finalPosition);
           setIsAnimating(false);
-          console.log('✅ Animation complete - landed at:', finalPos);
           
-          // Verify winning slot is under center line
-          verifyWinningSlotLanding(winningSlot, finalPos);
+          console.log('✅ Animation complete at exact position:', finalPosition);
+          
+          // Verify the winning slot is under center line
+          verifyWinningSlotPosition(winningSlot, finalPosition);
           
         } else {
-          // Calculate progress through phases - CONSISTENT PATTERN
+          // Calculate progress with speed ramping
           let progress = 0;
           
-          if (elapsed <= SPEED_UP_TIME) {
-            // Phase 1: Speeding up (0-0.5s) - Smooth acceleration
-            const t = elapsed / SPEED_UP_TIME;
-            progress = t * t * 0.15; // 0% to 15% distance (quadratic ease-in)
-          } else if (elapsed <= SPEED_UP_TIME + FAST_TIME) {
-            // Phase 2: Fast rolling (0.5s-1.5s) - Consistent speed
-            const t = (elapsed - SPEED_UP_TIME) / FAST_TIME;
-            progress = 0.15 + (t * 0.70); // 15% to 85% distance (linear)
+          if (elapsed <= SPEEDUP_PHASE) {
+            // Speed up phase: slow start, accelerating
+            const phaseProgress = elapsed / SPEEDUP_PHASE;
+            progress = phaseProgress * phaseProgress * 0.10; // 0% to 10% (slow start)
+          } else if (elapsed <= SPEEDUP_PHASE + FAST_PHASE) {
+            // Fast phase: consistent high speed
+            const phaseProgress = (elapsed - SPEEDUP_PHASE) / FAST_PHASE;
+            progress = 0.10 + phaseProgress * 0.75; // 10% to 85% (fast movement)
           } else {
-            // Phase 3: Slowing down (1.5s-3.0s) - Smooth deceleration 
-            const t = (elapsed - SPEED_UP_TIME - FAST_TIME) / SLOW_DOWN_TIME;
-            const easeOut = 1 - Math.pow(1 - t, 3); // Cubic ease-out
-            progress = 0.85 + (easeOut * 0.15); // 85% to 100% distance
+            // Slowdown phase: smooth deceleration to exact stop
+            const phaseProgress = (elapsed - SPEEDUP_PHASE - FAST_PHASE) / SLOWDOWN_PHASE;
+            const easeOut = 1 - Math.pow(1 - phaseProgress, 4); // Strong ease-out for precise stop
+            progress = 0.85 + easeOut * 0.15; // 85% to 100% (precise landing)
           }
           
-          const currentPos = startPos + (finalPos - startPos) * progress;
-          setReelPosition(currentPos);
+          // Apply progress to get current position
+          const currentPosition = startPos + (finalPosition - startPos) * progress;
+          setReelPosition(currentPosition);
           
-          animationFrameRef.current = requestAnimationFrame(runAnimation);
+          // Continue animation
+          animationFrameRef.current = requestAnimationFrame(animate);
         }
       };
       
@@ -209,7 +222,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      animationFrameRef.current = requestAnimationFrame(runAnimation);
+      animationFrameRef.current = requestAnimationFrame(animate);
     }
   }, [isSpinning, winningSlot, synchronizedPosition, reelPosition, actualCenterOffset]);
 
@@ -225,41 +238,47 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [isSpinning, isAnimating]);
 
-  // Verify winning slot lands under center line
-  const verifyWinningSlotLanding = (slot: number | null, position: number) => {
+  // Verify winning slot lands exactly under center line
+  const verifyWinningSlotPosition = (slot: number | null, finalPos: number) => {
     if (slot === null) return;
     
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) return;
     
-    // Find closest instance of winning slot to center
-    let bestDistance = Infinity;
-    let bestCenter = 0;
+    // Check where the winning slot actually ended up
+    let closestDistance = Infinity;
+    let closestTileCenter = 0;
+    let closestRepetition = -1;
     
     for (let rep = 0; rep < 25; rep++) {
-      const tileIndex = rep * WHEEL_SLOTS.length + slotIndex;
-      const tileLeft = position + (tileIndex * TILE_WIDTH);
-      const tileCenter = tileLeft + (TILE_WIDTH / 2);
-      const distanceFromCenter = Math.abs(tileCenter - actualCenterOffset);
+      const tileGlobalIndex = rep * WHEEL_SLOTS.length + slotIndex;
+      const tileLeftEdge = finalPos + (tileGlobalIndex * TILE_WIDTH);
+      const tileCenterPosition = tileLeftEdge + (TILE_WIDTH / 2);
+      const distanceFromCenter = Math.abs(tileCenterPosition - actualCenterOffset);
       
-      if (distanceFromCenter < bestDistance) {
-        bestDistance = distanceFromCenter;
-        bestCenter = tileCenter;
+      if (distanceFromCenter < closestDistance) {
+        closestDistance = distanceFromCenter;
+        closestTileCenter = tileCenterPosition;
+        closestRepetition = rep;
       }
     }
     
-    const isAccurate = bestDistance < 10; // Strict tolerance
+    const isAccurate = closestDistance < 5; // Very strict tolerance
     
-    console.log('🎯 Landing verification:', {
-      slot,
+    console.log('🎯 LANDING VERIFICATION:', {
+      targetSlot: slot,
       expectedCenter: actualCenterOffset,
-      actualCenter: bestCenter,
-      distance: bestDistance.toFixed(1) + 'px',
-      accurate: isAccurate ? '✅ PERFECT' : '❌ INACCURATE'
+      actualTileCenter: closestTileCenter,
+      distanceOff: closestDistance.toFixed(2) + 'px',
+      repetition: closestRepetition,
+      result: isAccurate ? '✅ PERFECT LANDING' : '❌ MISSED TARGET'
     });
     
     if (!isAccurate) {
-      console.warn(`❌ Landing inaccurate! Slot ${slot} is ${bestDistance.toFixed(1)}px off center`);
+      console.error(`❌ CRITICAL ERROR: Winning slot ${slot} missed center by ${closestDistance.toFixed(2)}px!`);
+      console.error('This indicates a positioning calculation error that needs to be fixed.');
+    } else {
+      console.log(`✅ SUCCESS: Winning slot ${slot} landed perfectly under center line!`);
     }
   };
 
