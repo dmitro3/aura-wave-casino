@@ -80,6 +80,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [roundBets, setRoundBets] = useState<RouletteBet[]>([]);
   const [recentResults, setRecentResults] = useState<RouletteResult[]>([]);
   const [userBets, setUserBets] = useState<Record<string, number>>({});
+  const [userBetsDisplay, setUserBetsDisplay] = useState<Record<string, number>>({}); // Stable visual state
   const [provablyFairModalOpen, setProvablyFairModalOpen] = useState(false);
   const [provablyFairHistoryOpen, setProvablyFairHistoryOpen] = useState(false);
   const [selectedRoundData, setSelectedRoundData] = useState<RouletteRound | null>(null);
@@ -152,6 +153,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     if (currentRound?.id && currentRoundRef.current && currentRound.id !== currentRoundRef.current) {
       console.log('🔄 Round changed, clearing user bets');
       setUserBets({});
+      setUserBetsDisplay({}); // Clear visual state for new round
       userBetsRef.current = {};
       currentRoundRef.current = currentRound.id;
     }
@@ -173,6 +175,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       if (isNewRound) {
         console.log('🆕 New round detected, clearing user bets');
         setUserBets({});
+        setUserBetsDisplay({}); // Clear visual state for new round
         userBetsRef.current = {};
         currentRoundRef.current = data?.id || null;
         setBetTotals({
@@ -231,6 +234,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         if (hasChanges || Object.keys(currentBets).length === 0) {
           console.log('🔄 Updating user bets (changes detected):', dbUserBets);
           setUserBets(dbUserBets);
+          setUserBetsDisplay(dbUserBets); // Update stable visual state
           userBetsRef.current = dbUserBets;
         } else {
           console.log('✅ User bets unchanged, keeping current state');
@@ -401,6 +405,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           if (isNewRound) {
             console.log('🆕 New round detected, clearing user bets and fetching fresh data');
             setUserBets({});
+            setUserBetsDisplay({}); // Clear visual state for new round
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
@@ -716,6 +721,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         userBetsRef.current = newBets;
         return newBets;
       });
+      
+      // Update stable display state immediately (prevents flickering)
+      setUserBetsDisplay(prev => ({
+        ...prev,
+        [color]: (prev[color] || 0) + Number(betAmount)
+      }));
 
       // Update bet limits tracking
       setUserBetLimits(prev => ({
@@ -873,6 +884,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       
       // Clear user bets for new round
       setUserBets({});
+      setUserBetsDisplay({}); // Clear visual state for new round
       userBetsRef.current = {};
       
       // Update current round reference
@@ -1197,9 +1209,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <span className="text-xs">{getMultiplierText(color)}</span>
                         {isPlacingBet && <div className="w-3 h-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>}
                       </div>
-                      {(userBets[color] || userBetsRef.current[color]) && (
+                      {userBetsDisplay[color] && (
                         <span className="text-xs opacity-90 bg-white/20 px-1 py-0.5 rounded">
-                          Your bet: ${(userBets[color] || userBetsRef.current[color] || 0).toFixed(2)}
+                          Your bet: ${userBetsDisplay[color].toFixed(2)}
                         </span>
                       )}
                     </Button>
