@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { RouletteReel } from './RouletteReel';
 
 interface RouletteRound {
@@ -69,6 +70,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const { user } = useAuth();
   const profile = userData;
   const { toast } = useToast();
+  const { liveBetFeed, isConnected } = useRealtimeFeeds();
 
   // Game state
   const [currentRound, setCurrentRound] = useState<RouletteRound | null>(null);
