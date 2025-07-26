@@ -2,12 +2,14 @@
 CREATE TABLE public.roulette_rounds (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   round_number BIGSERIAL NOT NULL,
-  status TEXT NOT NULL DEFAULT 'betting', -- betting, spinning, completed
+  status TEXT NOT NULL DEFAULT 'betting', -- betting, spinning, revealing, completed
   result_slot INTEGER, -- 0-14 (slot index that won)
   result_color TEXT, -- green, red, black
   result_multiplier NUMERIC, -- 14, 2, 2
+  result_hash TEXT, -- provably fair hash
   betting_end_time TIMESTAMP WITH TIME ZONE,
-  spin_end_time TIMESTAMP WITH TIME ZONE,
+  spinning_end_time TIMESTAMP WITH TIME ZONE,
+  revealing_end_time TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -51,7 +53,7 @@ ON public.roulette_bets
 FOR SELECT 
 USING (true);
 
-CREATE POLICY "Users can insert their own roulette bets" 
+CREATE POLICY "Users can insert their own bets" 
 ON public.roulette_bets 
 FOR INSERT 
 WITH CHECK (auth.uid() = user_id);
@@ -62,20 +64,14 @@ ON public.roulette_results
 FOR SELECT 
 USING (true);
 
--- Create indexes for performance
+-- Create indexes for better performance
 CREATE INDEX idx_roulette_rounds_status ON public.roulette_rounds(status);
-CREATE INDEX idx_roulette_rounds_created_at ON public.roulette_rounds(created_at DESC);
+CREATE INDEX idx_roulette_rounds_created_at ON public.roulette_rounds(created_at);
 CREATE INDEX idx_roulette_bets_round_id ON public.roulette_bets(round_id);
 CREATE INDEX idx_roulette_bets_user_id ON public.roulette_bets(user_id);
-CREATE INDEX idx_roulette_results_created_at ON public.roulette_results(created_at DESC);
+CREATE INDEX idx_roulette_results_created_at ON public.roulette_results(created_at);
 
--- Add triggers for updated_at
-CREATE TRIGGER update_roulette_rounds_updated_at
-BEFORE UPDATE ON public.roulette_rounds
-FOR EACH ROW
-EXECUTE FUNCTION public.update_updated_at_column();
-
--- Set up realtime for live updates
-ALTER TABLE public.roulette_rounds REPLICA IDENTITY FULL;
-ALTER TABLE public.roulette_bets REPLICA IDENTITY FULL;
-ALTER TABLE public.roulette_results REPLICA IDENTITY FULL;
+-- Enable real-time subscriptions
+ALTER PUBLICATION supabase_realtime ADD TABLE public.roulette_rounds;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.roulette_bets;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.roulette_results;

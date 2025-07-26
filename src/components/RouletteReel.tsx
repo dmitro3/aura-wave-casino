@@ -37,16 +37,16 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
   useEffect(() => {
     spinningRef.current = isSpinning;
     winningSlotRef.current = winningSlot;
-    console.log('🎰 Props updated:', { isSpinning, winningSlot, position: position.toFixed(0) });
+    console.log('🎰 Reel props updated:', { isSpinning, winningSlot, position: position.toFixed(0) });
   }, [isSpinning, winningSlot, position]);
 
-  // Single unified animation function
+  // Main animation function
   const runAnimation = () => {
-    console.log('🎰 Starting unified animation');
+    console.log('🎰 Starting reel animation');
     setIsAnimating(true);
     
-    const SPIN_SPEED = 1500; // pixels per second
-    const LANDING_DURATION = 2500; // duration for landing animation
+    const SPIN_SPEED = 1800; // pixels per second - fast but controlled
+    const LANDING_DURATION = 3000; // 3 seconds for smooth landing
     const startTime = performance.now();
     let landingStartTime: number | null = null;
     let landingStartPosition = 0;
@@ -55,15 +55,15 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       
-      // Check if we should start landing (result is available and we've been spinning for at least 1 second)
-      if (winningSlotRef.current !== null && elapsed > 1000 && landingStartTime === null) {
-        console.log('🎰 Starting landing phase to slot:', winningSlotRef.current);
+      // Check if we should start landing (result is available and we've been spinning for at least 1.5 seconds)
+      if (winningSlotRef.current !== null && elapsed > 1500 && landingStartTime === null) {
+        console.log('🎰 Starting landing sequence to slot:', winningSlotRef.current);
         landingStartTime = currentTime;
         landingStartPosition = position;
         
-        // Calculate final position for perfect center alignment
-        const containerCenter = 600; // Center of 1200px wide container
-        const totalCycles = 4; // Additional full cycles for drama
+        // Calculate perfect center alignment
+        const containerCenter = 360; // Center of visible area
+        const totalCycles = 5; // Additional dramatic cycles
         const cycleDistance = REEL_SLOTS.length * TILE_WIDTH; // 15 * 120 = 1800px per cycle
         const totalAdditionalDistance = totalCycles * cycleDistance;
         const targetSlotOffset = winningSlotRef.current * TILE_WIDTH;
@@ -88,11 +88,11 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
         const distance = (elapsed / 1000) * SPIN_SPEED;
         setPosition(-distance);
       } else {
-        // LANDING PHASE: Smooth deceleration to final position
+        // LANDING PHASE: Smooth deceleration with realistic physics
         const landingElapsed = currentTime - landingStartTime;
         const landingProgress = Math.min(landingElapsed / LANDING_DURATION, 1);
         
-        // Ease-out animation for smooth landing
+        // Use cubic ease-out for very smooth, realistic deceleration
         const easeOut = 1 - Math.pow(1 - landingProgress, 3);
         const currentPos = landingStartPosition + (finalPosition - landingStartPosition) * easeOut;
         setPosition(currentPos);
@@ -129,19 +129,17 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
 
   // Main controller
   useEffect(() => {
-    console.log('🎰 Main controller:', { isSpinning, isAnimating });
-    
     if (isSpinning && !isAnimating) {
-      console.log('🎰 ✅ STARTING ANIMATION NOW!');
+      console.log('🎰 ✅ Starting animation');
       runAnimation();
     } else if (!isSpinning && isAnimating) {
-      console.log('🎰 Stopping animation due to isSpinning=false');
+      console.log('🎰 Stopping animation');
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
       setIsAnimating(false);
       // Reset after delay
-      setTimeout(resetReel, 2000);
+      setTimeout(resetReel, 3000);
     }
 
     return () => {
@@ -178,34 +176,6 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
 
   return (
     <div className="relative w-full max-w-6xl mx-auto">
-      
-      {/* Debug Panel */}
-      <div className="mb-4 p-4 bg-gray-800 rounded-lg text-sm text-white">
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <strong>Props:</strong><br/>
-            isSpinning: <span className="text-green-400">{String(isSpinning)}</span><br/>
-            winningSlot: <span className="text-blue-400">{winningSlot ?? 'null'}</span><br/>
-            showWinAnimation: <span className="text-pink-400">{String(showWinAnimation)}</span>
-          </div>
-          <div>
-            <strong>State:</strong><br/>
-            isAnimating: <span className="text-yellow-400">{String(isAnimating)}</span><br/>
-            position: <span className="text-cyan-400">{position.toFixed(0)}px</span>
-          </div>
-          <div>
-            <strong>Status:</strong><br/>
-            {isAnimating ? (
-              winningSlot !== null ? 
-                <span className="text-orange-400">🎯 Landing...</span> : 
-                <span className="text-cyan-400">🎰 Fast Spinning...</span>
-            ) : (
-              <span className="text-gray-400">⏸️ Idle</span>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Reel Container */}
       <div className="relative h-32 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl border-4 border-yellow-500 overflow-hidden shadow-2xl">
         
@@ -238,21 +208,21 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
             return (
               <div
                 key={tile.uniqueKey}
-                className={`flex-shrink-0 h-24 flex flex-col items-center justify-center border-r-2 border-gray-600 relative transition-all duration-300 ${getTileColorClass(tile.color)} ${
+                className={`flex-shrink-0 h-24 flex flex-col items-center justify-center border-r-2 border-gray-600 relative transition-all duration-500 ${getTileColorClass(tile.color)} ${
                   isWinning ? 'scale-110 ring-4 ring-yellow-400 shadow-2xl shadow-yellow-400/50 z-20' : ''
                 }`}
                 style={{ width: `${TILE_WIDTH}px` }}
               >
                 {/* Number */}
-                <div className={`text-2xl font-bold drop-shadow-lg ${
+                <div className={`text-2xl font-bold drop-shadow-lg transition-all duration-300 ${
                   isWinning ? 'text-yellow-200 scale-125' : ''
                 }`}>
                   {tile.slot}
                 </div>
                 
                 {/* Multiplier */}
-                <div className={`text-xs font-medium px-2 py-1 rounded-full bg-black/40 ${
-                  isWinning ? 'bg-yellow-400/40 text-yellow-200' : 'text-white/80'
+                <div className={`text-xs font-medium px-2 py-1 rounded-full bg-black/40 transition-all duration-300 ${
+                  isWinning ? 'bg-yellow-400/40 text-yellow-200 scale-110' : 'text-white/80'
                 }`}>
                   {tile.multiplier}
                 </div>
@@ -295,7 +265,7 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
         </div>
       )}
       
-      {/* Simple Status */}
+      {/* Status */}
       <div className="text-center mt-6">
         <p className="text-xl font-semibold">
           {isAnimating ? (
