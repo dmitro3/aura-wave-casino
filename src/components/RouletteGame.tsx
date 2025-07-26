@@ -80,7 +80,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [roundBets, setRoundBets] = useState<RouletteBet[]>([]);
   const [recentResults, setRecentResults] = useState<RouletteResult[]>([]);
   const [userBets, setUserBets] = useState<Record<string, number>>({});
-  const [roundBetTotals, setRoundBetTotals] = useState<Record<string, number>>({}); // Track user's total bets for current round
+  const [isolatedRoundTotals, setIsolatedRoundTotals] = useState<Record<string, number>>({}); // Completely isolated from fetchRoundBets
   const [provablyFairModalOpen, setProvablyFairModalOpen] = useState(false);
   const [provablyFairHistoryOpen, setProvablyFairHistoryOpen] = useState(false);
   const [selectedRoundData, setSelectedRoundData] = useState<RouletteRound | null>(null);
@@ -114,7 +114,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   // Refs for preventing race conditions
   const placingBetRef = useRef(false);
   const userBetsRef = useRef<Record<string, number>>({});
-  const roundBetTotalsRef = useRef<Record<string, number>>({});
   const currentRoundRef = useRef<string>('');
   const balanceRef = useRef<number>(0);
 
@@ -124,11 +123,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       balanceRef.current = profile.balance;
     }
   }, [profile?.balance]);
-  
-  // Update round bet totals ref when state changes
-  useEffect(() => {
-    roundBetTotalsRef.current = roundBetTotals;
-  }, [roundBetTotals]);
   
   // Filter roulette bets from live feed (only current round)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
@@ -159,23 +153,18 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     if (currentRound?.id && currentRoundRef.current && currentRound.id !== currentRoundRef.current) {
       console.log('🔄 Round changed, clearing user bets');
       setUserBets({});
-      setRoundBetTotals({}); // Clear round bet totals for new round
-      roundBetTotalsRef.current = {}; // Clear ref too
+      setIsolatedRoundTotals({}); // Clear isolated totals for new round
       userBetsRef.current = {};
       currentRoundRef.current = currentRound.id;
     }
   }, [currentRound?.id]);
 
-  // Update round bet totals when placing a bet
-  const addToRoundBetTotal = (color: string, amount: number) => {
-    setRoundBetTotals(prev => {
-      const newTotals = {
-        ...prev,
-        [color]: (prev[color] || 0) + amount
-      };
-      roundBetTotalsRef.current = newTotals;
-      return newTotals;
-    });
+  // Simple isolated functions - NEVER touched by fetchRoundBets
+  const addToIsolatedTotal = (color: string, amount: number) => {
+    setIsolatedRoundTotals(prev => ({
+      ...prev,
+      [color]: (prev[color] || 0) + amount
+    }));
   };
 
   // Fetch current round
@@ -194,8 +183,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       if (isNewRound) {
         console.log('🆕 New round detected, clearing user bets');
         setUserBets({});
-        setRoundBetTotals({}); // Clear round bet totals for new round
-        roundBetTotalsRef.current = {}; // Clear ref too
+        setIsolatedRoundTotals({}); // Clear round bet totals for new round
         userBetsRef.current = {};
         currentRoundRef.current = data?.id || null;
         setBetTotals({
@@ -256,21 +244,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           setUserBets(dbUserBets);
           userBetsRef.current = dbUserBets;
           
-          // Only update round bet totals if they actually changed
-          const currentRoundTotals = roundBetTotalsRef.current;
-          const roundTotalsChanged = Object.keys(dbUserBets).some(color => 
-            dbUserBets[color] !== (currentRoundTotals[color] || 0)
-          ) || Object.keys(currentRoundTotals).some(color =>
-            (currentRoundTotals[color] || 0) !== (dbUserBets[color] || 0)
-          );
-          
-          if (roundTotalsChanged) {
-            console.log('🔄 Updating round bet totals (changes detected):', dbUserBets);
-            setRoundBetTotals(dbUserBets);
-            roundBetTotalsRef.current = dbUserBets;
-          } else {
-            console.log('✅ Round bet totals unchanged, keeping current display');
-          }
+          // DO NOT sync isolated totals with database - keep them completely isolated
         } else {
           console.log('✅ User bets unchanged, keeping current state');
         }
@@ -440,8 +414,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           if (isNewRound) {
             console.log('🆕 New round detected, clearing user bets and fetching fresh data');
             setUserBets({});
-            setRoundBetTotals({}); // Clear round bet totals for new round
-            roundBetTotalsRef.current = {}; // Clear ref too
+            setIsolatedRoundTotals({}); // Clear round bet totals for new round
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
@@ -759,7 +732,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       });
       
       // Add to round bet totals
-      addToRoundBetTotal(color, Number(betAmount));
+      addToIsolatedTotal(color, Number(betAmount));
 
       // Update bet limits tracking
       setUserBetLimits(prev => ({
@@ -917,8 +890,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       
       // Clear user bets for new round
       setUserBets({});
-      setRoundBetTotals({}); // Clear round bet totals for new round
-      roundBetTotalsRef.current = {}; // Clear ref too
+      setIsolatedRoundTotals({}); // Clear round bet totals for new round
       userBetsRef.current = {};
       
       // Update current round reference
@@ -1243,9 +1215,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <span className="text-xs">{getMultiplierText(color)}</span>
                         {isPlacingBet && <div className="w-3 h-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>}
                       </div>
-                      {roundBetTotals[color] && (
+                      {isolatedRoundTotals[color] && (
                         <span className="text-xs opacity-90 bg-white/20 px-2 py-1 rounded">
-                          Total: ${roundBetTotals[color].toFixed(2)}
+                          Total: ${isolatedRoundTotals[color].toFixed(2)}
                         </span>
                       )}
                     </Button>
