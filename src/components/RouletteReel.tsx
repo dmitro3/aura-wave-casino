@@ -92,36 +92,36 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       setIsAnimating(true);
       
-      // Calculate responsive positioning
-      const currentCenterOffset = actualCenterOffset;
       const fullRotationDistance = WHEEL_SLOTS.length * TILE_WIDTH;
       
-      // Scale the synchronized position from backend (1200px) to actual container width
-      const positionScale = actualContainerWidth / DEFAULT_CONTAINER_WIDTH;
-      const scaledSynchronizedPosition = synchronizedPosition * positionScale;
+      // Calculate the offset between backend's expected center and actual center
+      const backendCenterOffset = DEFAULT_CONTAINER_WIDTH / 2; // 600px
+      const actualCenter = actualCenterOffset;
+      const centerOffsetDifference = actualCenter - backendCenterOffset;
       
-      console.log('📱 Responsive scaling:', {
-        backendPosition: synchronizedPosition,
-        scaledPosition: scaledSynchronizedPosition,
-        positionScale,
-        actualWidth: actualContainerWidth,
-        centerOffset: currentCenterOffset
+      console.log('🎯 Center offset calculation:', {
+        backendExpectedCenter: backendCenterOffset,
+        actualCenter: actualCenter,
+        centerOffsetDifference,
+        containerWidth: actualContainerWidth,
+        winningSlot
       });
       
       const startPosition = position;
-      let finalPosition = scaledSynchronizedPosition;
+      // Adjust the backend position by the center offset difference
+      let finalPosition = synchronizedPosition + centerOffsetDifference;
       
       // Ensure consistent left movement
       while (finalPosition >= startPosition) {
         finalPosition -= fullRotationDistance;
       }
       
-      console.log('🎯 Synchronized animation params:', {
+      console.log('🎯 Adjusted animation params:', {
+        originalBackendPosition: synchronizedPosition,
+        centerOffsetDifference,
+        adjustedFinalPosition: finalPosition,
         startPosition,
-        finalPosition,
-        winningSlot,
-        difference: finalPosition - startPosition,
-        actualCenterOffset: currentCenterOffset
+        difference: finalPosition - startPosition
       });
 
       const startTime = performance.now();
@@ -131,7 +131,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         const elapsed = (currentTime - startTime) / 1000; // Convert to seconds
         
         if (elapsed >= TOTAL_DURATION) {
-          // Animation complete - verify accuracy with actual dimensions
+          // Animation complete - verify accuracy
           if (winningSlot !== null) {
             const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningSlot);
             if (winningSlotIndex !== -1) {
@@ -142,7 +142,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                 const tileGlobalIndex = repeat * WHEEL_SLOTS.length + winningSlotIndex;
                 const tilePosition = finalPosition + tileGlobalIndex * TILE_WIDTH;
                 const tileCenterPosition = tilePosition + TILE_WIDTH / 2;
-                const distanceFromCenter = Math.abs(tileCenterPosition - currentCenterOffset);
+                const distanceFromCenter = Math.abs(tileCenterPosition - actualCenter);
                 
                 if (distanceFromCenter < closestDistance) {
                   closestDistance = distanceFromCenter;
@@ -152,10 +152,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
               
               console.log('🔍 Animation accuracy verification:', {
                 winningSlot,
-                centerLine: currentCenterOffset,
+                actualCenterLine: actualCenter,
+                backendExpectedCenter: backendCenterOffset,
                 closestWinningSlotCenter: closestTilePosition,
                 distanceFromCenter: closestDistance,
-                isAccurate: closestDistance < 5 // Within 5px tolerance
+                isAccurate: closestDistance < 5 // Back to strict tolerance
               });
             }
           }
@@ -196,32 +197,43 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       animationRef.current = requestAnimationFrame(animate);
     }
-  }, [isSpinning, winningSlot, synchronizedPosition, actualCenterOffset, actualContainerWidth]);
+  }, [isSpinning, winningSlot, synchronizedPosition, actualCenterOffset]);
 
   // Initialize position from synchronized position on first load
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating) {
       console.log('🔄 Initializing position from synchronized state:', synchronizedPosition);
       
-      // Scale the position for current container width
-      const positionScale = actualContainerWidth / DEFAULT_CONTAINER_WIDTH;
-      const scaledPosition = synchronizedPosition * positionScale;
+      // Calculate the offset between backend's expected center and actual center
+      const backendCenterOffset = DEFAULT_CONTAINER_WIDTH / 2; // 600px
+      const actualCenter = actualCenterOffset;
+      const centerOffsetDifference = actualCenter - backendCenterOffset;
+      
+      // Adjust the backend position by the center offset difference
+      let normalizedPosition = synchronizedPosition + centerOffsetDifference;
+      
+      console.log('🔄 Position adjustment on init:', {
+        originalPosition: synchronizedPosition,
+        centerOffsetDifference,
+        adjustedPosition: normalizedPosition,
+        actualCenter,
+        backendExpectedCenter: backendCenterOffset
+      });
       
       // Safeguard: if position is extremely negative, normalize it
       const fullRotationDistance = WHEEL_SLOTS.length * TILE_WIDTH;
-      let normalizedPosition = scaledPosition;
       
       // Keep position within reasonable bounds (same as backend logic)
       const maxNegativeRotations = -10 * fullRotationDistance;
       if (normalizedPosition < maxNegativeRotations) {
         const excessRotations = Math.floor((maxNegativeRotations - normalizedPosition) / fullRotationDistance);
         normalizedPosition += excessRotations * fullRotationDistance;
-        console.log('🔄 Frontend normalized position:', { original: scaledPosition, normalized: normalizedPosition });
+        console.log('🔄 Frontend normalized position:', { beforeNormalization: normalizedPosition - excessRotations * fullRotationDistance, normalized: normalizedPosition });
       }
       
       setPosition(normalizedPosition);
     }
-  }, [synchronizedPosition, isAnimating, actualContainerWidth]);
+  }, [synchronizedPosition, isAnimating, actualCenterOffset]);
 
   // Keep position between rounds - no reset
   useEffect(() => {
