@@ -88,9 +88,11 @@ export default function Index({ initialGame }: IndexProps) {
   }
 
   return (
-    <div className="min-h-screen p-4">
-      {/* Header */}
-      <header className="mb-6">
+    <div className="min-h-screen">
+      {/* Main Content Container */}
+      <div className="p-4 pb-32">
+        {/* Header */}
+        <header className="mb-6">
         <div className="glass rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -196,7 +198,7 @@ export default function Index({ initialGame }: IndexProps) {
       </header>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-8 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 pb-8">
         {/* Left Sidebar */}
         <div className="lg:col-span-1 space-y-4">
           {user && <NotificationsPanel />}
@@ -250,7 +252,7 @@ export default function Index({ initialGame }: IndexProps) {
         </div>
 
         {/* Games Area */}
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-7">
           <Tabs value={currentGame} onValueChange={handleGameChange} className="space-y-4">
             <TabsList className="glass w-full">
               <TabsTrigger value="coinflip" className="flex-1">
@@ -310,7 +312,7 @@ export default function Index({ initialGame }: IndexProps) {
         </div>
 
         {/* Right Sidebar - Real-time Chat */}
-        <div className="lg:col-span-1 h-[calc(100vh-20rem)]">
+        <div className="lg:col-span-2 h-[calc(100vh-16rem)]">
           <RealtimeChat />
         </div>
       </div>
@@ -330,8 +332,9 @@ export default function Index({ initialGame }: IndexProps) {
         onClose={() => setShowAuthModal(false)}
       />
 
-      {/* Live Level-Up Notifications - Only show for authenticated users */}
-      {user && <LiveLevelUpNotification />}
+        {/* Live Level-Up Notifications - Only show for authenticated users */}
+        {user && <LiveLevelUpNotification />}
+      </div>
       
       {/* Footer */}
       <Footer />
