@@ -1029,7 +1029,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                       <div className="flex items-center gap-3 flex-1">
                         <div className="relative flex-1 max-w-xs">
                           {/* Clean Floating Label with Perfect Border Break */}
-                          <div className="absolute -top-2.5 left-3 z-10">
+                          <div className="absolute -top-2.5 left-3 z-20">
                             <label className="text-xs font-medium text-primary uppercase tracking-wider">
                               Bet Amount
                             </label>
