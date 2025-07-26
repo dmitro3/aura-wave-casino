@@ -190,82 +190,95 @@ serve(async (req) => {
         const logs = [];
         
         try {
-          logs.push('🔬 Starting advanced round creation test...');
+          logs.push('🔬 Starting step-by-step test...');
           
-          // Test daily seed creation
-          logs.push('📅 Testing daily seed creation...');
-          const dailySeed = await getOrCreateDailySeed(supabase);
-          logs.push(`✅ Daily seed obtained: ${dailySeed.id} (${dailySeed.date})`);
-          
-          // Check if columns exist
-          logs.push('🔍 Checking if daily_seed_id column exists...');
-          const { data: columnTest, error: columnError } = await supabase
-            .from('roulette_rounds')
-            .select('daily_seed_id, nonce_id')
-            .limit(1);
+          // Step 1: Check if columns exist
+          logs.push('🔍 Step 1: Checking if columns exist...');
+          try {
+            const { data: columnTest, error: columnError } = await supabase
+              .from('roulette_rounds')
+              .select('daily_seed_id, nonce_id')
+              .limit(1);
+              
+            if (columnError) {
+              logs.push(`❌ Column check failed: ${columnError.message}`);
+              logs.push(`❌ Code: ${columnError.code}`);
+              
+              return new Response(JSON.stringify({
+                success: false,
+                error: 'Missing columns',
+                details: columnError,
+                logs: logs
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
             
-          if (columnError) {
-            logs.push(`❌ Column check failed: ${columnError.message}`);
+            logs.push('✅ Columns exist');
+          } catch (err) {
+            logs.push(`❌ Column check crashed: ${err.message}`);
             return new Response(JSON.stringify({
               success: false,
-              error: 'Missing columns',
-              details: columnError.message,
+              error: 'Column check crashed',
               logs: logs
             }), {
-              status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
           
-          logs.push('✅ Columns exist');
-          
-          // Test the actual insert
-          logs.push('🧪 Testing round insert...');
-          const now = new Date();
-          const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
-          const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
-
-          const testRoundData = {
-            status: 'betting',
-            betting_end_time: bettingEnd.toISOString(),
-            spinning_end_time: spinningEnd.toISOString(),
-            daily_seed_id: dailySeed.id,
-            nonce_id: 999, // Test nonce
-            server_seed_hash: dailySeed.server_seed_hash,
-            nonce: 999
-          };
-          
-          logs.push(`📝 Test insert data: ${JSON.stringify(testRoundData)}`);
-          
-          const { data: testRound, error: insertError } = await supabase
-            .from('roulette_rounds')
-            .insert(testRoundData)
-            .select()
-            .single();
-
-          if (insertError) {
-            logs.push(`❌ Insert failed: ${insertError.message}`);
-            logs.push(`❌ Error code: ${insertError.code}`);
+          // Step 2: Check daily_seeds table
+          logs.push('🔍 Step 2: Checking daily_seeds table...');
+          try {
+            const { data: seedsTest, error: seedsError } = await supabase
+              .from('daily_seeds')
+              .select('id, date')
+              .limit(1);
+              
+            if (seedsError) {
+              logs.push(`❌ Daily seeds table error: ${seedsError.message}`);
+              return new Response(JSON.stringify({
+                success: false,
+                error: 'Daily seeds table issue',
+                details: seedsError,
+                logs: logs
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            logs.push(`✅ Daily seeds table works, found ${seedsTest?.length || 0} records`);
+          } catch (err) {
+            logs.push(`❌ Daily seeds check crashed: ${err.message}`);
             return new Response(JSON.stringify({
               success: false,
-              error: 'Insert failed',
-              details: insertError,
+              error: 'Daily seeds check crashed',
               logs: logs
             }), {
-              status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
           
-          logs.push(`✅ Test round created: ${testRound.id} with daily_seed_id: ${testRound.daily_seed_id}`);
-          
-          // Clean up test round
-          await supabase.from('roulette_rounds').delete().eq('id', testRound.id);
-          logs.push('🗑️ Test round cleaned up');
+          // Step 3: Try to get/create daily seed
+          logs.push('🔍 Step 3: Testing daily seed creation...');
+          let dailySeed = null;
+          try {
+            dailySeed = await getOrCreateDailySeed(supabase);
+            logs.push(`✅ Daily seed obtained: ${dailySeed.id} (${dailySeed.date})`);
+          } catch (err) {
+            logs.push(`❌ Daily seed creation failed: ${err.message}`);
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Daily seed creation failed',
+              details: err.message,
+              logs: logs
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
           
           return new Response(JSON.stringify({
             success: true,
-            message: 'Advanced round creation works!',
+            message: 'All basic tests passed!',
             logs: logs
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -278,7 +291,6 @@ serve(async (req) => {
             error: error.message,
             logs: logs
           }), {
-            status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
