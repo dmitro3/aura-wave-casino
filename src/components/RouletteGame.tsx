@@ -80,7 +80,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [roundBets, setRoundBets] = useState<RouletteBet[]>([]);
   const [recentResults, setRecentResults] = useState<RouletteResult[]>([]);
   const [userBets, setUserBets] = useState<Record<string, number>>({});
-  const [isolatedRoundTotals, setIsolatedRoundTotals] = useState<Record<string, number>>({}); // Completely isolated from fetchRoundBets
+  const [isolatedRoundTotals, setIsolatedRoundTotals] = useState<Record<string, number>>({});
+  const [isolatedRoundId, setIsolatedRoundId] = useState<string | null>(null); // Track which round the totals belong to
   const [provablyFairModalOpen, setProvablyFairModalOpen] = useState(false);
   const [provablyFairHistoryOpen, setProvablyFairHistoryOpen] = useState(false);
   const [selectedRoundData, setSelectedRoundData] = useState<RouletteRound | null>(null);
@@ -153,14 +154,26 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     if (currentRound?.id && currentRoundRef.current && currentRound.id !== currentRoundRef.current) {
       console.log('🔄 Round changed, clearing user bets');
       setUserBets({});
-      setIsolatedRoundTotals({}); // Clear isolated totals for new round
+      
+      // Only clear isolated totals if it's actually a different round
+      if (isolatedRoundId !== currentRound.id) {
+        console.log('🧹 Clearing isolated totals for new round:', currentRound.id);
+        setIsolatedRoundTotals({});
+        setIsolatedRoundId(currentRound.id);
+      }
+      
       userBetsRef.current = {};
       currentRoundRef.current = currentRound.id;
     }
-  }, [currentRound?.id]);
+  }, [currentRound?.id, isolatedRoundId]);
 
   // Simple isolated functions - NEVER touched by fetchRoundBets
   const addToIsolatedTotal = (color: string, amount: number) => {
+    // Set the round ID if not set or if it's a new round
+    if (!isolatedRoundId || isolatedRoundId !== currentRound?.id) {
+      setIsolatedRoundId(currentRound?.id || null);
+    }
+    
     setIsolatedRoundTotals(prev => ({
       ...prev,
       [color]: (prev[color] || 0) + amount
@@ -180,10 +193,24 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       
       // Check if this is a new round (different ID)
       const isNewRound = currentRound?.id !== data?.id;
+      console.log('🔍 Round comparison:', {
+        currentRoundId: currentRound?.id,
+        dataId: data?.id,
+        isNewRound: isNewRound,
+        currentRoundRefValue: currentRoundRef.current
+      });
+      
       if (isNewRound) {
         console.log('🆕 New round detected, clearing user bets');
         setUserBets({});
-        setIsolatedRoundTotals({}); // Clear round bet totals for new round
+        
+        // Only clear isolated totals if it's actually a different round
+        if (isolatedRoundId !== data?.id) {
+          console.log('🧹 Clearing isolated totals for new round:', data?.id);
+          setIsolatedRoundTotals({});
+          setIsolatedRoundId(data?.id);
+        }
+        
         userBetsRef.current = {};
         currentRoundRef.current = data?.id || null;
         setBetTotals({
@@ -414,7 +441,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           if (isNewRound) {
             console.log('🆕 New round detected, clearing user bets and fetching fresh data');
             setUserBets({});
-            setIsolatedRoundTotals({}); // Clear round bet totals for new round
+            
+            // Only clear isolated totals if it's actually a different round
+            if (isolatedRoundId !== round.id) {
+              console.log('🧹 Clearing isolated totals for new round:', round.id);
+              setIsolatedRoundTotals({});
+              setIsolatedRoundId(round.id);
+            }
+            
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
@@ -890,7 +924,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       
       // Clear user bets for new round
       setUserBets({});
-      setIsolatedRoundTotals({}); // Clear round bet totals for new round
+      
+      // Only clear isolated totals if it's actually a different round
+      if (isolatedRoundId !== currentRound.id) {
+        console.log('🧹 Clearing isolated totals for new round (security reset):', currentRound.id);
+        setIsolatedRoundTotals({});
+        setIsolatedRoundId(currentRound.id);
+      }
+      
       userBetsRef.current = {};
       
       // Update current round reference
