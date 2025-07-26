@@ -706,39 +706,41 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Game Area */}
         <div className="lg:col-span-3 space-y-6">
+          {/* Recent Results Bubbles */}
+          <div className="flex justify-end mb-4">
+            <div className="glass border-0 rounded-lg p-3 flex items-center gap-3">
+              <span className="text-sm text-muted-foreground font-medium">Recent Results:</span>
+              <div className="flex items-center gap-2">
+                {recentResults.slice(0, 8).map((result, index) => (
+                  <div
+                    key={result.id}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-xl hover:shadow-current/50 ${getResultBubbleClass(result.result_color)} animate-in slide-in-from-right-5`}
+                    style={{
+                      animationDelay: `${index * 100}ms`,
+                      animationFillMode: 'both'
+                    }}
+                    onClick={() => openRoundDetails(result)}
+                    title={`Round #${result.round_number} - Click for details`}
+                  >
+                    {result.result_slot}
+                  </div>
+                ))}
+                {recentResults.length === 0 && (
+                  <span className="text-sm text-muted-foreground">No results yet</span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Roulette Reel */}
           <Card className="glass border-0">
-            <CardContent className="p-6 relative">
+            <CardContent className="p-6">
               <RouletteReel 
                 isSpinning={currentRound.status === 'spinning'}
                 winningSlot={currentRound.result_slot || null}
                 showWinAnimation={currentRound.status === 'completed'}
                 synchronizedPosition={currentRound.reel_position || null}
               />
-              
-              {/* Recent Results Bubbles */}
-              <div className="absolute top-4 right-4 flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-medium mr-2">Recent:</span>
-                <div className="flex items-center gap-1">
-                  {recentResults.slice(0, 8).map((result, index) => (
-                    <div
-                      key={result.id}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-lg ${getResultBubbleClass(result.result_color)} animate-in slide-in-from-right-5`}
-                      style={{
-                        animationDelay: `${index * 100}ms`,
-                        animationFillMode: 'both'
-                      }}
-                      onClick={() => openRoundDetails(result)}
-                      title={`Round #${result.round_number} - Click for details`}
-                    >
-                      {result.result_slot}
-                    </div>
-                  ))}
-                  {recentResults.length === 0 && (
-                    <span className="text-xs text-muted-foreground">No results yet</span>
-                  )}
-                </div>
-              </div>
             </CardContent>
           </Card>
 
