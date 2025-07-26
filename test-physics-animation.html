@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics-Based Roulette Animation Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(45deg, #10b981, #059669, #047857);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .animation-demo {
+            height: 120px;
+            background: linear-gradient(90deg, #1f2937, #374151, #1f2937);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            margin: 20px 0;
+        }
+        
+        .reel-container {
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .center-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(to bottom, #10b981, #059669, #10b981);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .center-line::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -5px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 8px solid #10b981;
+        }
+        
+        .center-line::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: -5px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #10b981;
+        }
+        
+        .tiles-container {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            transition: none;
+        }
+        
+        .tile {
+            flex-shrink: 0;
+            width: 120px;
+            height: 80px;
+            margin: 0 2px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            transition: all 0.075s ease;
+        }
+        
+        .tile.green {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .tile.red {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .tile.black {
+            background: linear-gradient(135deg, #374151, #1f2937);
+            color: white;
+        }
+        
+        .tile.winning {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+            border-color: #10b981;
+            z-index: 5;
+        }
+        
+        .tile.motion-blur {
+            filter: blur(1px);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+        
+        .btn.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .status {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .status h4 {
+            margin: 0 0 10px 0;
+            color: #10b981;
+        }
+        
+        .status-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .animation-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .info-item {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .info-item h4 {
+            margin: 0 0 10px 0;
+            color: #10b981;
+        }
+        
+        .info-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: #fbbf24;
+        }
+        
+        .progress-bar {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #10b981, #059669);
+            height: 100%;
+            transition: width 0.1s ease;
+        }
+        
+        .velocity-indicator {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .phase-indicator {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎰 Physics-Based Roulette Animation</h1>
+            <p>Realistic rolling animation with physics, motion blur, and smooth deceleration</p>
+        </div>
+
+        <div class="test-section">
+            <h2>⚙️ Animation Configuration</h2>
+            <div class="animation-info">
+                <div class="info-item">
+                    <h4>Total Duration</h4>
+                    <div class="info-value">5000ms (5 seconds)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Acceleration Phase</h4>
+                    <div class="info-value">1000ms (20%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Fast Phase</h4>
+                    <div class="info-value">3000ms (60%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Deceleration Phase</h4>
+                    <div class="info-value">1000ms (20%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Max Velocity</h4>
+                    <div class="info-value">3000px/s</div>
+                </div>
+                <div class="info-item">
+                    <h4>Min Rotations</h4>
+                    <div class="info-value">5 full rotations</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Animation Demo</h2>
+            <div class="animation-demo">
+                <div class="center-line"></div>
+                <div class="reel-container">
+                    <div class="tiles-container" id="tilesContainer">
+                        <!-- Tiles will be generated by JavaScript -->
+                    </div>
+                </div>
+                <div class="velocity-indicator" id="velocityIndicator">0 px/s</div>
+                <div class="phase-indicator" id="phaseIndicator">Idle</div>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="startAnimation()">Start Animation</button>
+                <button class="btn secondary" onclick="resetAnimation()">Reset</button>
+                <button class="btn danger" onclick="stopAnimation()">Stop</button>
+                <button class="btn" onclick="testRandomTarget()">Random Target</button>
+                <button class="btn" onclick="testGreenZero()">Test Green 0</button>
+                <button class="btn" onclick="testRedFive()">Test Red 5</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Animation Status</h2>
+            <div class="status">
+                <h4>Real-time Status</h4>
+                <div class="status-content" id="statusContent">
+                    Ready to start physics-based animation...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Roulette wheel configuration
+        const WHEEL_SLOTS = [
+            { slot: 0, color: 'green' },
+            { slot: 11, color: 'black' },
+            { slot: 5, color: 'red' },
+            { slot: 10, color: 'black' },
+            { slot: 6, color: 'red' },
+            { slot: 9, color: 'black' },
+            { slot: 7, color: 'red' },
+            { slot: 8, color: 'black' },
+            { slot: 1, color: 'red' },
+            { slot: 14, color: 'black' },
+            { slot: 2, color: 'red' },
+            { slot: 13, color: 'black' },
+            { slot: 3, color: 'red' },
+            { slot: 12, color: 'black' },
+            { slot: 4, color: 'red' }
+        ];
+
+        const TILE_WIDTH = 120;
+        const CONTAINER_WIDTH = 1200;
+        const CENTER_OFFSET = CONTAINER_WIDTH / 2;
+
+        // Animation configuration
+        const ANIMATION_CONFIG = {
+            TOTAL_DURATION: 5000, // 5 seconds total
+            ACCELERATION_PHASE: 0.2, // 20% of time accelerating
+            FAST_PHASE: 0.6, // 60% of time at max speed
+            DECELERATION_PHASE: 0.2, // 20% of time decelerating
+            MAX_VELOCITY: 3000, // Maximum velocity in pixels per second
+            MIN_ROTATIONS: 5, // Minimum number of full rotations
+            BOUNCE_STRENGTH: 0.1, // Bounce effect strength
+            MOTION_BLUR_THRESHOLD: 1000 // Velocity threshold for motion blur
+        };
+
+        // Animation state
+        let isAnimating = false;
+        let animationId = null;
+        let currentPosition = 0;
+        let targetSlot = 0;
+        let startTime = 0;
+        let startPosition = 0;
+        let targetPosition = 0;
+        let currentVelocity = 0;
+        let animationPhase = 'idle';
+
+        // DOM elements
+        const tilesContainer = document.getElementById('tilesContainer');
+        const statusContent = document.getElementById('statusContent');
+        const velocityIndicator = document.getElementById('velocityIndicator');
+        const phaseIndicator = document.getElementById('phaseIndicator');
+        const progressFill = document.getElementById('progressFill');
+
+        // Initialize tiles
+        function initializeTiles() {
+            tilesContainer.innerHTML = '';
+            
+            // Create 30 repetitions for smooth infinite scroll
+            for (let repeat = 0; repeat < 30; repeat++) {
+                for (let i = 0; i < WHEEL_SLOTS.length; i++) {
+                    const tile = document.createElement('div');
+                    tile.className = `tile ${WHEEL_SLOTS[i].color}`;
+                    tile.textContent = WHEEL_SLOTS[i].slot;
+                    tile.dataset.slot = WHEEL_SLOTS[i].slot;
+                    tile.dataset.index = repeat * WHEEL_SLOTS.length + i;
+                    tilesContainer.appendChild(tile);
+                }
+            }
+        }
+
+        // Physics-based easing functions
+        const easeInOutCubic = (t) => {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        };
+
+        const easeOutBounce = (t) => {
+            const n1 = 7.5625;
+            const d1 = 2.75;
+            
+            if (t < 1 / d1) {
+                return n1 * t * t;
+            } else if (t < 2 / d1) {
+                return n1 * (t -= 1.5 / d1) * t + 0.75;
+            } else if (t < 2.5 / d1) {
+                return n1 * (t -= 2.25 / d1) * t + 0.9375;
+            } else {
+                return n1 * (t -= 2.625 / d1) * t + 0.984375;
+            }
+        };
+
+        // Calculate target position for winning slot
+        function calculateTargetPosition(winningSlot) {
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
+            if (slotIndex === -1) return 0;
+            
+            // Calculate position to center the winning slot under the indicator
+            const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
+            const baseTargetPosition = CENTER_OFFSET - winningSlotCenter;
+            
+            // Add minimum rotations for dramatic effect
+            const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
+            const rotations = ANIMATION_CONFIG.MIN_ROTATIONS;
+            const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
+            
+            return finalTargetPosition;
+        }
+
+        // Main animation function with physics
+        function animateWithPhysics() {
+            if (!isAnimating) return;
+
+            const currentTime = Date.now();
+            const elapsed = currentTime - startTime;
+            const totalDuration = ANIMATION_CONFIG.TOTAL_DURATION;
+            const progress = Math.min(elapsed / totalDuration, 1);
+
+            // Calculate current phase
+            let currentPhase = 'idle';
+            let phaseProgress = 0;
+            let velocity = 0;
+
+            if (progress < ANIMATION_CONFIG.ACCELERATION_PHASE) {
+                // Acceleration phase
+                currentPhase = 'accelerating';
+                phaseProgress = progress / ANIMATION_CONFIG.ACCELERATION_PHASE;
+                velocity = ANIMATION_CONFIG.MAX_VELOCITY * easeInOutCubic(phaseProgress);
+            } else if (progress < ANIMATION_CONFIG.ACCELERATION_PHASE + ANIMATION_CONFIG.FAST_PHASE) {
+                // Fast phase
+                currentPhase = 'fast';
+                phaseProgress = (progress - ANIMATION_CONFIG.ACCELERATION_PHASE) / ANIMATION_CONFIG.FAST_PHASE;
+                velocity = ANIMATION_CONFIG.MAX_VELOCITY;
+            } else {
+                // Deceleration phase
+                currentPhase = 'decelerating';
+                phaseProgress = (progress - ANIMATION_CONFIG.ACCELERATION_PHASE - ANIMATION_CONFIG.FAST_PHASE) / ANIMATION_CONFIG.DECELERATION_PHASE;
+                
+                // Use bounce easing for deceleration
+                const easedProgress = easeOutBounce(phaseProgress);
+                velocity = ANIMATION_CONFIG.MAX_VELOCITY * (1 - easedProgress);
+            }
+
+            // Calculate position based on velocity
+            const distance = startPosition - targetPosition;
+            const currentPosition = startPosition - (distance * progress);
+            
+            // Add bounce effect at the end
+            if (currentPhase === 'decelerating' && phaseProgress > 0.8) {
+                const bounceProgress = (phaseProgress - 0.8) / 0.2;
+                const bounceOffset = Math.sin(bounceProgress * Math.PI * 4) * ANIMATION_CONFIG.BOUNCE_STRENGTH * distance;
+                updateTilesPosition(currentPosition + bounceOffset);
+            } else {
+                updateTilesPosition(currentPosition);
+            }
+
+            // Update visual effects
+            updateVisualEffects(velocity, currentPhase);
+            updateProgressBar(progress);
+            updateIndicators(velocity, currentPhase);
+
+            if (progress < 1) {
+                animationId = requestAnimationFrame(animateWithPhysics);
+            } else {
+                // Animation complete
+                updateTilesPosition(targetPosition);
+                updateVisualEffects(0, 'stopped');
+                updateIndicators(0, 'stopped');
+                isAnimating = false;
+                highlightWinningTile(targetSlot);
+                updateStatus(`✅ Animation complete! Slot ${targetSlot} landed under center line`);
+            }
+        }
+
+        // Update visual effects based on velocity and phase
+        function updateVisualEffects(velocity, phase) {
+            const tiles = document.querySelectorAll('.tile');
+            const motionBlur = velocity > ANIMATION_CONFIG.MOTION_BLUR_THRESHOLD && phase === 'fast';
+            
+            tiles.forEach(tile => {
+                const velocityScale = Math.min(velocity / ANIMATION_CONFIG.MAX_VELOCITY, 1);
+                const scale = motionBlur ? 1 + velocityScale * 0.05 : 1;
+                
+                tile.style.transform = `scale(${scale})`;
+                
+                if (motionBlur) {
+                    tile.classList.add('motion-blur');
+                } else {
+                    tile.classList.remove('motion-blur');
+                }
+            });
+        }
+
+        // Update progress bar
+        function updateProgressBar(progress) {
+            progressFill.style.width = `${progress * 100}%`;
+        }
+
+        // Update indicators
+        function updateIndicators(velocity, phase) {
+            velocityIndicator.textContent = `${Math.round(velocity)} px/s`;
+            
+            const phaseText = {
+                'accelerating': '🚀 Accelerating',
+                'fast': '⚡ High Speed',
+                'decelerating': '🛑 Decelerating',
+                'stopped': '✅ Stopped',
+                'idle': '⏸️ Idle'
+            };
+            
+            phaseIndicator.textContent = phaseText[phase] || 'Unknown';
+        }
+
+        // Animation functions
+        function startAnimation() {
+            if (isAnimating) return;
+            
+            // Generate random target slot
+            targetSlot = Math.floor(Math.random() * 15);
+            
+            const calculatedTargetPosition = calculateTargetPosition(targetSlot);
+            startPosition = currentPosition;
+            targetPosition = calculatedTargetPosition;
+            startTime = Date.now();
+            
+            updateStatus(`🚀 Starting physics-based animation to slot ${targetSlot} (${WHEEL_SLOTS.find(s => s.slot === targetSlot).color})`);
+            
+            isAnimating = true;
+            
+            // Cancel any existing animation
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            animationId = requestAnimationFrame(animateWithPhysics);
+        }
+
+        function resetAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            isAnimating = false;
+            currentPosition = 0;
+            updateTilesPosition(0);
+            updateVisualEffects(0, 'idle');
+            updateIndicators(0, 'idle');
+            updateProgressBar(0);
+            updateStatus('Animation reset to initial position');
+        }
+
+        function stopAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            isAnimating = false;
+            updateVisualEffects(0, 'stopped');
+            updateIndicators(0, 'stopped');
+            updateStatus('Animation stopped');
+        }
+
+        function testRandomTarget() {
+            if (isAnimating) return;
+            
+            const randomSlot = Math.floor(Math.random() * 15);
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === randomSlot);
+            
+            updateStatus(`Testing random target: slot ${randomSlot} (${WHEEL_SLOTS[slotIndex].color})`);
+            highlightWinningTile(randomSlot);
+        }
+
+        function testGreenZero() {
+            if (isAnimating) return;
+            
+            updateStatus('Testing specific target: slot 0 (green)');
+            highlightWinningTile(0);
+        }
+
+        function testRedFive() {
+            if (isAnimating) return;
+            
+            updateStatus('Testing specific target: slot 5 (red)');
+            highlightWinningTile(5);
+        }
+
+        // Update functions
+        function updateTilesPosition(position) {
+            tilesContainer.style.transform = `translateX(${position}px)`;
+            currentPosition = position;
+        }
+
+        function updateStatus(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            statusContent.innerHTML = `[${timestamp}] ${message}<br>` + statusContent.innerHTML;
+            
+            // Keep only last 10 messages
+            const lines = statusContent.innerHTML.split('<br>');
+            if (lines.length > 10) {
+                statusContent.innerHTML = lines.slice(0, 10).join('<br>');
+            }
+        }
+
+        function highlightWinningTile(slot) {
+            // Remove previous highlights
+            document.querySelectorAll('.tile.winning').forEach(tile => {
+                tile.classList.remove('winning');
+            });
+            
+            // Add highlight to winning tile
+            document.querySelectorAll(`.tile[data-slot="${slot}"]`).forEach(tile => {
+                tile.classList.add('winning');
+            });
+        }
+
+        // Initialize the demo
+        initializeTiles();
+        updateStatus('Physics-based Roulette Animation ready for testing');
+    </script>
+</body>
+</html>
