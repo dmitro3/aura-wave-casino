@@ -1024,35 +1024,35 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
               {user && profile ? (
                 <div className="w-full">
                   <div className="relative glass rounded-lg px-4 py-3 border border-primary/20 shadow-lg backdrop-blur-lg">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 rounded-lg"></div>
-                    
                     <div className="relative flex items-center justify-between gap-4">
-                      {/* Left Side - Bet Amount Label and Input */}
-                      <div className="flex items-center gap-3 flex-1">
-                        <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                          Bet Amount:
+                      {/* Left Side - Bet Amount Input with Label on Top */}
+                      <div className="flex flex-col gap-2 flex-1">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider self-start">
+                          Bet Amount
                         </label>
-                        <div className="flex items-center gap-2 bg-black/50 border border-primary/40 rounded-lg px-3 py-2 flex-1 max-w-xs">
-                          <span className="text-lg font-bold text-primary">$</span>
-                          <Input
-                            type="number"
-                            value={betAmount}
-                            onChange={(e) => {
-                              const newAmount = Number(e.target.value);
-                              const maxBalance = profile?.balance || 0;
-                              setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
-                            }}
-                            min="0.01"
-                            max={profile?.balance || 0}
-                            step="0.01"
-                            className="flex-1 text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-white"
-                            disabled={currentRound.status !== 'betting'}
-                            placeholder="0.00"
-                          />
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 bg-black/50 border border-primary/40 rounded-lg px-3 py-2 flex-1 max-w-xs">
+                            <span className="text-lg font-bold text-primary">$</span>
+                            <Input
+                              type="number"
+                              value={betAmount}
+                              onChange={(e) => {
+                                const newAmount = Number(e.target.value);
+                                const maxBalance = profile?.balance || 0;
+                                setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                              }}
+                              min="0.01"
+                              max={profile?.balance || 0}
+                              step="0.01"
+                              className="flex-1 text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-white"
+                              disabled={currentRound.status !== 'betting'}
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            Max: ${profile?.balance?.toFixed(2) || '0.00'}
+                          </span>
                         </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          Max: ${profile?.balance?.toFixed(2) || '0.00'}
-                        </span>
                       </div>
                       
                       {/* Right Side - Multiplier Controls */}
