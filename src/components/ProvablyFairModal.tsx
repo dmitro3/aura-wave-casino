@@ -66,6 +66,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
   useEffect(() => {
     if (isOpen && roundData) {
+      console.log('🔍 Modal opened with round data:', roundData);
       fetchRoundDetails();
     }
   }, [isOpen, roundData]);
@@ -128,7 +129,9 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
     setIsVerifying(true);
     try {
-      const { data } = await supabase.functions.invoke('roulette-engine', {
+      console.log('🔍 Verifying fairness with client seed:', clientSeed);
+      
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: {
           action: 'verify_round',
           roundId: roundData?.id,
@@ -136,11 +139,18 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
         }
       });
 
+      if (error) {
+        console.error('❌ Verification API error:', error);
+        throw error;
+      }
+
+      console.log('✅ Verification result:', data);
+
       if (data) {
         setVerificationData(data);
       }
     } catch (error) {
-      console.error('Error verifying fairness:', error);
+      console.error('❌ Error verifying fairness:', error);
     }
     setIsVerifying(false);
   };

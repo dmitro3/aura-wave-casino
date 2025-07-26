@@ -591,8 +591,9 @@ async function generateProvablyFairResult(supabase: any, round: any) {
   console.log('🎲 Generating provably fair result');
   
   // Create hash input: server_seed + client_seed + nonce
-  // For simplicity, we'll use a default client seed if none provided
-  const hashInput = `${round.server_seed}:default_client:${round.nonce}`;
+  // Use consistent default client seed
+  const defaultClientSeed = 'default_client_seed';
+  const hashInput = `${round.server_seed}:${defaultClientSeed}:${round.nonce}`;
   const hash = await sha256Hash(hashInput);
   
   // Convert first 8 characters of hash to number and mod by 15
@@ -600,7 +601,8 @@ async function generateProvablyFairResult(supabase: any, round: any) {
   const resultSlot = hashNumber % 15;
   const result = WHEEL_SLOTS[resultSlot];
   
-  console.log(`🎯 Generated result: slot ${resultSlot}, color ${result.color}, hash: ${hash.substring(0, 16)}...`);
+  console.log(`🎯 Generated result: slot ${resultSlot}, color ${result.color}`);
+  console.log(`📊 Hash calculation: "${hashInput}" -> ${hash.substring(0, 16)}... -> ${hashNumber} % 15 = ${resultSlot}`);
   
   return result;
 }

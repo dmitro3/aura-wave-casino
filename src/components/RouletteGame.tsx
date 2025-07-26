@@ -234,6 +234,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
   // Open provably fair modal for current round
   const openProvablyFairModal = () => {
+    if (!currentRound) {
+      console.error('❌ No current round available');
+      toast({
+        title: "No Active Round",
+        description: "There's no active round to show details for.",
+        variant: "destructive",
+      });
+      return;
+    }
+    console.log('🛡️ Opening provably fair modal for current round:', currentRound);
     setSelectedRoundData(currentRound);
     setProvablyFairModalOpen(true);
   };
