@@ -30,7 +30,7 @@ ADD COLUMN IF NOT EXISTS ip_address INET,
 ADD COLUMN IF NOT EXISTS user_agent TEXT,
 ADD COLUMN IF NOT EXISTS security_hash TEXT;
 
--- 4. Atomic Balance Check Function
+-- 4. Simplified Atomic Balance Check Function (avoiding timestamp issues)
 CREATE OR REPLACE FUNCTION atomic_bet_balance_check(
     p_user_id UUID,
     p_bet_amount NUMERIC,
@@ -39,8 +39,6 @@ CREATE OR REPLACE FUNCTION atomic_bet_balance_check(
 DECLARE
     current_balance NUMERIC;
     round_status TEXT;
-    round_betting_end TIMESTAMPTZ;
-    current_time TIMESTAMPTZ := NOW();
 BEGIN
     -- Lock the user row to prevent concurrent access
     SELECT balance INTO current_balance
@@ -63,8 +61,8 @@ BEGIN
         );
     END IF;
     
-    -- Verify round is still in betting phase
-    SELECT status, betting_end_time::TIMESTAMPTZ INTO round_status, round_betting_end
+    -- Simple round status check (time validation done in edge function)
+    SELECT status INTO round_status
     FROM roulette_rounds
     WHERE id = p_round_id;
     
@@ -79,13 +77,6 @@ BEGIN
         RETURN jsonb_build_object(
             'success', false,
             'error_message', 'Betting is closed for this round'
-        );
-    END IF;
-    
-    IF current_time >= round_betting_end THEN
-        RETURN jsonb_build_object(
-            'success', false,
-            'error_message', 'Betting time has expired'
         );
     END IF;
     
