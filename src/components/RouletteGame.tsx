@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { RouletteReel } from './RouletteReel';
+import { ProvablyFairModal } from './ProvablyFairModal';
 
 interface RouletteRound {
   id: string;
@@ -78,6 +79,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [roundBets, setRoundBets] = useState<RouletteBet[]>([]);
   const [recentResults, setRecentResults] = useState<RouletteResult[]>([]);
   const [userBets, setUserBets] = useState<Record<string, number>>({});
+  const [provablyFairModalOpen, setProvablyFairModalOpen] = useState(false);
+  const [selectedRoundData, setSelectedRoundData] = useState<RouletteRound | null>(null);
   const [betTotals, setBetTotals] = useState<BetTotals>({
     green: { total: 0, count: 0, users: [] },
     red: { total: 0, count: 0, users: [] },
@@ -228,6 +231,34 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   };
 
 
+
+  // Open provably fair modal for current round
+  const openProvablyFairModal = () => {
+    setSelectedRoundData(currentRound);
+    setProvablyFairModalOpen(true);
+  };
+
+  // Open round details modal
+  const openRoundDetails = (result: RouletteResult) => {
+    // Convert RouletteResult to RouletteRound format for the modal
+    const roundData: RouletteRound = {
+      id: result.round_id,
+      round_number: result.round_number,
+      status: 'completed',
+      result_slot: result.result_slot,
+      result_color: result.result_color,
+      result_multiplier: 0, // Not needed for display
+      reel_position: 0, // Not needed for display
+      betting_start_time: '',
+      betting_end_time: '',
+      spinning_end_time: '',
+      server_seed_hash: '',
+      nonce: 0,
+      created_at: result.created_at
+    };
+    setSelectedRoundData(roundData);
+    setProvablyFairModalOpen(true);
+  };
 
   // Verify round fairness
   const verifyRoundFairness = async (roundId: string) => {
@@ -635,17 +666,15 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
               <Badge variant="outline">Round #{currentRound.round_number}</Badge>
             </span>
             <div className="flex items-center gap-4">
-
-              {lastCompletedRound && (
-                <Button 
-                  onClick={() => verifyRoundFairness(lastCompletedRound.id)} 
-                  variant="outline" 
-                  size="sm"
-                  className="bg-blue-50 hover:bg-blue-100"
-                >
-                  🔍 Verify Fairness
-                </Button>
-              )}
+              <Button 
+                onClick={openProvablyFairModal}
+                variant="outline" 
+                size="sm"
+                className="bg-blue-50 hover:bg-blue-100"
+                title="Provably Fair Verification"
+              >
+                <Shield className="w-4 h-4" />
+              </Button>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 <span className="text-lg font-mono">
@@ -857,18 +886,23 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             <CardContent>
               <ScrollArea className="h-48">
                 <div className="space-y-2">
-                  {recentResults.map((result) => (
-                    <div key={result.id} className="flex items-center justify-between p-2 rounded border">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${getResultColorClass(result.result_color)}`}></div>
-                        <span className="text-sm font-medium">{result.result_slot}</span>
-                        <span className="text-xs text-muted-foreground">#{result.round_number}</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {result.total_bets_count} bets
-                      </div>
+                                  {recentResults.map((result) => (
+                  <div 
+                    key={result.id} 
+                    className="flex items-center justify-between p-2 rounded border cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => openRoundDetails(result)}
+                    title="Click to view round details"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${getResultColorClass(result.result_color)}`}></div>
+                      <span className="text-sm font-medium">{result.result_slot}</span>
+                      <span className="text-xs text-muted-foreground">#{result.round_number}</span>
                     </div>
-                  ))}
+                    <div className="text-xs text-muted-foreground">
+                      {result.total_bets_count} bets
+                    </div>
+                  </div>
+                ))}
                   {recentResults.length === 0 && (
                     <p className="text-muted-foreground text-center py-4">No results yet</p>
                   )}
@@ -911,6 +945,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           </Card>
         </div>
       </div>
+
+      {/* Provably Fair Modal */}
+      <ProvablyFairModal
+        isOpen={provablyFairModalOpen}
+        onClose={() => setProvablyFairModalOpen(false)}
+        roundData={selectedRoundData}
+        showCurrentRound={selectedRoundData?.id === currentRound?.id}
+      />
     </div>
   );
 }
