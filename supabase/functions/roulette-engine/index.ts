@@ -344,57 +344,96 @@ async function getCurrentRound(supabase: any) {
 }
 
 async function createNewRound(supabase: any) {
-  console.log('🆕 Creating new advanced provably fair round...');
+  console.log('🆕 Creating new round...');
   
-  // Get or create today's daily seed
-  const dailySeed = await getOrCreateDailySeed(supabase);
-  console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
-  
-  // Get next nonce ID for today
-  const { data: lastRound, error: lastRoundError } = await supabase
-    .from('roulette_rounds')
-    .select('nonce_id')
-    .eq('daily_seed_id', dailySeed.id)
-    .order('nonce_id', { ascending: false })
-    .limit(1)
-    .single();
+  try {
+    // Try advanced system first
+    console.log('🔬 Attempting advanced provably fair round...');
+    
+    // Get or create today's daily seed
+    const dailySeed = await getOrCreateDailySeed(supabase);
+    console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
+    
+    // Get next nonce ID for today
+    const { data: lastRound, error: lastRoundError } = await supabase
+      .from('roulette_rounds')
+      .select('nonce_id')
+      .eq('daily_seed_id', dailySeed.id)
+      .order('nonce_id', { ascending: false })
+      .limit(1)
+      .single();
 
-  if (lastRoundError && lastRoundError.code !== 'PGRST116') {
-    console.error('❌ Error fetching last round:', lastRoundError);
+    if (lastRoundError && lastRoundError.code !== 'PGRST116') {
+      console.error('❌ Error fetching last round:', lastRoundError);
+    }
+
+    const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
+    console.log('✅ Next nonce ID:', nextNonceId);
+
+    const now = new Date();
+    const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
+    const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
+
+    const roundData = {
+      status: 'betting',
+      betting_end_time: bettingEnd.toISOString(),
+      spinning_end_time: spinningEnd.toISOString(),
+      daily_seed_id: dailySeed.id,
+      nonce_id: nextNonceId,
+      server_seed_hash: dailySeed.server_seed_hash,
+      nonce: nextNonceId // Keep for compatibility
+    };
+
+    console.log('📝 Inserting advanced round data:', roundData);
+    const { data: newRound, error: insertError } = await supabase
+      .from('roulette_rounds')
+      .insert(roundData)
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('❌ Advanced round creation failed:', insertError);
+      console.error('❌ Failed round data:', roundData);
+      throw insertError; // This will trigger the catch block
+    }
+
+    console.log('✅ Created advanced round:', newRound.id, 'with daily_seed_id:', newRound.daily_seed_id);
+    return newRound;
+
+  } catch (error) {
+    console.error('❌ Advanced round creation failed, falling back to legacy:', error);
+    
+    // Fallback to legacy system to keep the game running
+    console.log('🔄 Creating legacy round as fallback...');
+    
+    const serverSeed = await generateServerSeed();
+    const serverSeedHash = await sha256Hash(serverSeed);
+    
+    const now = new Date();
+    const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
+    const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
+
+    const { data: legacyRound, error: legacyError } = await supabase
+      .from('roulette_rounds')
+      .insert({
+        status: 'betting',
+        betting_end_time: bettingEnd.toISOString(),
+        spinning_end_time: spinningEnd.toISOString(),
+        server_seed: serverSeed,
+        server_seed_hash: serverSeedHash,
+        nonce: 1
+      })
+      .select()
+      .single();
+
+    if (legacyError) {
+      console.error('❌ Legacy round creation also failed:', legacyError);
+      throw legacyError;
+    }
+
+    console.log('✅ Created legacy round as fallback:', legacyRound.id);
+    return legacyRound;
   }
-
-  const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
-  console.log('✅ Next nonce ID:', nextNonceId);
-
-  const now = new Date();
-  const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
-  const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
-
-  const roundData = {
-    status: 'betting',
-    betting_end_time: bettingEnd.toISOString(),
-    spinning_end_time: spinningEnd.toISOString(),
-    daily_seed_id: dailySeed.id,
-    nonce_id: nextNonceId,
-    server_seed_hash: dailySeed.server_seed_hash,
-    nonce: nextNonceId // Keep for compatibility
-  };
-
-  console.log('📝 Inserting advanced round data:', roundData);
-  const { data: newRound, error: insertError } = await supabase
-    .from('roulette_rounds')
-    .insert(roundData)
-    .select()
-    .single();
-
-  if (insertError) {
-    console.error('❌ Advanced round creation failed:', insertError);
-    console.error('❌ Failed round data:', roundData);
-    throw new Error(`Failed to create advanced round: ${insertError.message}`);
-  }
-
-  console.log('✅ Created advanced round:', newRound.id, 'with daily_seed_id:', newRound.daily_seed_id);
-  return newRound;
 }
 
 async function placeBet(supabase: any, userId: string, roundId: string, betColor: string, betAmount: number, clientSeed?: string) {
