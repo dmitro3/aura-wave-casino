@@ -334,11 +334,12 @@ async function getCurrentRound(supabase: any) {
       const totalRotationDistance = fullRotations * fullRotationDistance;
       
       // Calculate final position: always move left from previous position with rotations
-      // Ensure we always move left by adding extra rotations if needed
-      let finalReelPosition = previousReelPosition - totalRotationDistance + winningSlotTargetPosition;
+      // Start with the exact position needed for the winning slot
+      let finalReelPosition = winningSlotTargetPosition;
       
-      // If the final position would be to the right of start, add another full rotation left
-      while (finalReelPosition > previousReelPosition) {
+      // Add full rotations to move left from previous position and create dramatic effect
+      // Keep adding rotations until we're sufficiently left of the previous position
+      while (finalReelPosition > previousReelPosition - totalRotationDistance) {
         finalReelPosition -= fullRotationDistance;
       }
       
@@ -358,7 +359,7 @@ async function getCurrentRound(supabase: any) {
         });
       }
       
-              console.log('🎯 Calculated synchronized reel position:', {
+                      console.log('🎯 Calculated synchronized reel position:', {
           resultSlot: result.slot,
           winningSlotIndex,
           centerOffset: CENTER_OFFSET,
@@ -366,6 +367,7 @@ async function getCurrentRound(supabase: any) {
           previousReelPosition,
           finalReelPosition,
           totalRotationDistance,
+          rotationsAdded: Math.abs(finalReelPosition - winningSlotTargetPosition) / fullRotationDistance,
           calculation: `slot ${result.slot} at index ${winningSlotIndex}: target=${winningSlotTargetPosition}, final=${finalReelPosition}`
         });
 
