@@ -157,66 +157,110 @@ serve(async (req) => {
       }
 
       case 'setup_daily_seeds': {
-        console.log('🔧 Setting up daily seeds system...')
+        console.log('🔧 Diagnosing daily seeds system...')
         
         try {
-          // Check if daily_seeds table exists
-          const { data: tableCheck, error: tableCheckError } = await supabase
+          // Check if daily_seeds table exists and get data
+          const { data: dailySeedsData, error: dailySeedsError } = await supabase
             .from('daily_seeds')
-            .select('id')
-            .limit(1);
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(5);
 
-          if (tableCheckError) {
-            console.log('❌ daily_seeds table does not exist:', tableCheckError.message)
+          console.log('📊 Daily seeds query result:', { dailySeedsData, dailySeedsError });
+
+          if (dailySeedsError) {
             return new Response(JSON.stringify({
-              error: 'daily_seeds table does not exist',
-              details: tableCheckError.message,
-              instructions: 'Please run the database migration manually'
+              error: 'Failed to query daily_seeds table',
+              details: dailySeedsError.message
             }), {
               status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
 
-          console.log('✅ daily_seeds table exists')
-
-          // Check if roulette_rounds has daily_seed_id column
-          const { data: roundsCheck, error: roundsCheckError } = await supabase
+          // Check if roulette_rounds has daily_seed_id column and get recent rounds
+          const { data: recentRounds, error: roundsError } = await supabase
             .from('roulette_rounds')
-            .select('daily_seed_id')
-            .limit(1);
+            .select('id, status, daily_seed_id, nonce_id, created_at')
+            .order('created_at', { ascending: false })
+            .limit(5);
 
-          if (roundsCheckError) {
-            console.log('❌ daily_seed_id column does not exist:', roundsCheckError.message)
+          console.log('📊 Recent rounds query result:', { recentRounds, roundsError });
+
+          if (roundsError) {
             return new Response(JSON.stringify({
-              error: 'daily_seed_id column does not exist in roulette_rounds',
-              details: roundsCheckError.message,
-              instructions: 'Please run the database migration manually'
+              error: 'Failed to query roulette_rounds table',
+              details: roundsError.message
             }), {
-              status: 400,
+            status: 400,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
 
-          console.log('✅ daily_seed_id column exists')
+          // Test the advanced verification query
+          const { data: verificationTestData, error: verificationTestError } = await supabase
+            .from('roulette_rounds')
+            .select(`
+              *,
+              daily_seeds (
+                date,
+                server_seed,
+                server_seed_hash,
+                lotto,
+                lotto_hash,
+                is_revealed
+              )
+            `)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
-          // Create today's seed
-          const dailySeed = await getOrCreateDailySeed(supabase);
+          console.log('📊 Verification query test:', { verificationTestData, verificationTestError });
+
+          // Try to create today's seed
+          let dailySeedResult = null;
+          try {
+            dailySeedResult = await getOrCreateDailySeed(supabase);
+            console.log('📊 Daily seed creation result:', dailySeedResult);
+          } catch (seedError) {
+            console.error('❌ Daily seed creation error:', seedError);
+          }
           
           return new Response(JSON.stringify({
             success: true,
-            message: 'Daily seeds system is properly set up',
-            daily_seed: {
-              date: dailySeed.date,
-              server_seed_hash: dailySeed.server_seed_hash,
-              lotto_hash: dailySeed.lotto_hash
+            message: 'Daily seeds diagnostic completed',
+            diagnostic: {
+              daily_seeds_table: {
+                exists: !dailySeedsError,
+                count: dailySeedsData?.length || 0,
+                recent_seeds: dailySeedsData || [],
+                error: dailySeedsError?.message
+              },
+              roulette_rounds_table: {
+                exists: !roundsError,
+                count: recentRounds?.length || 0,
+                recent_rounds: recentRounds || [],
+                rounds_with_daily_seed_id: recentRounds?.filter(r => r.daily_seed_id).length || 0,
+                error: roundsError?.message
+              },
+              verification_query: {
+                works: !verificationTestError,
+                sample_data: verificationTestData,
+                error: verificationTestError?.message
+              },
+              daily_seed_creation: {
+                works: !!dailySeedResult,
+                result: dailySeedResult,
+                error: dailySeedResult ? null : 'Failed to create/fetch daily seed'
+              }
             }
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
 
         } catch (error) {
-          console.error('❌ Setup error:', error)
+          console.error('❌ Diagnostic error:', error)
           return new Response(JSON.stringify({
             error: error.message,
             success: false
