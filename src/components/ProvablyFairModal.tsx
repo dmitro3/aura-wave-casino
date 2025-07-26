@@ -370,6 +370,9 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                       <p className="text-sm">
                         Result Calculation: {verificationData.hash_number} % 15 = {verificationData.calculated_slot}
                       </p>
+                      <p className="text-sm">
+                        Wheel Position {verificationData.calculated_slot} → Slot {verificationData.actual_calculated_slot || verificationData.calculated_slot}
+                      </p>
                       <p className={`text-sm font-semibold ${verificationData.verification_result === 'VALID' ? 'text-emerald-400' : 'text-red-400'}`}>
                         {verificationData.verification_result === 'VALID' ? '✅' : '❌'} Result: Slot {verificationData.result_slot} ({verificationData.result_color}) - {verificationData.verification_result}
                       </p>

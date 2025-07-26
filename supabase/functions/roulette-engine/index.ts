@@ -914,6 +914,9 @@ async function verifyAdvancedRound(round: any, dailySeed: any) {
     console.error('Error calculating advanced verification:', error);
   }
 
+  // Get the actual slot number from the WHEEL_SLOTS array
+  const actualCalculatedSlot = WHEEL_SLOTS[calculatedSlot]?.slot || calculatedSlot;
+
   return {
     round_id: round.id,
     round_number: round.round_number,
@@ -932,7 +935,8 @@ async function verifyAdvancedRound(round: any, dailySeed: any) {
     hash_result: hashResult,
     hash_number: hashNumber,
     calculated_slot: calculatedSlot,
-    verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID',
+    actual_calculated_slot: actualCalculatedSlot,
+    verification_result: actualCalculatedSlot === round.result_slot ? 'VALID' : 'INVALID',
     provably_fair_formula: `hash("sha256", "${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}")`
   };
 }
@@ -970,6 +974,9 @@ async function verifyLegacyRound(round: any, clientSeed?: string) {
     console.error('Error calculating legacy verification:', error);
   }
 
+  // Get the actual slot number from the WHEEL_SLOTS array
+  const actualCalculatedSlot = WHEEL_SLOTS[calculatedSlot]?.slot || calculatedSlot;
+
   return {
     round_id: round.id,
     round_number: round.round_number,
@@ -986,7 +993,8 @@ async function verifyLegacyRound(round: any, clientSeed?: string) {
     hash_result: hashResult,
     hash_number: hashNumber,
     calculated_slot: calculatedSlot,
-    verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID'
+    actual_calculated_slot: actualCalculatedSlot,
+    verification_result: actualCalculatedSlot === round.result_slot ? 'VALID' : 'INVALID'
   };
 }
 
