@@ -80,7 +80,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [roundBets, setRoundBets] = useState<RouletteBet[]>([]);
   const [recentResults, setRecentResults] = useState<RouletteResult[]>([]);
   const [userBets, setUserBets] = useState<Record<string, number>>({});
-  const [userBetsDisplay, setUserBetsDisplay] = useState<Record<string, number>>({}); // Stable visual state
   const [provablyFairModalOpen, setProvablyFairModalOpen] = useState(false);
   const [provablyFairHistoryOpen, setProvablyFairHistoryOpen] = useState(false);
   const [selectedRoundData, setSelectedRoundData] = useState<RouletteRound | null>(null);
@@ -153,8 +152,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     if (currentRound?.id && currentRoundRef.current && currentRound.id !== currentRoundRef.current) {
       console.log('🔄 Round changed, clearing user bets');
       setUserBets({});
-      setUserBetsDisplay({}); // Clear visual state for new round
-      clearBetDisplay(); // Clear visual ref for new round
+      clearStableBetDisplay(); // Clear stable display for new round
       userBetsRef.current = {};
       currentRoundRef.current = currentRound.id;
     }
@@ -176,8 +174,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       if (isNewRound) {
         console.log('🆕 New round detected, clearing user bets');
         setUserBets({});
-        setUserBetsDisplay({}); // Clear visual state for new round
-        clearBetDisplay(); // Clear visual ref immediately
+        clearStableBetDisplay(); // Clear stable display for new round
         userBetsRef.current = {};
         currentRoundRef.current = data?.id || null;
         setBetTotals({
@@ -236,8 +233,19 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         if (hasChanges || Object.keys(currentBets).length === 0) {
           console.log('🔄 Updating user bets (changes detected):', dbUserBets);
           setUserBets(dbUserBets);
-          setUserBetsDisplay(dbUserBets); // Update stable visual state
           userBetsRef.current = dbUserBets;
+          
+          // Sync stable display with database data (only if we don't have higher local values)
+          setStableBetDisplay(prev => {
+            const synced = { ...prev };
+            Object.keys(dbUserBets).forEach(color => {
+              // Only update if database has a higher value than our display
+              if (dbUserBets[color] > (synced[color] || 0)) {
+                synced[color] = dbUserBets[color];
+              }
+            });
+            return synced;
+          });
         } else {
           console.log('✅ User bets unchanged, keeping current state');
         }
@@ -407,8 +415,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           if (isNewRound) {
             console.log('🆕 New round detected, clearing user bets and fetching fresh data');
             setUserBets({});
-            setUserBetsDisplay({}); // Clear visual state for new round
-            clearBetDisplay(); // Clear visual ref immediately
+            clearStableBetDisplay(); // Clear stable display for new round
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
@@ -725,15 +732,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         return newBets;
       });
       
-      // Update stable display state immediately (prevents flickering)
-      setUserBetsDisplay(prev => ({
-        ...prev,
-        [color]: (prev[color] || 0) + Number(betAmount)
-      }));
+      // Update stable display immediately (simple approach)
+      updateStableBetDisplay(color, Number(betAmount));
       
-      // Update display ref immediately for instant visual feedback
-      updateBetDisplay(color, Number(betAmount));
-
       // Update bet limits tracking
       setUserBetLimits(prev => ({
         totalThisRound: prev.totalThisRound + Number(betAmount),
@@ -890,8 +891,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       
       // Clear user bets for new round
       setUserBets({});
-      setUserBetsDisplay({}); // Clear visual state for new round
-      clearBetDisplay(); // Clear visual ref immediately
+      clearStableBetDisplay(); // Clear stable display for new round
       userBetsRef.current = {};
       
       // Update current round reference
@@ -903,41 +903,21 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [currentRound?.id]);
 
-  // Stable reference for bet display to prevent flickering
-  const userBetsDisplayRef = useRef<Record<string, number>>({});
-  const [, setForceUpdate] = useState({});
+  // Simple, stable bet display - completely new approach
+  const [stableBetDisplay, setStableBetDisplay] = useState<Record<string, number>>({});
   
-  // Force re-render function for immediate visual updates
-  const forceRender = () => setForceUpdate({});
-  
-  // Update display ref and force render when needed
-  const updateBetDisplay = (color: string, amount: number) => {
-    userBetsDisplayRef.current = {
-      ...userBetsDisplayRef.current,
-      [color]: (userBetsDisplayRef.current[color] || 0) + amount
-    };
-    forceRender(); // Force immediate visual update
+  // Update stable display only when actually placing a bet
+  const updateStableBetDisplay = (color: string, amount: number) => {
+    setStableBetDisplay(prev => ({
+      ...prev,
+      [color]: (prev[color] || 0) + amount
+    }));
   };
   
-  // Clear display and force render
-  const clearBetDisplay = () => {
-    userBetsDisplayRef.current = {};
-    forceRender(); // Force immediate visual update
+  // Clear stable display for new rounds
+  const clearStableBetDisplay = () => {
+    setStableBetDisplay({});
   };
-  
-  // Update ref whenever display state changes (fallback)
-  useEffect(() => {
-    const hasChanges = Object.keys(userBetsDisplay).some(color => 
-      userBetsDisplay[color] !== (userBetsDisplayRef.current[color] || 0)
-    ) || Object.keys(userBetsDisplayRef.current).some(color =>
-      (userBetsDisplayRef.current[color] || 0) !== (userBetsDisplay[color] || 0)
-    );
-    
-    if (hasChanges) {
-      userBetsDisplayRef.current = { ...userBetsDisplay };
-      forceRender();
-    }
-  }, [userBetsDisplay]);
 
 
   if (loading) {
@@ -1252,9 +1232,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <span className="text-xs">{getMultiplierText(color)}</span>
                         {isPlacingBet && <div className="w-3 h-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>}
                       </div>
-                      {userBetsDisplayRef.current[color] && (
+                      {stableBetDisplay[color] && (
                         <span className="text-xs opacity-90 bg-white/20 px-1 py-0.5 rounded">
-                          Your bet: ${userBetsDisplayRef.current[color].toFixed(2)}
+                          Your bet: ${stableBetDisplay[color].toFixed(2)}
                         </span>
                       )}
                     </Button>
