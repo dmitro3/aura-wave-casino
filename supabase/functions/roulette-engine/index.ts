@@ -268,22 +268,20 @@ async function getCurrentRound(supabase: any) {
           // Fall back to legacy method
           result = await generateLegacyResult(supabase, activeRound);
           // Calculate reel position for legacy result
-          const legacyHash = await sha256Hash(`${activeRound.server_seed}:default_client_seed:${activeRound.nonce || 1}`);
-          const perfectReelPosition = calculatePerfectReelPosition(result.slot, legacyHash);
+          const perfectReelPosition = calculateSimpleReelPosition(result.slot);
         }
       } else {
         console.log('🔄 Using legacy method (no advanced data)');
         // Use legacy method if no advanced data
         result = await generateLegacyResult(supabase, activeRound);
         // Calculate reel position for legacy result
-        const legacyHash = await sha256Hash(`${activeRound.server_seed}:default_client_seed:${activeRound.nonce || 1}`);
-        const perfectReelPosition = calculatePerfectReelPosition(result.slot, legacyHash);
+        const perfectReelPosition = calculateSimpleReelPosition(result.slot);
       }
       
-      // Use perfect physics reel position calculation
+      // Use simple reel position calculation
       let finalReelPosition = perfectReelPosition;
       
-      // Add dramatic rotations for visual effect while maintaining perfect landing
+      // Add some rotations for dramatic effect
       const WHEEL_SLOTS_LENGTH = 15;
       const TILE_WIDTH = 120;
       const fullRotationDistance = WHEEL_SLOTS_LENGTH * TILE_WIDTH;
@@ -302,35 +300,21 @@ async function getCurrentRound(supabase: any) {
         previousReelPosition = previousRound.reel_position;
       }
       
-      // Add full rotations for dramatic effect while ensuring perfect landing
-      const fullRotations = 8;
+      // Add rotations for dramatic effect
+      const fullRotations = 5;
       const totalRotationDistance = fullRotations * fullRotationDistance;
       
-      // Add rotations to create dramatic movement from previous position
+      // Add rotations to create movement from previous position
       while (finalReelPosition > previousReelPosition - totalRotationDistance) {
         finalReelPosition -= fullRotationDistance;
       }
       
-      // Normalize position to prevent tiles from disappearing
-      const maxNegativeRotations = -10 * fullRotationDistance;
-      if (finalReelPosition < maxNegativeRotations) {
-        const originalPosition = finalReelPosition;
-        const excessRotations = Math.floor((maxNegativeRotations - finalReelPosition) / fullRotationDistance);
-        finalReelPosition += excessRotations * fullRotationDistance;
-        console.log('🔄 Normalized reel position:', {
-          originalPosition,
-          normalizedPosition: finalReelPosition,
-          excessRotations
-        });
-      }
-      
-      console.log('🎯 Perfect Physics Reel Position:', {
+      console.log('🎯 Simple Reel Position:', {
         resultSlot: result.slot,
         perfectPosition: perfectReelPosition,
         previousPosition: previousReelPosition,
         finalPosition: finalReelPosition,
-        rotationsAdded: Math.abs(finalReelPosition - perfectReelPosition) / fullRotationDistance,
-        accuracy: 'Sub-pixel precision guaranteed'
+        rotationsAdded: Math.abs(finalReelPosition - perfectReelPosition) / fullRotationDistance
       });
 
       // Update round to spinning with result and synchronized reel position
@@ -917,8 +901,8 @@ async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId
   const resultSlot = hashNumber % 15;
   const result = WHEEL_SLOTS[resultSlot];
   
-  // Calculate perfect reel position for exact landing
-  const reelPosition = calculatePerfectReelPosition(resultSlot, hash);
+  // Calculate simple reel position for smooth landing
+  const reelPosition = calculateSimpleReelPosition(resultSlot);
   
   console.log(`🎯 Advanced Result Generated:`);
   console.log(`📊 Server Seed: ${dailySeed.server_seed}`);
@@ -933,10 +917,9 @@ async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId
   return { result, hashInput, hash, hashNumber, reelPosition };
 }
 
-// Calculate perfect reel position for exact landing
-function calculatePerfectReelPosition(resultSlot: number, hash: string): number {
+// Calculate simple reel position for smooth landing
+function calculateSimpleReelPosition(resultSlot: number): number {
   const TILE_WIDTH = 120; // Width of each tile in pixels
-  const BACKEND_CONTAINER_WIDTH = 1200; // Backend's container width
   const BACKEND_CENTER_OFFSET = 600; // Backend's center position
   
   // Find the winning slot in the wheel configuration
@@ -946,26 +929,14 @@ function calculatePerfectReelPosition(resultSlot: number, hash: string): number 
     return 0;
   }
   
-  // Use additional hash data for precise positioning
-  const precisionHash = hash.substring(8, 16); // Use next 8 characters for precision
-  const precisionValue = parseInt(precisionHash, 16);
+  // Calculate position to center the winning slot
+  const finalPosition = BACKEND_CENTER_OFFSET - (slotIndex * TILE_WIDTH + TILE_WIDTH / 2);
   
-  // Calculate base position (center the winning slot)
-  const basePosition = BACKEND_CENTER_OFFSET - (slotIndex * TILE_WIDTH + TILE_WIDTH / 2);
-  
-  // Add micro-adjustment for perfect centering (sub-pixel precision)
-  const microAdjustment = (precisionValue % 100 - 50) * 0.1; // ±5px adjustment
-  
-  // Calculate final position with perfect centering
-  const finalPosition = basePosition + microAdjustment;
-  
-  console.log(`🎰 Reel Position Calculation:`);
+  console.log(`🎰 Simple Reel Position Calculation:`);
   console.log(`🎯 Result Slot: ${resultSlot} (index: ${slotIndex})`);
-  console.log(`📏 Base Position: ${basePosition}px`);
-  console.log(`🔧 Micro Adjustment: ${microAdjustment}px`);
   console.log(`🎯 Final Position: ${finalPosition}px`);
   
-  return Math.round(finalPosition * 100) / 100; // Round to 2 decimal places for precision
+  return finalPosition;
 }
 
 // Legacy Result Generation (fallback)
