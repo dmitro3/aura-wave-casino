@@ -381,8 +381,9 @@ async function createNewRound(supabase: any) {
     console.log('🔬 Attempting advanced provably fair round...');
     
     // Get or create today's daily seed
+    console.log('📅 Getting daily seed...');
     const dailySeed = await getOrCreateDailySeed(supabase);
-    console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
+    console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date, server_seed_hash: dailySeed.server_seed_hash });
     
     // Get next nonce ID for today
     const { data: lastRound, error: lastRoundError } = await supabase
@@ -415,6 +416,8 @@ async function createNewRound(supabase: any) {
     };
 
     console.log('📝 Inserting advanced round data:', roundData);
+    console.log('🔍 About to insert with daily_seed_id:', dailySeed.id, 'and nonce_id:', nextNonceId);
+    
     const { data: newRound, error: insertError } = await supabase
       .from('roulette_rounds')
       .insert(roundData)
@@ -422,16 +425,22 @@ async function createNewRound(supabase: any) {
       .single();
 
     if (insertError) {
-      console.error('❌ Advanced round creation failed:', insertError);
+      console.error('❌ Advanced round creation failed with error:', insertError);
+      console.error('❌ Error code:', insertError.code);
+      console.error('❌ Error message:', insertError.message);
+      console.error('❌ Error details:', insertError.details);
       console.error('❌ Failed round data:', roundData);
       throw insertError; // This will trigger the catch block
     }
 
-    console.log('✅ Created advanced round:', newRound.id, 'with daily_seed_id:', newRound.daily_seed_id);
+    console.log('✅ Created advanced round:', newRound.id, 'with daily_seed_id:', newRound.daily_seed_id, 'nonce_id:', newRound.nonce_id);
     return newRound;
 
   } catch (error) {
     console.error('❌ Advanced round creation failed, falling back to legacy:', error);
+    console.error('❌ Error type:', typeof error);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
     
     // Fallback to legacy system to keep the game running
     console.log('🔄 Creating legacy round as fallback...');
