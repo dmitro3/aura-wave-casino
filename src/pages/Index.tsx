@@ -226,7 +226,7 @@ export default function Index({ initialGame }: IndexProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="relative p-2 h-10 w-10 glass rounded-lg"
+                      className="relative px-3 py-1 glass rounded-lg"
                     >
                       {unreadCount > 0 ? (
                         <BellDot className="w-4 h-4" />
