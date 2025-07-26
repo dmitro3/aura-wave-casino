@@ -75,6 +75,74 @@ export const RouletteGame = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Initialize game data
+  const initializeGame = async () => {
+    console.log('🎰 Initializing roulette game...');
+    setLoading(true);
+    
+    // Don't automatically try to fetch - let user test connection first
+    console.log('🎰 Waiting for manual connection test...');
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    initializeGame();
+  }, []);
+
+  // Refresh current round periodically (only if we have a working connection)
+  useEffect(() => {
+    if (!currentRound) return;
+    
+    const interval = setInterval(() => {
+      console.log('🔄 Refreshing current round...');
+      fetchCurrentRound();
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [currentRound]);
+
+  // Fetch current round (only called after successful connection test)
+  const fetchCurrentRound = async () => {
+    try {
+      console.log('🎰 Frontend: Calling roulette-engine...');
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'get_current_round' }
+      });
+
+      console.log('🎰 Frontend: Response from server:', { data, error });
+
+      if (error) {
+        console.error('🎰 Frontend: Server error:', error);
+        throw error;
+      }
+      
+      console.log('🎰 Current round:', data);
+      setCurrentRound(data);
+      
+      // Fetch bets for this round
+      if (data?.id) {
+        fetchRoundBets(data.id);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch current round:', error);
+      
+      // More detailed error message
+      let errorMessage = 'Failed to connect to the game server';
+      if (error?.message) {
+        errorMessage = error.message;
+      }
+      if (error?.details) {
+        errorMessage += ` (${error.details})`;
+      }
+      
+      toast({
+        title: "Connection Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Test server connection
   const testServerConnection = async () => {
     try {
@@ -125,6 +193,10 @@ export const RouletteGame = () => {
             description: `Function works! Test: ${directData.test}`,
             variant: "default",
           });
+          
+          // If direct fetch works, try to get current round
+          console.log('🎰 Direct fetch worked, now trying to get current round...');
+          await fetchCurrentRound();
           return true;
           
         } catch (directError) {
@@ -138,7 +210,7 @@ export const RouletteGame = () => {
         }
       }
 
-      if (data.test === 'success') {
+      if (data && data.test === 'success') {
         console.log('✅ Server connection test passed');
         console.log('📊 Test details:', data);
         toast({
@@ -146,12 +218,16 @@ export const RouletteGame = () => {
           description: `Database: ${data.database_connection}, Roulette tables: ${data.roulette_tables}`,
           variant: "default",
         });
+        
+        // If test passes, try to get current round
+        console.log('🎰 Test passed, now trying to get current round...');
+        await fetchCurrentRound();
         return true;
       } else {
         console.error('❌ Server test failed:', data);
         toast({
           title: "❌ Test Failed",
-          description: `Test result: ${data.test}, Error: ${data.error}`,
+          description: `Test result: ${data?.test}, Error: ${data?.error}`,
           variant: "destructive",
         });
         return false;
@@ -164,59 +240,6 @@ export const RouletteGame = () => {
         variant: "destructive",
       });
       return false;
-    }
-  };
-
-  // Fetch current round
-  const fetchCurrentRound = async () => {
-    try {
-      // First test the connection
-      const connectionWorking = await testServerConnection();
-      if (!connectionWorking) {
-        console.log('❌ Stopping here - connection test failed');
-        setLoading(false);
-        return;
-      }
-
-      console.log('🎰 Frontend: Calling roulette-engine...');
-      const { data, error } = await supabase.functions.invoke('roulette-engine', {
-        body: { action: 'get_current_round' }
-      });
-
-      console.log('🎰 Frontend: Response from server:', { data, error });
-
-      if (error) {
-        console.error('🎰 Frontend: Server error:', error);
-        throw error;
-      }
-      
-      console.log('🎰 Current round:', data);
-      setCurrentRound(data);
-      setLoading(false);
-      
-      // Fetch bets for this round
-      if (data?.id) {
-        fetchRoundBets(data.id);
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch current round:', error);
-      
-      // More detailed error message
-      let errorMessage = 'Failed to connect to the game server';
-      if (error?.message) {
-        errorMessage = error.message;
-      }
-      if (error?.details) {
-        errorMessage += ` (${error.details})`;
-      }
-      
-      toast({
-        title: "Connection Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      
-      setLoading(false);
     }
   };
 
@@ -384,24 +407,6 @@ export const RouletteGame = () => {
     };
   }, [user, currentRound?.id]);
 
-  // Initial data fetch
-  useEffect(() => {
-    const initializeGame = async () => {
-      setLoading(true);
-      await Promise.all([
-        fetchCurrentRound(),
-        fetchRecentResults()
-      ]);
-      setLoading(false);
-    };
-
-    initializeGame();
-
-    // Refresh current round every 2 seconds
-    const refreshInterval = setInterval(fetchCurrentRound, 2000);
-    return () => clearInterval(refreshInterval);
-  }, []);
-
   // Place bet
   const placeBet = async (color: string) => {
     if (!user || !profile || !currentRound) {
@@ -505,11 +510,26 @@ export const RouletteGame = () => {
     );
   }
 
+  // Show test button if no current round
   if (!currentRound) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-muted-foreground">No active round found</p>
+      <div className="p-6 text-center">
+        <h2 className="text-2xl font-bold mb-4">🎰 Roulette</h2>
+        <p className="text-red-400">❌ No active round</p>
+        <p className="text-gray-400 text-sm mt-2">The game server may not be responding</p>
+        <div className="mt-4 space-y-2">
+          <button 
+            onClick={testServerConnection}
+            className="block mx-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            🧪 Test Server Connection
+          </button>
+          <button 
+            onClick={fetchCurrentRound}
+            className="block mx-auto px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            🔄 Try to Get Current Round
+          </button>
         </div>
       </div>
     );
