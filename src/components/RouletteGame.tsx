@@ -5,12 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, Users, TrendingUp } from 'lucide-react';
+import { Clock, Users, TrendingUp, Wallet, Plus, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { RouletteWheel } from './RouletteWheel';
+import { useToast } from '@/hooks/use-toast';
+import { RouletteReel } from './RouletteReel';
 import { RouletteResultHistory } from './RouletteResultHistory';
 
 interface RouletteRound {
@@ -40,19 +40,31 @@ interface RouletteBet {
   };
 }
 
+interface BetTotals {
+  green: { total: number; count: number; users: RouletteBet[] };
+  red: { total: number; count: number; users: RouletteBet[] };
+  black: { total: number; count: number; users: RouletteBet[] };
+}
+
 export const RouletteGame = () => {
   const { user } = useAuth();
-  const { userData: profile } = useUserProfile();
+  const { userData: profile, updateUserProfile } = useUserProfile();
+  const { toast } = useToast();
   const [currentRound, setCurrentRound] = useState<RouletteRound | null>(null);
   const [roundBets, setRoundBets] = useState<RouletteBet[]>([]);
   const [userBets, setUserBets] = useState<{ [key: string]: number }>({});
-  const [betAmount, setBetAmount] = useState<number>(1);
+  const [betAmount, setBetAmount] = useState<number>(10);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winningSlot, setWinningSlot] = useState<number | null>(null);
   const [showWinAnimation, setShowWinAnimation] = useState(false);
+  const [betTotals, setBetTotals] = useState<BetTotals>({
+    green: { total: 0, count: 0, users: [] },
+    red: { total: 0, count: 0, users: [] },
+    black: { total: 0, count: 0, users: [] }
+  });
 
-  // Auto-start new rounds every 20 seconds
+  // Auto-start new rounds and check status
   useEffect(() => {
     const fetchCurrentRound = async () => {
       try {
@@ -205,8 +217,30 @@ export const RouletteGame = () => {
           };
         })
       );
+      
       setRoundBets(betsWithUsernames as RouletteBet[]);
+      calculateBetTotals(betsWithUsernames as RouletteBet[]);
     }
+  };
+
+  // Calculate bet totals for each color
+  const calculateBetTotals = (bets: RouletteBet[]) => {
+    const totals: BetTotals = {
+      green: { total: 0, count: 0, users: [] },
+      red: { total: 0, count: 0, users: [] },
+      black: { total: 0, count: 0, users: [] }
+    };
+
+    bets.forEach(bet => {
+      const color = bet.bet_color as keyof BetTotals;
+      if (totals[color]) {
+        totals[color].total += bet.bet_amount;
+        totals[color].count += 1;
+        totals[color].users.push(bet);
+      }
+    });
+
+    setBetTotals(totals);
   };
 
   useEffect(() => {
@@ -251,7 +285,10 @@ export const RouletteGame = () => {
       if (userWon) {
         setShowWinAnimation(true);
         const winAmount = userBets[currentRound.result_color!] * currentRound.result_multiplier!;
-        toast.success(`🎉 You hit ${currentRound.result_color}! +$${winAmount.toFixed(2)}`);
+        toast({
+          title: "🎉 You Won!",
+          description: `${currentRound.result_color} hit! You won $${winAmount.toFixed(2)}`,
+        });
         setTimeout(() => setShowWinAnimation(false), 3000);
       }
       
@@ -264,13 +301,21 @@ export const RouletteGame = () => {
   }, [currentRound, userBets]);
 
   const placeBet = async (color: string) => {
-    if (!user || !currentRound || currentRound.status !== 'betting' || timeLeft <= 0) {
-      toast.error('Betting is closed');
+    if (!user || !profile || !currentRound || currentRound.status !== 'betting' || timeLeft <= 0) {
+      toast({
+        title: "Betting Closed",
+        description: "Betting is not available right now",
+        variant: "destructive",
+      });
       return;
     }
 
-    if (betAmount <= 0 || betAmount > (profile?.balance || 0)) {
-      toast.error('Invalid bet amount');
+    if (betAmount <= 0 || betAmount > profile.balance) {
+      toast({
+        title: "Invalid Bet",
+        description: betAmount > profile.balance ? "Insufficient balance" : "Invalid bet amount",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -287,14 +332,31 @@ export const RouletteGame = () => {
 
       if (error) throw error;
 
+      // Update local user bets
       setUserBets(prev => ({
         ...prev,
         [color]: (prev[color] || 0) + betAmount
       }));
 
-      toast.success(`Bet placed: $${betAmount} on ${color}`);
+      // Update user balance locally
+      await updateUserProfile({
+        balance: profile.balance - betAmount,
+        total_wagered: profile.total_wagered + betAmount
+      });
+
+      toast({
+        title: "Bet Placed!",
+        description: `$${betAmount} on ${color}`,
+      });
+
+      // Refresh round bets to update totals
+      setTimeout(fetchRoundBets, 500);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to place bet');
+      toast({
+        title: "Bet Failed",
+        description: error.message || 'Failed to place bet',
+        variant: "destructive",
+      });
     }
   };
 
@@ -304,9 +366,9 @@ export const RouletteGame = () => {
 
   const getBetColorClass = (color: string) => {
     switch (color) {
-      case 'green': return 'bg-green-600 hover:bg-green-700 text-white';
-      case 'red': return 'bg-red-600 hover:bg-red-700 text-white';
-      case 'black': return 'bg-gray-900 hover:bg-gray-800 text-white';
+      case 'green': return 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white border-green-400';
+      case 'red': return 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white border-red-400';
+      case 'black': return 'bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white border-gray-500';
       default: return '';
     }
   };
@@ -325,7 +387,7 @@ export const RouletteGame = () => {
   return (
     <div className="space-y-6">
       {/* Game Header */}
-      <Card className="glass-card">
+      <Card className="glass border-0">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
@@ -341,20 +403,20 @@ export const RouletteGame = () => {
               </div>
               <Badge variant={currentRound.status === 'betting' ? 'default' : 'secondary'}>
                 {currentRound.status === 'betting' ? 'Betting Open' : 
-                 isSpinning ? 'Spinning...' : 'Round Complete'}
+                 isSpinning ? 'Rolling...' : 'Round Complete'}
               </Badge>
             </div>
           </CardTitle>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main Game Area */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Roulette Wheel */}
-          <Card className="glass-card">
+        <div className="lg:col-span-3 space-y-6">
+          {/* Roulette Reel */}
+          <Card className="glass border-0">
             <CardContent className="p-6">
-              <RouletteWheel 
+              <RouletteReel 
                 isSpinning={isSpinning}
                 winningSlot={winningSlot}
                 showWinAnimation={showWinAnimation}
@@ -363,43 +425,95 @@ export const RouletteGame = () => {
           </Card>
 
           {/* Betting Interface */}
-          <Card className="glass-card">
+          <Card className="glass border-0">
             <CardHeader>
-              <CardTitle>Place Your Bets</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Place Your Bets</span>
+                {user && profile && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Wallet className="w-4 h-4" />
+                    <span>Balance: ${profile.balance.toFixed(2)}</span>
+                  </div>
+                )}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium">Bet Amount:</label>
-                <Input
-                  type="number"
-                  value={betAmount}
-                  onChange={(e) => setBetAmount(Number(e.target.value))}
-                  min="1"
-                  max={profile?.balance || 0}
-                  className="w-32"
-                  disabled={currentRound.status !== 'betting' || timeLeft <= 0}
-                />
-                <span className="text-sm text-muted-foreground">
-                  Balance: ${profile?.balance?.toFixed(2) || '0.00'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                {['green', 'red', 'black'].map((color) => (
-                  <Button
-                    key={color}
-                    onClick={() => placeBet(color)}
+            <CardContent className="space-y-6">
+              {/* Bet Amount Controls */}
+              {user && profile ? (
+                <div className="flex items-center gap-4 justify-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setBetAmount(Math.max(1, betAmount - 5))}
                     disabled={currentRound.status !== 'betting' || timeLeft <= 0}
-                    className={`h-20 flex flex-col gap-2 ${getBetColorClass(color)}`}
                   >
-                    <span className="text-lg font-bold capitalize">{color}</span>
-                    <span className="text-sm">{getMultiplierText(color)}</span>
-                    {userBets[color] && (
-                      <span className="text-xs opacity-80">
-                        Bet: ${userBets[color].toFixed(2)}
-                      </span>
-                    )}
+                    <Minus className="w-4 h-4" />
                   </Button>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Bet:</span>
+                    <Input
+                      type="number"
+                      value={betAmount}
+                      onChange={(e) => setBetAmount(Number(e.target.value))}
+                      min="1"
+                      max={profile.balance}
+                      className="w-24 text-center"
+                      disabled={currentRound.status !== 'betting' || timeLeft <= 0}
+                    />
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setBetAmount(betAmount + 5)}
+                    disabled={currentRound.status !== 'betting' || timeLeft <= 0 || betAmount + 5 > profile.balance}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                  
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setBetAmount(10)}>$10</Button>
+                    <Button variant="outline" size="sm" onClick={() => setBetAmount(50)}>$50</Button>
+                    <Button variant="outline" size="sm" onClick={() => setBetAmount(Math.min(100, profile.balance))}>$100</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground">Sign in to place bets</p>
+                </div>
+              )}
+
+              {/* Betting Options */}
+              <div className="grid grid-cols-3 gap-4">
+                {(['green', 'red', 'black'] as const).map((color) => (
+                  <div key={color} className="space-y-2">
+                    <Button
+                      onClick={() => placeBet(color)}
+                      disabled={!user || !profile || currentRound.status !== 'betting' || timeLeft <= 0}
+                      className={`w-full h-20 flex flex-col gap-2 border-2 ${getBetColorClass(color)}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold capitalize">{color}</span>
+                        <span className="text-sm">{getMultiplierText(color)}</span>
+                      </div>
+                      {userBets[color] && (
+                        <span className="text-xs opacity-90 bg-white/20 px-2 py-1 rounded">
+                          Your bet: ${userBets[color].toFixed(2)}
+                        </span>
+                      )}
+                    </Button>
+                    
+                    {/* Live Bet Totals */}
+                    <div className="text-center text-xs space-y-1">
+                      <div className="font-medium">
+                        ${betTotals[color].total.toFixed(0)} total
+                      </div>
+                      <div className="text-muted-foreground">
+                        {betTotals[color].count} bets
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </CardContent>
@@ -411,7 +525,7 @@ export const RouletteGame = () => {
 
         {/* Live Bets Feed */}
         <div className="space-y-6">
-          <Card className="glass-card">
+          <Card className="glass border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -426,6 +540,7 @@ export const RouletteGame = () => {
                     <div key={bet.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/20">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
+                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.profiles?.username}`} />
                           <AvatarFallback className="text-xs">
                             {bet.profiles?.username?.slice(0, 2).toUpperCase() || 'U'}
                           </AvatarFallback>

@@ -160,7 +160,7 @@ serve(async (req) => {
         // Check user balance
         const { data: profile } = await supabase
           .from('profiles')
-          .select('balance')
+          .select('balance, total_wagered')
           .eq('id', userId)
           .single();
 
@@ -174,7 +174,10 @@ serve(async (req) => {
         // Deduct bet amount from balance
         await supabase
           .from('profiles')
-          .update({ balance: profile.balance - betAmount })
+          .update({ 
+            balance: profile.balance - betAmount,
+            total_wagered: (profile.total_wagered || 0) + betAmount
+          })
           .eq('id', userId);
 
         // Place the bet
@@ -218,12 +221,16 @@ serve(async (req) => {
     console.log(`🎯 Processing round completion: ${roundId}`);
 
     try {
-      // Generate random result
-      const resultSlot = Math.floor(Math.random() * 15);
+      // Generate cryptographically secure random result
+      const randomBytes = new Uint32Array(1);
+      crypto.getRandomValues(randomBytes);
+      const resultSlot = randomBytes[0] % 15; // 0-14
       const result = WHEEL_CONFIG[resultSlot];
 
+      console.log(`🎲 Secure random result: slot ${resultSlot}, color ${result.color}`);
+
       // Update round with result
-      await supabase
+      const { error: roundUpdateError } = await supabase
         .from('roulette_rounds')
         .update({
           status: 'completed',
@@ -233,6 +240,8 @@ serve(async (req) => {
         })
         .eq('id', roundId);
 
+      if (roundUpdateError) throw roundUpdateError;
+
       // Add to results history
       const { data: round } = await supabase
         .from('roulette_rounds')
@@ -240,13 +249,15 @@ serve(async (req) => {
         .eq('id', roundId)
         .single();
 
-      await supabase
-        .from('roulette_results')
-        .insert({
-          round_number: round.round_number,
-          result_color: result.color,
-          result_slot: resultSlot
-        });
+      if (round) {
+        await supabase
+          .from('roulette_results')
+          .insert({
+            round_number: round.round_number,
+            result_color: result.color,
+            result_slot: resultSlot
+          });
+      }
 
       // Get all bets for this round
       const { data: bets } = await supabase
@@ -268,30 +279,53 @@ serve(async (req) => {
           })
           .eq('id', bet.id);
 
-        // Update user balance with winnings
+        // Update user balance with winnings and stats
         if (isWinner && payout > 0) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('balance')
+            .select('balance, total_profit')
             .eq('id', bet.user_id)
             .single();
 
-          await supabase
-            .from('profiles')
-            .update({ balance: profile.balance + payout })
-            .eq('id', bet.user_id);
+          if (profile) {
+            const profit = payout - bet.bet_amount;
+            await supabase
+              .from('profiles')
+              .update({ 
+                balance: profile.balance + payout,
+                total_profit: (profile.total_profit || 0) + profit
+              })
+              .eq('id', bet.user_id);
 
-          console.log(`🎉 Payout: ${payout} to user ${bet.user_id}`);
+            console.log(`🎉 Payout: ${payout} (profit: ${profit}) to user ${bet.user_id}`);
+          }
+        } else {
+          // Update loss in total_profit
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('total_profit')
+            .eq('id', bet.user_id)
+            .single();
+
+          if (profile) {
+            await supabase
+              .from('profiles')
+              .update({ 
+                total_profit: (profile.total_profit || 0) - bet.bet_amount
+              })
+              .eq('id', bet.user_id);
+          }
         }
 
         // Add to game history
+        const profit = payout - bet.bet_amount;
         await supabase
           .from('game_history')
           .insert({
             user_id: bet.user_id,
             game_type: 'roulette',
             bet_amount: bet.bet_amount,
-            profit: payout - bet.bet_amount,
+            profit: profit,
             result: isWinner ? 'win' : 'loss',
             game_data: {
               round_id: roundId,
