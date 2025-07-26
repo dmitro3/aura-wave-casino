@@ -1070,16 +1070,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                   min="0.01"
                                   max={profile?.balance || 0}
                                   step="0.01"
-                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 pr-6 text-primary focus:text-emerald-400 placeholder:text-primary/40 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 pr-6 text-primary focus:text-emerald-400 placeholder:text-muted-foreground placeholder:font-normal placeholder:text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   style={{
                                     MozAppearance: 'textfield'
                                   }}
                                   disabled={currentRound.status !== 'betting'}
-                                  placeholder="0.00"
+                                  placeholder="Enter amount..."
                                 />
                                 
                                 {/* Custom Spin Buttons */}
-                                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex flex-col gap-px">
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex flex-col gap-0.5">
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -1089,9 +1089,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                       setBetAmount(newAmount > maxBalance ? maxBalance : newAmount);
                                     }}
                                     disabled={currentRound.status !== 'betting'}
-                                    className="w-5 h-4 flex items-center justify-center bg-gradient-to-b from-primary/40 to-primary/30 hover:from-primary/60 hover:to-primary/50 active:from-primary/80 active:to-primary/70 rounded-sm border border-primary/20 text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                                    className="w-4 h-3 flex items-center justify-center text-primary/60 hover:text-primary focus:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95"
                                   >
-                                    <span className="text-[10px]">▲</span>
+                                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="drop-shadow-sm">
+                                      <path d="M5 0L9 6H1L5 0Z" fill="currentColor"/>
+                                    </svg>
                                   </button>
                                   <button
                                     type="button"
@@ -1101,9 +1103,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                       setBetAmount(newAmount);
                                     }}
                                     disabled={currentRound.status !== 'betting'}
-                                    className="w-5 h-4 flex items-center justify-center bg-gradient-to-b from-primary/30 to-primary/40 hover:from-primary/50 hover:to-primary/60 active:from-primary/70 active:to-primary/80 rounded-sm border border-primary/20 text-xs text-white font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+                                    className="w-4 h-3 flex items-center justify-center text-primary/60 hover:text-primary focus:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200 hover:scale-110 active:scale-95"
                                   >
-                                    <span className="text-[10px]">▼</span>
+                                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className="drop-shadow-sm">
+                                      <path d="M5 6L1 0H9L5 6Z" fill="currentColor"/>
+                                    </svg>
                                   </button>
                                 </div>
                               </div>
@@ -1176,7 +1180,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         userBetLimits.betCount >= MAX_BETS_PER_ROUND ? 'Max bets reached' :
                         userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND ? 'Round limit reached' :
                         Date.now() - lastBetTime < MIN_BET_INTERVAL ? 'Rate limited' :
-                        `Bet $${betAmount === '' ? '0.00' : Number(betAmount).toFixed(2)} on ${color}`
+                        `Bet $${Number(betAmount).toFixed(2)} on ${color}`
                       }
                     >
                       <div className="flex items-center gap-2">
