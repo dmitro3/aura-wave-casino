@@ -747,10 +747,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                       value={betAmount}
                       onChange={(e) => {
                         const newAmount = Number(e.target.value);
-                        setBetAmount(newAmount > profile.balance ? profile.balance : Math.max(1, newAmount));
+                        const maxBalance = profile?.balance || 0;
+                        setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(1, newAmount));
                       }}
                       min="1"
-                      max={profile.balance}
+                      max={profile?.balance || 0}
                       className="w-24 text-center"
                       disabled={currentRound.status !== 'betting'}
                     />
@@ -759,7 +760,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setBetAmount(Math.min(profile.balance, betAmount * 2))}
+                    onClick={() => setBetAmount(Math.min(profile?.balance || 0, betAmount * 2))}
                     disabled={currentRound.status !== 'betting'}
                   >
                     ×2
