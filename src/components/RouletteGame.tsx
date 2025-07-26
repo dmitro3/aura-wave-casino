@@ -675,6 +675,19 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   };
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if mobile on mount and window resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
 
   if (loading) {
@@ -702,13 +715,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     <div className="space-y-6">
       {/* Game Header */}
       <Card className="glass border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span className="flex items-center gap-2">
               🎰 Roulette
               <Badge variant="outline">Round #{currentRound.round_number}</Badge>
             </span>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <Button 
                 onClick={openProvablyFairModal}
                 variant="outline" 
@@ -716,8 +729,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 className="glass border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-all duration-200"
                 title="Provably Fair Verification"
               >
-                <Shield className="w-4 h-4 mr-1" />
-                Provably Fair
+                <Shield className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Provably Fair</span>
               </Button>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -738,13 +751,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         <div className="space-y-6">
           {/* Recent Results Bubbles */}
           <div className="flex justify-end mb-4">
-            <div className="glass border-0 rounded-lg p-3 flex items-center gap-3">
-              <span className="text-sm text-muted-foreground font-medium">Recent Results:</span>
-              <div className="flex items-center gap-2">
-                {recentResults.slice(0, 8).map((result, index) => (
+            <div className="glass border-0 rounded-lg p-2 sm:p-3 flex items-center gap-2 sm:gap-3">
+              <span className="text-xs sm:text-sm text-muted-foreground font-medium hidden sm:inline">Recent Results:</span>
+              <span className="text-xs text-muted-foreground font-medium sm:hidden">Recent:</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                {recentResults.slice(0, isMobile ? 5 : 8).map((result, index) => (
                   <div
                     key={result.id}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-xl hover:shadow-current/50 ${getResultBubbleClass(result.result_color)} animate-in slide-in-from-right-5`}
+                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-xl hover:shadow-current/50 ${getResultBubbleClass(result.result_color)} animate-in slide-in-from-right-5`}
                     style={{
                       animationDelay: `${index * 100}ms`,
                       animationFillMode: 'both'
@@ -756,7 +770,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   </div>
                 ))}
                 {recentResults.length === 0 && (
-                  <span className="text-sm text-muted-foreground">No results yet</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground">No results yet</span>
                 )}
               </div>
             </div>
@@ -777,17 +791,17 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
           {/* Betting Interface */}
           <Card className="glass border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span>Place Your Bets</span>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
                   {user && profile && (
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2">
                       <Wallet className="w-4 h-4" />
                       <span>Balance: ${profile.balance.toFixed(2)}</span>
                     </div>
                   )}
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-muted-foreground">
                     {timeLeft > 0 ? `${timeLeft}s remaining` : 'Bets closed'}
                   </span>
                 </div>
@@ -796,7 +810,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             <CardContent className="space-y-6">
               {/* Bet Amount Controls */}
               {user && profile ? (
-                <div className="flex items-center gap-4 justify-center">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 justify-center">
                   <Button 
                     variant="outline" 
                     size="sm"
@@ -818,7 +832,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                       }}
                       min="1"
                       max={profile?.balance || 0}
-                      className="w-24 text-center"
+                      className="w-20 sm:w-24 text-center"
                       disabled={currentRound.status !== 'betting'}
                     />
                   </div>
@@ -832,7 +846,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                     ×2
                   </Button>
                   
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-1 sm:gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
