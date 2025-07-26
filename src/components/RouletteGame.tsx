@@ -342,6 +342,11 @@ export function RouletteGame() {
         [color]: (prev[color] || 0) + betAmount
       }));
 
+      // Update user balance immediately on frontend to reflect the bet
+      await updateUserProfile({ 
+        balance: profile.balance - betAmount 
+      });
+
     } catch (error: any) {
       toast({
         title: "Bet Failed",

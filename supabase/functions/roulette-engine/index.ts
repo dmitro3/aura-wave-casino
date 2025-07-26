@@ -272,12 +272,11 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     finalClientSeed = seedData?.client_seed || 'default_client_seed';
   }
 
-  // Deduct balance and update total wagered
+  // Deduct balance only (stats will be updated when round completes)
   await supabase
     .from('profiles')
     .update({
-      balance: profile.balance - betAmount,
-      total_wagered: (profile.total_wagered || 0) + betAmount
+      balance: profile.balance - betAmount
     })
     .eq('id', userId);
 
@@ -336,11 +335,20 @@ async function completeRound(supabase: any, round: any) {
       })
       .eq('id', bet.id);
 
-    // Process winnings
+    // Update user stats using the proper function
+    await supabase.rpc('update_user_stats', {
+      p_user_id: bet.user_id,
+      p_game_type: 'roulette',
+      p_bet_amount: bet.bet_amount,
+      p_profit: profit,
+      p_is_winner: isWinner
+    });
+
+    // Process winnings (update balance only)
     if (isWinner && actualPayout > 0) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('balance, total_profit')
+        .select('balance')
         .eq('id', bet.user_id)
         .single();
 
@@ -348,8 +356,7 @@ async function completeRound(supabase: any, round: any) {
         await supabase
           .from('profiles')
           .update({
-            balance: profile.balance + actualPayout,
-            total_profit: (profile.total_profit || 0) + profit
+            balance: profile.balance + actualPayout
           })
           .eq('id', bet.user_id);
 
