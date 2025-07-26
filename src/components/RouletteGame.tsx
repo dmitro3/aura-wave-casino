@@ -223,11 +223,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   // Fetch recent results
   const fetchRecentResults = async () => {
     try {
+      console.log('🔄 Fetching recent results...');
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_recent_results' }
       });
 
       if (error) throw error;
+      console.log('✅ Recent results fetched:', data?.length || 0, 'results');
       setRecentResults(data || []);
     } catch (error: any) {
       console.error('Failed to fetch recent results:', error);
@@ -392,6 +394,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           } else if (round.status === 'completed') {
             console.log('🏁 Round completed, fetching final results');
             fetchRoundBets(round.id);
+            // Also fetch recent results to ensure sync (with small delay for DB insert)
+            setTimeout(() => fetchRecentResults(), 500);
           } else {
             console.log('⏭️ Round update but keeping current state');
           }
