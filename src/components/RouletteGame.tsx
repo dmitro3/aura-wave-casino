@@ -213,20 +213,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   };
 
-  // Test function to check bet storage
-  const testBets = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('roulette-engine', {
-        body: { action: 'test_bets' }
-      });
 
-      if (error) throw error;
-      setTestData(data);
-      console.log('🧪 Test data:', data);
-    } catch (error: any) {
-      console.error('Test failed:', error);
-    }
-  };
 
   // Verify round fairness
   const verifyRoundFairness = async (roundId: string) => {
@@ -545,9 +532,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
               <Badge variant="outline">Round #{currentRound.round_number}</Badge>
             </span>
             <div className="flex items-center gap-4">
-              <Button onClick={testBets} variant="outline" size="sm">
-                🧪 Test Bets
-              </Button>
+
               {lastCompletedRound && (
                 <Button 
                   onClick={() => verifyRoundFairness(lastCompletedRound.id)} 

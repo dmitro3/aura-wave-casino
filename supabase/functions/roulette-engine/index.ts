@@ -342,21 +342,21 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   if (profileErr) {
     console.error('❌ Error fetching from profiles:', profileErr);
     
-    // Fallback to auth.users table  
-    const { data: userData, error: userErr } = await supabase.auth.admin.getUserById(userId);
-    if (userData?.user) {
-      userProfile = {
-        username: userData.user.email?.split('@')[0] || `User${userId.slice(-4)}`,
-        avatar_url: userData.user.user_metadata?.avatar_url || null
-      };
-    } else {
-      console.error('❌ Error fetching from auth.users:', userErr);
-      // Final fallback
-      userProfile = {
-        username: `User${userId.slice(-4)}`,
-        avatar_url: null
-      };
-    }
+         // Fallback to auth.users table  
+     const { data: userData, error: userErr } = await supabase.auth.admin.getUserById(userId);
+     if (userData?.user) {
+       userProfile = {
+         username: userData.user.user_metadata?.username || userData.user.email?.split('@')[0] || `User${userId.slice(-4)}`,
+         avatar_url: userData.user.user_metadata?.avatar_url || null
+       };
+     } else {
+       console.error('❌ Error fetching from auth.users:', userErr);
+       // Final fallback
+       userProfile = {
+         username: `User${userId.slice(-4)}`,
+         avatar_url: null
+       };
+     }
   } else {
     userProfile = profileData;
   }
@@ -461,15 +461,22 @@ async function completeRound(supabase: any, round: any) {
         .single();
 
       if (profile) {
-        await supabase
+        const newBalance = profile.balance + actualPayout;
+        const { error: balanceError } = await supabase
           .from('profiles')
           .update({
-            balance: profile.balance + actualPayout
+            balance: newBalance
           })
           .eq('id', bet.user_id);
 
-        console.log(`💰 Winner: ${bet.user_id} won ${actualPayout} (profit: ${profit})`);
+        if (balanceError) {
+          console.error('❌ Error updating balance:', balanceError);
+        } else {
+          console.log(`💰 Winner: ${bet.user_id} won ${actualPayout} (profit: ${profit}), balance: ${profile.balance} → ${newBalance}`);
+        }
       }
+    } else {
+      console.log(`😢 Loser: ${bet.user_id} lost ${bet.bet_amount} on ${bet.bet_color}`);
     }
   }
 

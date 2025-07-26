@@ -51,27 +51,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
 
   // Smooth animation with realistic physics
   useEffect(() => {
-    if (isSpinning && !isAnimating && winningSlot !== null) {
+    if (isSpinning && winningSlot !== null) {
       console.log('🎰 Starting reel animation to slot:', winningSlot);
       setIsAnimating(true);
       
-      const startPosition = position;
       const animationDuration = 4000; // 4 seconds total animation
       
       // Calculate final position - land exactly on the winning slot at center
-      const finalCycles = 8; // Number of full wheel rotations
+      const finalCycles = 10; // Number of full wheel rotations
       const cycleDistance = WHEEL_SLOTS.length * TILE_WIDTH;
       const totalDistance = finalCycles * cycleDistance;
       const targetSlotOffset = winningSlot * TILE_WIDTH;
       const finalPosition = -(totalDistance + targetSlotOffset) + CENTER_OFFSET;
       
       console.log('🎯 Animation params:', {
-        startPosition,
         finalPosition,
         totalDistance,
         targetSlotOffset,
         winningSlot
       });
+
+      // Reset start time for new animation
+      startTimeRef.current = undefined;
 
       const animate = (currentTime: number) => {
         if (!startTimeRef.current) {
@@ -82,17 +83,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
         const progress = Math.min(elapsed / animationDuration, 1);
         
         // Realistic easing: start fast, then slow down smoothly
-        // Using cubic-bezier equivalent: ease-out with momentum
         const easeProgress = 1 - Math.pow(1 - progress, 3);
         
-        // Add subtle blur effect during high speed
-        const blur = Math.max(0, (1 - progress) * 8); // Start with 8px blur, fade to 0
-        const reelElement = document.getElementById('roulette-reel');
-        if (reelElement) {
-          reelElement.style.filter = `blur(${blur}px)`;
-        }
-        
-        const currentPosition = startPosition + (finalPosition - startPosition) * easeProgress;
+        // Simple position calculation from 0 to final position
+        const currentPosition = finalPosition * easeProgress;
         setPosition(currentPosition);
         
         if (progress < 1) {
@@ -102,23 +96,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
           console.log('🎰 Animation completed at position:', currentPosition);
           setIsAnimating(false);
           startTimeRef.current = undefined;
-          
-          // Remove blur
-          if (reelElement) {
-            reelElement.style.filter = 'none';
-          }
         }
       };
+      
+      // Cancel any existing animation
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
       
       animationRef.current = requestAnimationFrame(animate);
-      
-      return () => {
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
-      };
     }
-  }, [isSpinning, winningSlot, isAnimating, position]);
+  }, [isSpinning, winningSlot]);
 
   // Reset position when round ends
   useEffect(() => {
@@ -245,20 +233,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
         </div>
       )}
       
-      {/* Status Display */}
-      <div className="text-center mt-4">
-        <p className="text-lg font-semibold">
-          {isAnimating ? (
-            <span className="text-cyan-400 animate-pulse">🎰 Reel is spinning...</span>
-          ) : winningSlot !== null && showWinAnimation ? (
-            <span className="text-emerald-400">
-              🏆 Result: {WHEEL_SLOTS[winningSlot]?.color} {WHEEL_SLOTS[winningSlot]?.slot} ({WHEEL_SLOTS[winningSlot]?.multiplier})
-            </span>
-          ) : (
-            <span className="text-gray-400">🎮 Ready to spin!</span>
-          )}
-        </p>
-      </div>
+
     </div>
   );
 }
