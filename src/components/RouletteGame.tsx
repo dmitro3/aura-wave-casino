@@ -1028,40 +1028,31 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                       {/* Left Side - Bet Amount Input with Floating Label */}
                       <div className="flex items-center gap-3 flex-1">
                         <div className="relative flex-1 max-w-xs">
-                          {/* Animated Floating Label with Border Magic */}
-                          <div className="absolute -top-2.5 left-3 z-10 animate-pulse">
-                            <label className="text-xs font-bold text-primary uppercase tracking-widest drop-shadow-lg filter">
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '0ms' }}>B</span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '100ms' }}>E</span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '200ms' }}>T</span>
-                              <span className="mx-1"></span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '300ms' }}>A</span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '400ms' }}>M</span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '500ms' }}>O</span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '600ms' }}>U</span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '700ms' }}>N</span>
-                              <span className="inline-block animate-bounce" style={{ animationDelay: '800ms' }}>T</span>
+                          {/* Clean Floating Label with Perfect Border Break */}
+                          <div className="absolute -top-2.5 left-3 z-10">
+                            <label className="text-xs font-medium text-primary uppercase tracking-wider">
+                              Bet Amount
                             </label>
                           </div>
                           
                           {/* Container with Custom Border that Breaks for Label */}
                           <div className="relative">
-                            {/* Custom Border Elements */}
+                            {/* Custom Border Elements with Perfect Gap */}
                             <div className="absolute inset-0 rounded-lg overflow-hidden">
-                              {/* Top border with gap */}
-                              <div className="absolute top-0 left-0 h-px bg-gradient-to-r from-primary/40 to-primary/60" style={{ width: '12px' }}></div>
-                              <div className="absolute top-0 right-0 h-px bg-gradient-to-l from-primary/40 to-primary/60" style={{ width: 'calc(100% - 90px)' }}></div>
+                              {/* Top border with precise gap for text */}
+                              <div className="absolute top-0 left-0 h-px bg-primary/40" style={{ width: '12px' }}></div>
+                              <div className="absolute top-0 h-px bg-primary/40" style={{ left: '80px', width: 'calc(100% - 80px)' }}></div>
                               
                               {/* Side borders */}
-                              <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-primary/40 to-primary/60"></div>
-                              <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-primary/40 to-primary/60"></div>
+                              <div className="absolute top-0 left-0 w-px h-full bg-primary/40"></div>
+                              <div className="absolute top-0 right-0 w-px h-full bg-primary/40"></div>
                               
                               {/* Bottom border */}
-                              <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-primary/40 via-primary/60 to-primary/40"></div>
+                              <div className="absolute bottom-0 left-0 w-full h-px bg-primary/40"></div>
                             </div>
                             
                             <div className="flex items-center gap-2 bg-black/50 rounded-lg px-3 py-2 relative z-10">
-                              <span className="text-lg font-bold text-primary animate-pulse">$</span>
+                              <span className="text-lg font-bold text-primary">$</span>
                               <Input
                                 type="number"
                                 value={betAmount}
@@ -1073,7 +1064,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                 min="0.01"
                                 max={profile?.balance || 0}
                                 step="0.01"
-                                className="flex-1 text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-white transition-all duration-300 focus:scale-105 focus:text-primary"
+                                className="flex-1 text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 text-white"
                                 disabled={currentRound.status !== 'betting'}
                                 placeholder="0.00"
                               />
