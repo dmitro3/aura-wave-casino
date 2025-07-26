@@ -302,14 +302,6 @@ serve(async (req) => {
           if (testRound.daily_seed_id) {
             console.log('✅ Advanced round creation works!')
             
-            // Delete the test round
-            await supabase
-              .from('roulette_rounds')
-              .delete()
-              .eq('id', testRound.id)
-            
-            console.log('🗑️ Cleaned up test round')
-            
             return new Response(JSON.stringify({
               success: true,
               message: 'Daily seeds system is working! New rounds will use advanced provably fair.',
