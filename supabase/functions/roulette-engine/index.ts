@@ -276,9 +276,68 @@ serve(async (req) => {
             });
           }
           
+          // Step 4: Try actual round creation
+          logs.push('🔍 Step 4: Testing actual round creation...');
+          try {
+            const now = new Date();
+            const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
+            const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
+
+            const testRoundData = {
+              status: 'betting',
+              betting_end_time: bettingEnd.toISOString(),
+              spinning_end_time: spinningEnd.toISOString(),
+              daily_seed_id: dailySeed.id,
+              nonce_id: 999,
+              server_seed_hash: dailySeed.server_seed_hash,
+              nonce: 999
+            };
+            
+            logs.push(`📝 Inserting test round with daily_seed_id: ${dailySeed.id}`);
+            
+            const { data: testRound, error: insertError } = await supabase
+              .from('roulette_rounds')
+              .insert(testRoundData)
+              .select()
+              .single();
+
+            if (insertError) {
+              logs.push(`❌ Round insert failed: ${insertError.message}`);
+              logs.push(`❌ Error code: ${insertError.code}`);
+              logs.push(`❌ Error details: ${insertError.details}`);
+              return new Response(JSON.stringify({
+                success: false,
+                error: 'Round creation failed',
+                details: insertError,
+                logs: logs
+              }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            logs.push(`✅ Test round created successfully: ${testRound.id}`);
+            logs.push(`✅ Round has daily_seed_id: ${testRound.daily_seed_id}`);
+            logs.push(`✅ Round has nonce_id: ${testRound.nonce_id}`);
+            
+            // Clean up
+            await supabase.from('roulette_rounds').delete().eq('id', testRound.id);
+            logs.push('🗑️ Test round cleaned up');
+            
+          } catch (err) {
+            logs.push(`❌ Round creation crashed: ${err.message}`);
+            return new Response(JSON.stringify({
+              success: false,
+              error: 'Round creation crashed',
+              details: err.message,
+              logs: logs
+            }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
           return new Response(JSON.stringify({
             success: true,
-            message: 'All basic tests passed!',
+            message: 'ALL tests passed - advanced round creation works!',
             logs: logs
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
