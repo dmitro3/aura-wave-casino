@@ -4,13 +4,8 @@ import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Shield, Eye, X } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import { ProvablyFairModal } from './ProvablyFairModal';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProvablyFairHistoryModalProps {
   isOpen: boolean;
