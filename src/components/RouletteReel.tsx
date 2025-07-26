@@ -5,6 +5,7 @@ interface RouletteReelProps {
   winningSlot: number | null;
   showWinAnimation: boolean;
   synchronizedPosition?: number | null;
+  extendedWinAnimation?: boolean;
 }
 
 // Roulette wheel configuration: 15 slots total in specific order
@@ -30,7 +31,7 @@ const TILE_WIDTH = 120;
 const CONTAINER_WIDTH = 1200; // Increased from 800 for more visibility
 const CENTER_OFFSET = CONTAINER_WIDTH / 2;
 
-export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition }: RouletteReelProps) {
+export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [position, setPosition] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const animationRef = useRef<number>();
@@ -142,7 +143,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   return (
     <div className="relative w-full max-w-7xl mx-auto">
       {/* Reel Container */}
-      <div className="relative h-36 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl">
+      <div className="relative h-36 rounded-xl overflow-hidden shadow-2xl">
         
         {/* Center Indicator Line */}
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
@@ -184,7 +185,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             // Check if tile is at center during spinning for scaling animation
             const isCenterTile = isAnimating && distanceFromCenter < TILE_WIDTH / 2;
             
-            const isWinningTile = showWinAnimation && 
+            const isWinningTile = (showWinAnimation || extendedWinAnimation) && 
                                   tile.slot === winningSlot && 
                                   !isAnimating &&
                                   // Only highlight the tile that's actually at the center line
@@ -193,7 +194,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             return (
               <div
                 key={tile.uniqueKey}
-                className={`flex-shrink-0 h-28 flex flex-col items-center justify-center border-r-2 border-gray-600 relative transition-all duration-150 ${getTileColorClass(tile.color)} ${
+                className={`flex-shrink-0 h-28 flex flex-col items-center justify-center relative transition-all duration-150 ${getTileColorClass(tile.color)} ${
                   isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : 
                   isCenterTile ? 'scale-105 z-10' : ''
                 }`}

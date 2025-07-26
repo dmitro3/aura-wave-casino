@@ -94,6 +94,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [winningColor, setWinningColor] = useState<string | null>(null);
+  const [extendedWinAnimation, setExtendedWinAnimation] = useState(false);
   const [testData, setTestData] = useState<any>(null);
   const [lastCompletedRound, setLastCompletedRound] = useState<RouletteRound | null>(null);
   
@@ -363,6 +364,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
               setTimeout(() => setWinningColor(null), 5000);
             }
             
+            // Start extended win animation for winning tile (2 seconds)
+            setExtendedWinAnimation(true);
+            setTimeout(() => setExtendedWinAnimation(false), 2000);
+            
             // Handle payouts for this user (TowerGame pattern)
             handleRoundPayout(round);
           }
@@ -376,6 +381,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
+            setExtendedWinAnimation(false); // Clear extended win animation for new round
             fetchRoundBets(round.id);
           } else if (round.status === 'betting' && oldRound?.status !== 'betting') {
             console.log('🎲 Betting phase started');
@@ -760,6 +766,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 winningSlot={currentRound.result_slot || null}
                 showWinAnimation={currentRound.status === 'completed'}
                 synchronizedPosition={currentRound.reel_position || null}
+                extendedWinAnimation={extendedWinAnimation}
               />
             </CardContent>
           </Card>
