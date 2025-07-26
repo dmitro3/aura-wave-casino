@@ -114,6 +114,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   // Refs for preventing race conditions
   const placingBetRef = useRef(false);
   const userBetsRef = useRef<Record<string, number>>({});
+  const roundBetTotalsRef = useRef<Record<string, number>>({});
   const currentRoundRef = useRef<string>('');
   const balanceRef = useRef<number>(0);
 
@@ -123,6 +124,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       balanceRef.current = profile.balance;
     }
   }, [profile?.balance]);
+  
+  // Update round bet totals ref when state changes
+  useEffect(() => {
+    roundBetTotalsRef.current = roundBetTotals;
+  }, [roundBetTotals]);
   
   // Filter roulette bets from live feed (only current round)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
@@ -154,6 +160,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       console.log('🔄 Round changed, clearing user bets');
       setUserBets({});
       setRoundBetTotals({}); // Clear round bet totals for new round
+      roundBetTotalsRef.current = {}; // Clear ref too
       userBetsRef.current = {};
       currentRoundRef.current = currentRound.id;
     }
@@ -161,10 +168,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
   // Update round bet totals when placing a bet
   const addToRoundBetTotal = (color: string, amount: number) => {
-    setRoundBetTotals(prev => ({
-      ...prev,
-      [color]: (prev[color] || 0) + amount
-    }));
+    setRoundBetTotals(prev => {
+      const newTotals = {
+        ...prev,
+        [color]: (prev[color] || 0) + amount
+      };
+      roundBetTotalsRef.current = newTotals;
+      return newTotals;
+    });
   };
 
   // Fetch current round
@@ -184,6 +195,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         console.log('🆕 New round detected, clearing user bets');
         setUserBets({});
         setRoundBetTotals({}); // Clear round bet totals for new round
+        roundBetTotalsRef.current = {}; // Clear ref too
         userBetsRef.current = {};
         currentRoundRef.current = data?.id || null;
         setBetTotals({
@@ -244,8 +256,21 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           setUserBets(dbUserBets);
           userBetsRef.current = dbUserBets;
           
-          // Sync round bet totals with database data
-          setRoundBetTotals(dbUserBets);
+          // Only update round bet totals if they actually changed
+          const currentRoundTotals = roundBetTotalsRef.current;
+          const roundTotalsChanged = Object.keys(dbUserBets).some(color => 
+            dbUserBets[color] !== (currentRoundTotals[color] || 0)
+          ) || Object.keys(currentRoundTotals).some(color =>
+            (currentRoundTotals[color] || 0) !== (dbUserBets[color] || 0)
+          );
+          
+          if (roundTotalsChanged) {
+            console.log('🔄 Updating round bet totals (changes detected):', dbUserBets);
+            setRoundBetTotals(dbUserBets);
+            roundBetTotalsRef.current = dbUserBets;
+          } else {
+            console.log('✅ Round bet totals unchanged, keeping current display');
+          }
         } else {
           console.log('✅ User bets unchanged, keeping current state');
         }
@@ -416,6 +441,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             console.log('🆕 New round detected, clearing user bets and fetching fresh data');
             setUserBets({});
             setRoundBetTotals({}); // Clear round bet totals for new round
+            roundBetTotalsRef.current = {}; // Clear ref too
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
@@ -892,6 +918,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       // Clear user bets for new round
       setUserBets({});
       setRoundBetTotals({}); // Clear round bet totals for new round
+      roundBetTotalsRef.current = {}; // Clear ref too
       userBetsRef.current = {};
       
       // Update current round reference
