@@ -236,12 +236,38 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 11. Add constraints for data integrity
-ALTER TABLE user_rate_limits 
-ADD CONSTRAINT check_bet_count_positive CHECK (bet_count >= 0);
+DO $$ 
+BEGIN
+    -- Add constraint to user_rate_limits if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE table_name = 'user_rate_limits' 
+        AND constraint_name = 'check_bet_count_positive'
+    ) THEN
+        ALTER TABLE user_rate_limits 
+        ADD CONSTRAINT check_bet_count_positive CHECK (bet_count >= 0);
+    END IF;
+EXCEPTION
+    WHEN duplicate_object THEN
+        -- Constraint already exists, do nothing
+        NULL;
+END $$;
 
-ALTER TABLE roulette_bets 
-ADD CONSTRAINT check_bet_amount_positive CHECK (bet_amount > 0),
-ADD CONSTRAINT check_bet_amount_reasonable CHECK (bet_amount >= 0.01 AND bet_amount <= 1000000);
+-- Drop existing constraint if it exists and add new one
+DO $$ 
+BEGIN
+    -- Drop existing constraint
+    ALTER TABLE roulette_bets DROP CONSTRAINT IF EXISTS check_bet_amount_reasonable;
+    
+    -- Add new constraints
+    ALTER TABLE roulette_bets 
+    ADD CONSTRAINT check_bet_amount_positive CHECK (bet_amount > 0),
+    ADD CONSTRAINT check_bet_amount_reasonable CHECK (bet_amount >= 0.01 AND bet_amount <= 1000000);
+EXCEPTION
+    WHEN duplicate_object THEN
+        -- Constraint already exists, do nothing
+        NULL;
+END $$;
 
 -- 12. Function to get user betting statistics
 CREATE OR REPLACE FUNCTION get_user_bet_stats(
