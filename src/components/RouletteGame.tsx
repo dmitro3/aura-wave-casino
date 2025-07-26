@@ -152,7 +152,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     if (currentRound?.id && currentRoundRef.current && currentRound.id !== currentRoundRef.current) {
       console.log('🔄 Round changed, clearing user bets');
       setUserBets({});
-      clearStableBetDisplay(); // Clear stable display for new round
       userBetsRef.current = {};
       currentRoundRef.current = currentRound.id;
     }
@@ -174,7 +173,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       if (isNewRound) {
         console.log('🆕 New round detected, clearing user bets');
         setUserBets({});
-        clearStableBetDisplay(); // Clear stable display for new round
         userBetsRef.current = {};
         currentRoundRef.current = data?.id || null;
         setBetTotals({
@@ -234,18 +232,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           console.log('🔄 Updating user bets (changes detected):', dbUserBets);
           setUserBets(dbUserBets);
           userBetsRef.current = dbUserBets;
-          
-          // Sync stable display with database data (only if we don't have higher local values)
-          setStableBetDisplay(prev => {
-            const synced = { ...prev };
-            Object.keys(dbUserBets).forEach(color => {
-              // Only update if database has a higher value than our display
-              if (dbUserBets[color] > (synced[color] || 0)) {
-                synced[color] = dbUserBets[color];
-              }
-            });
-            return synced;
-          });
         } else {
           console.log('✅ User bets unchanged, keeping current state');
         }
@@ -415,7 +401,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           if (isNewRound) {
             console.log('🆕 New round detected, clearing user bets and fetching fresh data');
             setUserBets({});
-            clearStableBetDisplay(); // Clear stable display for new round
             userBetsRef.current = {};
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
@@ -732,9 +717,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         return newBets;
       });
       
-      // Update stable display immediately (simple approach)
-      updateStableBetDisplay(color, Number(betAmount));
-      
       // Update bet limits tracking
       setUserBetLimits(prev => ({
         totalThisRound: prev.totalThisRound + Number(betAmount),
@@ -891,7 +873,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       
       // Clear user bets for new round
       setUserBets({});
-      clearStableBetDisplay(); // Clear stable display for new round
       userBetsRef.current = {};
       
       // Update current round reference
@@ -902,22 +883,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       setExtendedWinAnimation(false);
     }
   }, [currentRound?.id]);
-
-  // Simple, stable bet display - completely new approach
-  const [stableBetDisplay, setStableBetDisplay] = useState<Record<string, number>>({});
-  
-  // Update stable display only when actually placing a bet
-  const updateStableBetDisplay = (color: string, amount: number) => {
-    setStableBetDisplay(prev => ({
-      ...prev,
-      [color]: (prev[color] || 0) + amount
-    }));
-  };
-  
-  // Clear stable display for new rounds
-  const clearStableBetDisplay = () => {
-    setStableBetDisplay({});
-  };
 
 
   if (loading) {
@@ -1232,11 +1197,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <span className="text-xs">{getMultiplierText(color)}</span>
                         {isPlacingBet && <div className="w-3 h-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>}
                       </div>
-                      {stableBetDisplay[color] && (
-                        <span className="text-xs opacity-90 bg-white/20 px-1 py-0.5 rounded">
-                          Your bet: ${stableBetDisplay[color].toFixed(2)}
-                        </span>
-                      )}
                     </Button>
                     
                     {/* Live totals calculated from live feed */}
