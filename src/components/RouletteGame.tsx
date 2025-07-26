@@ -1055,23 +1055,28 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                               <span className="text-lg font-bold text-primary">$</span>
                               <div className="relative flex-1">
                                 <Input
-                                  type="number"
+                                  type="text"
                                   value={betAmount}
                                   onChange={(e) => {
                                     const value = e.target.value;
                                     if (value === '') {
                                       setBetAmount('');
-                                    } else {
-                                      // Strictly validate decimal places (max 2 characters after decimal)
-                                      const decimalParts = value.split('.');
-                                      if (decimalParts[1] && decimalParts[1].length > 2) {
-                                        return; // Don't update if more than 2 decimal characters (even if zeros)
-                                      }
-                                      
-                                      const newAmount = Number(value);
-                                      const maxBalance = profile?.balance || 0;
-                                      setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                                      return;
                                     }
+                                    
+                                    // Only allow numbers, one decimal point, and max 2 decimal places
+                                    const regex = /^\d*\.?\d{0,2}$/;
+                                    if (!regex.test(value)) {
+                                      return; // Don't update if doesn't match pattern
+                                    }
+                                    
+                                    const newAmount = Number(value);
+                                    if (isNaN(newAmount)) {
+                                      return; // Don't update if not a valid number
+                                    }
+                                    
+                                    const maxBalance = profile?.balance || 0;
+                                    setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
                                   }}
                                   onBlur={(e) => {
                                     // Format to 2 decimal places on blur if there's a value
@@ -1079,13 +1084,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                       setBetAmount(Number(Number(betAmount).toFixed(2)));
                                     }
                                   }}
-                                  min="0.01"
-                                  max={profile?.balance || 0}
-                                  step="0.01"
-                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 pr-6 text-primary focus:text-purple-400 placeholder:text-muted-foreground placeholder:font-normal placeholder:text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  style={{
-                                    MozAppearance: 'textfield'
-                                  }}
+                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 pr-6 text-primary focus:text-violet-400 placeholder:text-muted-foreground placeholder:font-normal placeholder:text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   disabled={currentRound.status !== 'betting'}
                                   placeholder="Enter amount..."
                                 />
