@@ -129,7 +129,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
     setIsVerifying(true);
     try {
-      console.log('🔍 Calculating PLG.BET verification');
+      console.log('🔍 Calculating provably fair verification');
       
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: {
@@ -351,15 +351,15 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
                   {verificationData.is_completed && !verificationData.verification_result && (
                     <Button onClick={verifyFairness} disabled={isVerifying} className="w-full">
-                      {isVerifying ? 'Calculating...' : 'Calculate PLG.BET Verification'}
+                      {isVerifying ? 'Calculating...' : 'Calculate Provably Fair Verification'}
                     </Button>
                   )}
 
                   {verificationData.verification_result && (
                     <div className="p-4 rounded-lg border bg-muted">
-                      <h4 className="font-semibold mb-2">PLG.BET Verification Result:</h4>
+                      <h4 className="font-semibold mb-2">Provably Fair Verification Result:</h4>
                       <p className="text-sm mb-2">
-                        <strong>Formula:</strong> <code className="bg-background px-1 rounded">{verificationData.plg_formula}</code>
+                        <strong>Formula:</strong> <code className="bg-background px-1 rounded">{verificationData.provably_fair_formula}</code>
                       </p>
                       <p className="text-sm">
                         Hash Input: <code className="bg-background px-1 rounded">{verificationData.hash_input}</code>
@@ -374,7 +374,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                         {verificationData.verification_result === 'VALID' ? '✅' : '❌'} Result: Slot {verificationData.result_slot} ({verificationData.result_color}) - {verificationData.verification_result}
                       </p>
                       <div className="mt-3 text-xs text-muted-foreground">
-                        <p>🏛️ This uses the same provably fair system as PLG.BET</p>
+                        <p>🛡️ Advanced provably fair cryptographic verification</p>
                         <p>📅 Daily seed and lotto are generated every 24 hours</p>
                         <p>🔒 Results are predetermined and cannot be manipulated</p>
                       </div>

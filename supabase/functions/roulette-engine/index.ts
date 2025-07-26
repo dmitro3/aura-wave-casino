@@ -28,7 +28,7 @@ const WHEEL_SLOTS = [
 const BETTING_DURATION = 15000; // 15 seconds betting
 const SPINNING_DURATION = 5000; // 5 seconds spinning animation
 
-// PLG.BET Style Provably Fair Constants
+// Advanced Provably Fair Constants
 const DAILY_SEED_LENGTH = 64; // 64 character hex string (256 bits)
 const LOTTO_LENGTH = 10; // 10 digit lotto number
 
@@ -202,10 +202,10 @@ async function getCurrentRound(supabase: any) {
       
       let result;
       
-      // Try PLG.BET method first
-      if (activeRound.daily_seed_id && activeRound.nonce_id) {
-        try {
-          console.log('🎯 Using PLG.BET method');
+             // Try advanced method first
+       if (activeRound.daily_seed_id && activeRound.nonce_id) {
+         try {
+           console.log('🎯 Using advanced provably fair method');
           
           // Get daily seed for this round
           const { data: dailySeed, error: seedError } = await supabase
@@ -222,20 +222,20 @@ async function getCurrentRound(supabase: any) {
             throw new Error('Daily seed not found for round');
           }
 
-          // Generate provably fair result using PLG.BET method
-          const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
-          result = resultData.result;
-          
-        } catch (error) {
-          console.error('❌ PLG.BET result generation failed, falling back to legacy:', error);
+                     // Generate provably fair result using advanced method
+           const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
+           result = resultData.result;
+           
+         } catch (error) {
+           console.error('❌ Advanced result generation failed, falling back to legacy:', error);
           // Fall back to legacy method
           result = await generateLegacyResult(supabase, activeRound);
         }
-      } else {
-        console.log('🔄 Using legacy method (no PLG.BET data)');
-        // Use legacy method if no PLG.BET data
-        result = await generateLegacyResult(supabase, activeRound);
-      }
+             } else {
+         console.log('🔄 Using legacy method (no advanced data)');
+         // Use legacy method if no advanced data
+         result = await generateLegacyResult(supabase, activeRound);
+       }
       
       // Calculate final reel position for cross-user sync
       const TILE_WIDTH = 120;
@@ -342,7 +342,7 @@ async function getCurrentRound(supabase: any) {
 }
 
 async function createNewRound(supabase: any) {
-  console.log('🆕 Creating new PLG.BET style round...');
+  console.log('🆕 Creating new advanced provably fair round...');
   
   try {
     // Get or create today's daily seed
@@ -392,7 +392,7 @@ async function createNewRound(supabase: any) {
     return newRound;
 
   } catch (error) {
-    console.error('❌ PLG.BET round creation failed, falling back to legacy system:', error);
+    console.error('❌ Advanced round creation failed, falling back to legacy system:', error);
     
     // Fallback to legacy system if PLG.BET fails
     const serverSeed = await generateServerSeed();
@@ -681,20 +681,20 @@ async function completeRound(supabase: any, round: any) {
   console.log(`🎉 Round completed with ${totalBetsCount} bets totaling ${totalBetsAmount}`);
 }
 
-// PLG.BET Style Provably Fair Result Generation
+// Advanced Provably Fair Result Generation
 async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId: number) {
-  console.log('🎲 Generating PLG.BET style provably fair result');
+  console.log('🎲 Generating advanced provably fair result');
   
-  // PLG.BET Formula: hash("sha256", server_seed."-".lotto."-".round_id)
+  // Industry standard formula: hash("sha256", server_seed + "-" + lotto + "-" + round_id)
   const hashInput = `${dailySeed.server_seed}-${dailySeed.lotto}-${nonceId}`;
   const hash = await sha256Hash(hashInput);
   
-  // Convert first 8 characters of hash to number and mod by 15 (PLG.BET method)
+  // Convert first 8 characters of hash to number and mod by 15
   const hashNumber = parseInt(hash.substring(0, 8), 16);
   const resultSlot = hashNumber % 15;
   const result = WHEEL_SLOTS[resultSlot];
   
-  console.log(`🎯 PLG.BET Result Generated:`);
+  console.log(`🎯 Advanced Result Generated:`);
   console.log(`📊 Server Seed: ${dailySeed.server_seed}`);
   console.log(`🎰 Lotto: ${dailySeed.lotto}`);
   console.log(`🔢 Nonce (Round ID): ${nonceId}`);
@@ -742,7 +742,7 @@ async function generateLegacyResult(supabase: any, round: any) {
   return result;
 }
 
-// PLG.BET Daily Seed Management
+// Daily Seed Management
 async function getOrCreateDailySeed(supabase: any) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
   
@@ -827,7 +827,7 @@ async function setClientSeed(supabase: any, userId: string, clientSeed: string) 
 async function verifyRound(supabase: any, roundId: string, clientSeed?: string) {
   console.log(`🔍 Verifying round ${roundId}`);
 
-  // Try PLG.BET verification first
+  // Try advanced verification first
   try {
     // Get round with daily seed info
     const { data: round } = await supabase
@@ -852,17 +852,17 @@ async function verifyRound(supabase: any, roundId: string, clientSeed?: string) 
 
     const dailySeed = round.daily_seeds;
     
-    // If we have PLG.BET data, use it
-    if (dailySeed && round.nonce_id) {
-      console.log(`🎯 Using PLG.BET verification for round ${roundId}`);
-      return await verifyPLGBETRound(round, dailySeed);
+         // If we have advanced data, use it
+     if (dailySeed && round.nonce_id) {
+       console.log(`🎯 Using advanced verification for round ${roundId}`);
+       return await verifyAdvancedRound(round, dailySeed);
     } else {
       console.log(`🔄 Using legacy verification for round ${roundId}`);
       return await verifyLegacyRound(round, clientSeed);
     }
     
-  } catch (error) {
-    console.error('❌ PLG.BET verification failed, trying legacy:', error);
+     } catch (error) {
+     console.error('❌ Advanced verification failed, trying legacy:', error);
     
     // Fallback to legacy verification
     const { data: round } = await supabase
@@ -879,7 +879,7 @@ async function verifyRound(supabase: any, roundId: string, clientSeed?: string) 
   }
 }
 
-async function verifyPLGBETRound(round: any, dailySeed: any) {
+async function verifyAdvancedRound(round: any, dailySeed: any) {
   // For ongoing rounds, show basic info but no server seed
   if (round.status !== 'completed') {
     return {
@@ -898,7 +898,7 @@ async function verifyPLGBETRound(round: any, dailySeed: any) {
     };
   }
 
-  // For completed rounds, show full PLG.BET verification
+  // For completed rounds, show full advanced verification
   const hashInput = `${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}`;
   
   let hashResult = '';
@@ -907,11 +907,11 @@ async function verifyPLGBETRound(round: any, dailySeed: any) {
   
   try {
     hashResult = await sha256Hash(hashInput);
-    // Take first 8 chars and convert to number (PLG.BET method)
+    // Take first 8 chars and convert to number
     hashNumber = parseInt(hashResult.substring(0, 8), 16);
     calculatedSlot = hashNumber % 15;
   } catch (error) {
-    console.error('Error calculating PLG.BET verification:', error);
+    console.error('Error calculating advanced verification:', error);
   }
 
   return {
@@ -927,13 +927,13 @@ async function verifyPLGBETRound(round: any, dailySeed: any) {
     status: round.status,
     daily_date: dailySeed.date,
     is_completed: true,
-    // PLG.BET Verification calculation
+    // Advanced Verification calculation
     hash_input: hashInput,
     hash_result: hashResult,
     hash_number: hashNumber,
     calculated_slot: calculatedSlot,
     verification_result: calculatedSlot === round.result_slot ? 'VALID' : 'INVALID',
-    plg_formula: `hash("sha256", "${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}")`
+    provably_fair_formula: `hash("sha256", "${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}")`
   };
 }
 
@@ -990,16 +990,16 @@ async function verifyLegacyRound(round: any, clientSeed?: string) {
   };
 }
 
-// PLG.BET Secure Generation Functions
+// Secure Generation Functions
 async function generateSecureServerSeed(): Promise<string> {
-  // Generate 64-character hex string (256 bits) like PLG.BET
+  // Generate 64-character hex string (256 bits)
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 async function generateSecureLotto(): Promise<string> {
-  // Generate 10-digit lotto number like PLG.BET
+  // Generate 10-digit lotto number
   const bytes = new Uint8Array(5);
   crypto.getRandomValues(bytes);
   let lotto = '';

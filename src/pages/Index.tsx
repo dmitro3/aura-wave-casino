@@ -13,6 +13,7 @@ import RewardsPanel from '@/components/RewardsPanel';
 import CoinflipGame from '@/components/CoinflipGame';
 import { RealtimeChat } from '@/components/RealtimeChat';
 import { RouletteGame } from '@/components/RouletteGame';
+import { Footer } from '@/components/Footer';
 import { TowerGame } from '@/components/TowerGame';
 import NotificationsPanel from '@/components/NotificationsPanel';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
@@ -331,6 +332,9 @@ export default function Index({ initialGame }: IndexProps) {
 
       {/* Live Level-Up Notifications - Only show for authenticated users */}
       {user && <LiveLevelUpNotification />}
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

@@ -1,4 +1,4 @@
--- PLG.BET Style Provably Fair System Migration
+-- Advanced Provably Fair System Migration
 -- Run this in Supabase SQL Editor
 
 -- Create daily_seeds table for storing server seeds and lotto numbers

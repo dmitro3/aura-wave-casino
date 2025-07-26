@@ -8,6 +8,7 @@ import { LevelSyncProvider } from "@/contexts/LevelSyncContext";
 import Index from "./pages/Index";
 import Rewards from "./pages/Rewards";
 import NotFound from "./pages/NotFound";
+import { ProvablyFair } from "./pages/ProvablyFair";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ const App = () => (
           <Route path="/coinflip" element={<Index initialGame="coinflip" />} />
           <Route path="/tower" element={<Index initialGame="tower" />} />
           <Route path="/rewards" element={<Rewards />} />
+          <Route path="/provably-fair" element={<ProvablyFair />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
