@@ -1063,14 +1063,27 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                       setBetAmount('');
                                     } else {
                                       const newAmount = Number(value);
+                                      
+                                      // Validate decimal places (max 2)
+                                      const decimalParts = value.split('.');
+                                      if (decimalParts[1] && decimalParts[1].length > 2) {
+                                        return; // Don't update if more than 2 decimal places
+                                      }
+                                      
                                       const maxBalance = profile?.balance || 0;
                                       setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
+                                    }
+                                  }}
+                                  onBlur={(e) => {
+                                    // Format to 2 decimal places on blur if there's a value
+                                    if (betAmount !== '' && !isNaN(Number(betAmount))) {
+                                      setBetAmount(Number(Number(betAmount).toFixed(2)));
                                     }
                                   }}
                                   min="0.01"
                                   max={profile?.balance || 0}
                                   step="0.01"
-                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 pr-6 text-primary focus:text-emerald-400 placeholder:text-muted-foreground placeholder:font-normal placeholder:text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  className="w-full text-center text-lg font-bold bg-transparent border-none focus:ring-0 focus:border-none p-0 pr-6 text-primary focus:text-blue-400 placeholder:text-muted-foreground placeholder:font-normal placeholder:text-sm [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   style={{
                                     MozAppearance: 'textfield'
                                   }}
