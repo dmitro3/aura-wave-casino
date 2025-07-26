@@ -317,10 +317,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           // Check if this is a new round (different ID)
           const isNewRound = currentRound?.id !== round.id;
           
-          // Save completed round for fairness checking
+          // Save completed round for fairness checking and handle payouts
           if (oldRound?.status === 'spinning' && round.status === 'completed') {
             console.log('✅ Round completed, saving for fairness check');
             setLastCompletedRound(round);
+            
+            // Handle payouts for this user (TowerGame pattern)
+            handleRoundPayout(round);
           }
           
           setCurrentRound(round);
@@ -403,6 +406,71 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     const refreshInterval = setInterval(fetchCurrentRound, 2000);
     return () => clearInterval(refreshInterval);
   }, []);
+
+  // Handle round payout (TowerGame pattern)
+  const handleRoundPayout = async (completedRound: RouletteRound) => {
+    if (!user || !profile || !completedRound.result_color) {
+      return;
+    }
+
+    try {
+      console.log('💰 Checking for payouts for completed round:', completedRound.id);
+      
+      // Check if user had any bets in this round
+      const userBetsInRound = Object.entries(userBets).filter(([_, amount]) => amount > 0);
+      
+      if (userBetsInRound.length === 0) {
+        console.log('ℹ️ No bets placed by user in this round');
+        return;
+      }
+
+      // Calculate user's total winnings
+      let totalPayout = 0;
+      let totalProfit = 0;
+      let hadWinningBet = false;
+
+      for (const [betColor, betAmount] of userBetsInRound) {
+        if (betColor === completedRound.result_color) {
+          // User won on this color
+          const multiplier = betColor === 'green' ? 14 : 2;
+          const payout = betAmount * multiplier;
+          totalPayout += payout;
+          totalProfit += (payout - betAmount);
+          hadWinningBet = true;
+          console.log(`🎯 User won ${payout} on ${betColor} (bet: ${betAmount}, multiplier: ${multiplier}x)`);
+        } else {
+          // User lost this bet
+          totalProfit -= betAmount;
+          console.log(`😢 User lost ${betAmount} on ${betColor}`);
+        }
+      }
+
+      if (hadWinningBet && totalPayout > 0) {
+        console.log(`💰 Total payout for user: ${totalPayout}, total profit: ${totalProfit}`);
+        
+        // Update user balance immediately (TowerGame pattern)
+        await onUpdateUser({
+          balance: profile.balance + totalPayout,
+          total_profit: (profile.total_profit || 0) + totalProfit
+        });
+
+        toast({
+          title: "🎉 You Won!",
+          description: `Won $${totalPayout.toFixed(2)} on ${completedRound.result_color}!`,
+        });
+      } else if (totalProfit < 0) {
+        // Only losses, update profit stats
+        await onUpdateUser({
+          total_profit: (profile.total_profit || 0) + totalProfit
+        });
+        
+        console.log(`😢 User lost total: ${Math.abs(totalProfit)}`);
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error handling round payout:', error);
+    }
+  };
 
   // Place bet
   const placeBet = async (color: string) => {

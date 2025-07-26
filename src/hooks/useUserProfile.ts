@@ -130,9 +130,38 @@ export function useUserProfile() {
         console.log('📊 Comprehensive stats subscription status:', status);
       });
 
+    // Additional dedicated balance subscription for maximum reliability
+    const balanceChannel = supabase
+      .channel(`balance_updates_${user.id}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('🏦 DEDICATED BALANCE UPDATE:', payload);
+          
+          if (payload.new && payload.old && payload.new.balance !== payload.old.balance) {
+            console.log('💰 BALANCE SYNC: Force updating balance from', payload.old.balance, 'to', payload.new.balance);
+            setUserData(prev => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                balance: payload.new.balance,
+              };
+            });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       console.log('🧹 Cleaning up comprehensive stats subscription');
       supabase.removeChannel(statsChannel);
+      supabase.removeChannel(balanceChannel);
     };
   }, [user])
 
