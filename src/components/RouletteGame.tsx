@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,6 +87,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [loading, setLoading] = useState(true);
   const [testData, setTestData] = useState<any>(null);
   const [lastCompletedRound, setLastCompletedRound] = useState<RouletteRound | null>(null);
+  
+  // Use ref to track current round ID and user bets to prevent race conditions
+  const currentRoundRef = useRef<string | null>(null);
+  const userBetsRef = useRef<Record<string, number>>({});
 
   // Fetch current round
   const fetchCurrentRound = async () => {
@@ -104,6 +108,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       if (isNewRound) {
         console.log('🆕 New round detected, clearing user bets');
         setUserBets({});
+        userBetsRef.current = {};
+        currentRoundRef.current = data?.id || null;
         setBetTotals({
           green: { total: 0, count: 0, users: [] },
           red: { total: 0, count: 0, users: [] },
@@ -128,7 +134,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   };
 
   // Fetch bets for current round
-  const fetchRoundBets = async (roundId: string, preserveUserBets = false) => {
+  const fetchRoundBets = async (roundId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_round_bets', roundId }
@@ -149,13 +155,23 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         });
         console.log('👤 Database user bets:', dbUserBets);
         
-        // Always update with database values unless preserveUserBets is true
-        if (!preserveUserBets) {
-          console.log('🔄 Updating user bets from database');
-          setUserBets(dbUserBets);
-        } else {
-          console.log('⏭️ Preserving current user bets');
+        // Smart user bet handling - merge database with current local state
+        const currentLocalBets = userBetsRef.current;
+        const mergedBets = { ...dbUserBets };
+        
+        // If this is the same round and we have local bets, prefer local values
+        if (currentRoundRef.current === roundId && currentLocalBets) {
+          Object.keys(currentLocalBets).forEach(color => {
+            if (currentLocalBets[color] > (dbUserBets[color] || 0)) {
+              mergedBets[color] = currentLocalBets[color];
+              console.log(`🔒 Keeping local bet for ${color}: ${currentLocalBets[color]} (DB: ${dbUserBets[color] || 0})`);
+            }
+          });
         }
+        
+        console.log('🔄 Final user bets:', mergedBets);
+        setUserBets(mergedBets);
+        userBetsRef.current = mergedBets;
       }
     } catch (error: any) {
       console.error('Failed to fetch round bets:', error);
@@ -291,10 +307,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           if (isNewRound) {
             console.log('🆕 New round detected, clearing user bets and fetching fresh data');
             setUserBets({});
+            userBetsRef.current = {};
+            currentRoundRef.current = round.id;
             fetchRoundBets(round.id);
           } else if (round.status === 'betting' && oldRound?.status !== 'betting') {
-            console.log('🎲 Betting phase started, preserving user bets');
-            fetchRoundBets(round.id, true);
+            console.log('🎲 Betting phase started');
+            fetchRoundBets(round.id);
           } else if (round.status === 'spinning' && oldRound?.status === 'betting') {
             console.log('🌀 Spinning started, fetching final bets');
             fetchRoundBets(round.id);
@@ -321,9 +339,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         // Always refresh bets to show live updates for all users
         if (currentRound?.id) {
           console.log('🔄 Refreshing bets for live updates');
-          // Preserve user bets during betting phase
-          const preserveUserBets = currentRound.status === 'betting';
-          fetchRoundBets(currentRound.id, preserveUserBets);
+          fetchRoundBets(currentRound.id);
         }
       })
       .subscribe();
@@ -426,6 +442,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           [color]: (prev[color] || 0) + betAmount
         };
         console.log('🎯 Setting user bets locally:', newBets);
+        // Also update the ref for persistence
+        userBetsRef.current = newBets;
         return newBets;
       });
 
