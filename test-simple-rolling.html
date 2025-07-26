@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Rolling Test - Fixed Animation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            color: #10b981;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .animation-demo {
+            height: 120px;
+            background: #2d3748;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #10b981;
+            margin: 20px 0;
+        }
+        
+        .center-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 3px;
+            height: 100%;
+            background: #10b981;
+            z-index: 10;
+            box-shadow: 0 0 10px #10b981;
+        }
+        
+        .tiles-container {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            transition: none;
+        }
+        
+        .tile {
+            flex-shrink: 0;
+            width: 120px;
+            height: 80px;
+            margin: 0 2px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .tile.green {
+            background: #10b981;
+            color: white;
+        }
+        
+        .tile.red {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .tile.black {
+            background: #374151;
+            color: white;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        
+        .btn:hover {
+            background: #059669;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .status h4 {
+            margin: 0 0 10px 0;
+            color: #10b981;
+        }
+        
+        .status-content {
+            font-family: monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .info-item {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .info-item h4 {
+            margin: 0 0 8px 0;
+            color: #10b981;
+            font-size: 1rem;
+        }
+        
+        .info-value {
+            font-family: monospace;
+            font-size: 1.1rem;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎰 Simple Rolling Test</h1>
+            <p>Fixed Animation with Proper Movement Calculation</p>
+        </div>
+
+        <div class="test-section">
+            <h2>⚙️ Animation Configuration</h2>
+            <div class="info">
+                <div class="info-item">
+                    <h4>Total Duration</h4>
+                    <div class="info-value">4000ms (4 seconds)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Acceleration Phase</h4>
+                    <div class="info-value">800ms (20%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Full Speed Phase</h4>
+                    <div class="info-value">2400ms (60%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Deceleration Phase</h4>
+                    <div class="info-value">800ms (20%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Full Rotations</h4>
+                    <div class="info-value">12 rotations</div>
+                </div>
+                <div class="info-item">
+                    <h4>Tile Repetitions</h4>
+                    <div class="info-value">150 sets</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Simple Rolling Animation Demo</h2>
+            <div class="animation-demo">
+                <div class="center-line"></div>
+                <div class="tiles-container" id="tilesContainer">
+                    <!-- Tiles will be generated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="startAnimation()">🚀 Start Rolling</button>
+                <button class="btn" onclick="resetAnimation()">🔄 Reset</button>
+                <button class="btn" onclick="testGreenZero()">🟢 Test Green 0</button>
+                <button class="btn" onclick="testRedFive()">🔴 Test Red 5</button>
+                <button class="btn" onclick="testBlackEleven()">⚫ Test Black 11</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Animation Status</h2>
+            <div class="status">
+                <h4>Live Animation Data</h4>
+                <div class="status-content" id="statusContent">
+                    Ready to start rolling animation...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Roulette wheel configuration
+        const WHEEL_SLOTS = [
+            { slot: 0, color: 'green' },
+            { slot: 11, color: 'black' },
+            { slot: 5, color: 'red' },
+            { slot: 10, color: 'black' },
+            { slot: 6, color: 'red' },
+            { slot: 9, color: 'black' },
+            { slot: 7, color: 'red' },
+            { slot: 8, color: 'black' },
+            { slot: 1, color: 'red' },
+            { slot: 14, color: 'black' },
+            { slot: 2, color: 'red' },
+            { slot: 13, color: 'black' },
+            { slot: 3, color: 'red' },
+            { slot: 12, color: 'black' },
+            { slot: 4, color: 'red' }
+        ];
+
+        const TILE_WIDTH = 120;
+        const CONTAINER_WIDTH = 1200;
+        const CENTER_OFFSET = CONTAINER_WIDTH / 2;
+
+        // Animation state
+        let isAnimating = false;
+        let animationId = null;
+        let currentPosition = 0;
+        let targetSlot = 0;
+
+        // DOM elements
+        const tilesContainer = document.getElementById('tilesContainer');
+        const statusContent = document.getElementById('statusContent');
+
+        // Initialize tiles
+        function initializeTiles() {
+            tilesContainer.innerHTML = '';
+            
+            // Create 150 repetitions for ultra-smooth infinite scroll
+            for (let repeat = 0; repeat < 150; repeat++) {
+                for (let i = 0; i < WHEEL_SLOTS.length; i++) {
+                    const tile = document.createElement('div');
+                    tile.className = `tile ${WHEEL_SLOTS[i].color}`;
+                    tile.textContent = WHEEL_SLOTS[i].slot;
+                    tilesContainer.appendChild(tile);
+                }
+            }
+        }
+
+        // Fixed rolling animation with proper movement calculation
+        function animateRolling(startPosition, targetPosition) {
+            const startTime = performance.now();
+            const totalDuration = 4000; // 4 seconds total
+            
+            console.log('🚀 Starting fixed rolling animation:', {
+                startPosition,
+                targetPosition,
+                distance: Math.abs(targetPosition - startPosition),
+                totalDuration
+            });
+
+            const animate = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const totalProgress = Math.min(elapsed / totalDuration, 1);
+                
+                // Calculate smooth position based on elapsed time with proper movement
+                let currentPosition: number;
+                
+                if (elapsed < 800) {
+                    // ACCELERATION PHASE (0-0.8s) - Rapid acceleration from right to left
+                    const phaseProgress = elapsed / 800;
+                    // Use easeInQuad for momentum buildup
+                    const easedProgress = phaseProgress * phaseProgress;
+                    // Move tiles from right to left (decreasing translateX)
+                    const accelerationDistance = (targetPosition - startPosition) * 0.3;
+                    currentPosition = startPosition + (accelerationDistance * easedProgress);
+                } else if (elapsed < 3200) {
+                    // FULL SPEED PHASE (0.8s-3.2s) - Constant high-speed spinning
+                    const phaseProgress = (elapsed - 800) / 2400;
+                    const accelerationDistance = (targetPosition - startPosition) * 0.3;
+                    const fullSpeedDistance = (targetPosition - startPosition) * 0.6;
+                    // Continue moving tiles from right to left
+                    currentPosition = startPosition + accelerationDistance + (fullSpeedDistance * phaseProgress);
+                } else {
+                    // DECELERATION PHASE (3.2s-4.0s) - Controlled slowdown to target
+                    const phaseProgress = (elapsed - 3200) / 800;
+                    // Use easeOutQuart for realistic deceleration
+                    const easedProgress = 1 - Math.pow(1 - phaseProgress, 4);
+                    const previousDistance = (targetPosition - startPosition) * 0.9;
+                    const decelerationDistance = (targetPosition - startPosition) * 0.1;
+                    // Final movement to target position
+                    currentPosition = startPosition + previousDistance + (decelerationDistance * easedProgress);
+                }
+                
+                // Apply bounce effect at the very end
+                if (totalProgress > 0.98) {
+                    const bounceProgress = (totalProgress - 0.98) / 0.02;
+                    const bounceOffset = Math.sin(bounceProgress * Math.PI * 3) * 5;
+                    currentPosition += bounceOffset;
+                }
+                
+                // Update position - this is the key to visible rolling
+                tilesContainer.style.transform = `translateX(${currentPosition}px)`;
+                
+                if (totalProgress < 1) {
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    // Animation complete - ensure exact landing
+                    isAnimating = false;
+                    tilesContainer.style.transform = `translateX(${targetPosition}px)`;
+                    updateStatus(`✅ Fixed rolling animation complete! Slot ${targetSlot} landed under center line`);
+                }
+            };
+
+            // Cancel any existing animation
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            isAnimating = true;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Animation functions
+        function startAnimation() {
+            if (isAnimating) return;
+            
+            // Generate random target slot
+            targetSlot = Math.floor(Math.random() * 15);
+            
+            // Find the winning slot in our wheel configuration
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === targetSlot);
+            if (slotIndex === -1) {
+                updateStatus('❌ Error: Winning slot not found');
+                return;
+            }
+            
+            // Calculate the exact position to center the winning slot under the indicator
+            const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
+            const baseTargetPosition = CENTER_OFFSET - winningSlotCenter;
+            
+            // Add multiple full rotations for dramatic effect
+            const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
+            const rotations = 12; // 12 full rotations for dramatic effect
+            const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
+            
+            updateStatus(`🚀 Starting fixed rolling animation to slot ${targetSlot} (${WHEEL_SLOTS[slotIndex].color})`);
+            
+            // Start the fixed rolling animation
+            animateRolling(currentPosition, finalTargetPosition);
+        }
+
+        function resetAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            isAnimating = false;
+            currentPosition = 0;
+            tilesContainer.style.transform = 'translateX(0px)';
+            updateStatus('Animation reset to initial position');
+        }
+
+        function testGreenZero() {
+            if (isAnimating) return;
+            updateStatus('Testing specific target: slot 0 (green)');
+        }
+
+        function testRedFive() {
+            if (isAnimating) return;
+            updateStatus('Testing specific target: slot 5 (red)');
+        }
+
+        function testBlackEleven() {
+            if (isAnimating) return;
+            updateStatus('Testing specific target: slot 11 (black)');
+        }
+
+        function updateStatus(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            statusContent.innerHTML = `[${timestamp}] ${message}<br>` + statusContent.innerHTML;
+            
+            // Keep only last 8 messages
+            const lines = statusContent.innerHTML.split('<br>');
+            if (lines.length > 8) {
+                statusContent.innerHTML = lines.slice(0, 8).join('<br>');
+            }
+        }
+
+        // Initialize the demo
+        initializeTiles();
+        updateStatus('Simple Rolling Test ready for testing');
+    </script>
+</body>
+</html>
