@@ -138,7 +138,7 @@ CREATE OR REPLACE FUNCTION validate_bet_limits(
 DECLARE
     total_user_bets NUMERIC := 0;
     bet_count INTEGER := 0;
-    max_bet_per_round NUMERIC := 1000;
+    max_bet_per_round NUMERIC := 100000;
     max_bets_per_user_per_round INTEGER := 10;
 BEGIN
     -- Calculate total bets for this user in this round
@@ -241,7 +241,7 @@ ADD CONSTRAINT check_bet_count_positive CHECK (bet_count >= 0);
 
 ALTER TABLE roulette_bets 
 ADD CONSTRAINT check_bet_amount_positive CHECK (bet_amount > 0),
-ADD CONSTRAINT check_bet_amount_reasonable CHECK (bet_amount <= 10000);
+ADD CONSTRAINT check_bet_amount_reasonable CHECK (bet_amount >= 0.01 AND bet_amount <= 1000000);
 
 -- 12. Function to get user betting statistics
 CREATE OR REPLACE FUNCTION get_user_bet_stats(
@@ -265,7 +265,7 @@ BEGIN
         'total_amount', total_amount,
         'bet_count', bet_count,
         'last_bet_time', last_bet_time,
-        'can_bet_more', (total_amount < 1000 AND bet_count < 10)
+        'can_bet_more', (total_amount < 100000 AND bet_count < 10)
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

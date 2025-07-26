@@ -90,7 +90,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   });
 
   // UI state
-  const [betAmount, setBetAmount] = useState(10);
+  const [betAmount, setBetAmount] = useState(0.01);
   const [timeLeft, setTimeLeft] = useState(0);
   const [loading, setLoading] = useState(true);
   const [winningColor, setWinningColor] = useState<string | null>(null);
@@ -107,7 +107,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   // Rate limiting configuration
   const MIN_BET_INTERVAL = 1000; // 1 second between bets
   const MAX_BETS_PER_ROUND = 10; // Maximum 10 bets per round
-  const MAX_TOTAL_BET_PER_ROUND = 1000; // Maximum $1000 per round
+  const MAX_TOTAL_BET_PER_ROUND = 100000; // Maximum $100,000 per round
 
   // Refs for preventing race conditions
   const placingBetRef = useRef(false);
@@ -610,10 +610,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
     // SECURITY 5: Validate bet amount
     const currentBalance = balanceRef.current;
-    if (betAmount < 1 || betAmount > 10000) {
+    if (betAmount < 0.01 || betAmount > 1000000) {
       toast({
         title: "Invalid Bet Amount",
-        description: "Bet must be between $1 and $10,000",
+        description: "Bet must be between $0.01 and $1,000,000",
         variant: "destructive",
       });
       return;
@@ -1011,7 +1011,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setBetAmount(Math.max(1, Math.floor(betAmount / 2)))}
+                    onClick={() => setBetAmount(Math.max(0.01, Math.floor(betAmount / 2 * 100) / 100))}
                     disabled={currentRound.status !== 'betting'}
                   >
                     ÷2
@@ -1025,10 +1025,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                       onChange={(e) => {
                         const newAmount = Number(e.target.value);
                         const maxBalance = profile?.balance || 0;
-                        setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(1, newAmount));
+                        setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
                       }}
-                      min="1"
+                      min="0.01"
                       max={profile?.balance || 0}
+                      step="0.01"
                       className="w-20 sm:w-24 text-center"
                       disabled={currentRound.status !== 'betting'}
                     />
@@ -1088,7 +1089,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         currentRound.status !== 'betting' || 
                         isPlacingBet ||
                         betAmount > balanceRef.current ||
-                        betAmount < 1 ||
+                        betAmount < 0.01 ||
                         userBetLimits.betCount >= MAX_BETS_PER_ROUND ||
                         userBetLimits.totalThisRound + betAmount > MAX_TOTAL_BET_PER_ROUND ||
                         Date.now() - lastBetTime < MIN_BET_INTERVAL

@@ -524,7 +524,7 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     throw new Error('Invalid bet color');
   }
   
-  if (!betAmount || typeof betAmount !== 'number' || betAmount < 1 || betAmount > 10000 || betAmount % 1 !== 0) {
+  if (!betAmount || typeof betAmount !== 'number' || betAmount < 0.01 || betAmount > 1000000) {
     throw new Error('Invalid bet amount');
   }
 
@@ -637,7 +637,7 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   }
 
   const totalUserBets = (userBetsCount || []).reduce((sum, bet) => sum + bet.bet_amount, 0);
-  const maxBetsPerUserPerRound = 1000; // Maximum $1000 per user per round
+  const maxBetsPerUserPerRound = 100000; // Maximum $100,000 per user per round
 
   if (totalUserBets + betAmount > maxBetsPerUserPerRound) {
     throw new Error(`Maximum bet limit per round is $${maxBetsPerUserPerRound}`);
@@ -647,7 +647,7 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   const multiplier = betColor === 'green' ? 14 : 2;
   const potentialPayout = betAmount * multiplier;
 
-  if (potentialPayout > 140000) { // Max payout $140,000
+  if (potentialPayout > 14000000) { // Max payout $14,000,000 (1M * 14 for green)
     throw new Error('Bet amount too high - maximum payout exceeded');
   }
 
