@@ -67,25 +67,55 @@ serve(async (req) => {
 
       case 'get_round_bets': {
         if (!roundId) {
-          throw new Error('Round ID required');
+          return new Response(JSON.stringify({ error: 'Round ID required' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
         }
 
-        const { data: bets, error } = await supabase
-          .from('roulette_bets')
-          .select(`
-            *,
-            profiles(username, avatar_url)
-          `)
-          .eq('round_id', roundId)
-          .order('created_at', { ascending: false });
+        try {
+          const { data: bets, error } = await supabase
+            .from('roulette_bets')
+            .select(`
+              *,
+              profiles(username, avatar_url)
+            `)
+            .eq('round_id', roundId)
+            .order('created_at', { ascending: false });
 
-        if (error) throw error;
+          if (error) {
+            console.error('❌ Error fetching round bets:', error);
+            // Try without profiles join as fallback
+            const { data: fallbackBets, error: fallbackError } = await supabase
+              .from('roulette_bets')
+              .select('*')
+              .eq('round_id', roundId)
+              .order('created_at', { ascending: false });
 
-        console.log(`📊 Retrieved ${bets?.length || 0} bets for round ${roundId}:`, bets);
+            if (fallbackError) {
+              console.error('❌ Fallback bet fetch also failed:', fallbackError);
+              return new Response(JSON.stringify([]), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
 
-        return new Response(JSON.stringify(bets || []), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+            console.log(`📊 Retrieved ${fallbackBets?.length || 0} bets (fallback) for round ${roundId}`);
+            return new Response(JSON.stringify(fallbackBets || []), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          console.log(`📊 Retrieved ${bets?.length || 0} bets for round ${roundId}`);
+          return new Response(JSON.stringify(bets || []), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+
+        } catch (error) {
+          console.error('❌ get_round_bets crashed:', error);
+          return new Response(JSON.stringify([]), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
       }
 
       case 'get_recent_results': {
