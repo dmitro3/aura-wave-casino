@@ -231,28 +231,34 @@ export const RealtimeChat = () => {
         </ScrollArea>
         
         <div className="p-4 border-t">
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={user ? "Type a message..." : "Sign in to chat"}
-              disabled={!user || loading}
-              className="flex-1 glass border-0"
-              maxLength={200}
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || !user || loading}
-              className="glass border-0 hover:glow-primary"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </div>
-          {!user && (
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Please sign in to participate in chat
-            </p>
+          {user ? (
+            <div className="flex gap-2">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type a message..."
+                disabled={loading}
+                className="flex-1 glass border-0"
+                maxLength={200}
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={!newMessage.trim() || loading}
+                className="glass border-0 hover:glow-primary"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-3 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                🔒 Please sign in to join the conversation
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Connect with other players and share your gaming experience!
+              </p>
+            </div>
           )}
         </div>
       </CardContent>

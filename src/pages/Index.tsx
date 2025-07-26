@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target, Building, Gift } from 'lucide-react';
+import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import AuthModal from '@/components/AuthModal';
@@ -40,53 +40,13 @@ export default function Index() {
   const getXpForNextLevel = (level: number) => level * 100;
   const xpProgress = levelStats ? (levelStats.current_level_xp / (levelStats.current_level_xp + levelStats.xp_to_next_level)) * 100 : 0;
 
-  if (authLoading || profileLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass p-8 rounded-2xl text-center">
           <div className="text-2xl mb-4">🎮</div>
           <p className="text-muted-foreground">Loading ArcadeFinance...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (!user || !userData) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <div className="text-center space-y-6 max-w-md">
-          <div className="space-y-2">
-            <h1 className="text-5xl font-bold gradient-primary bg-clip-text text-transparent">
-              ArcadeFinance
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              The Future of Digital Gaming
-            </p>
-          </div>
-          
-          <div className="glass p-8 rounded-2xl space-y-4 animate-float">
-            <div className="text-6xl mb-4">🎮</div>
-            <h2 className="text-2xl font-semibold">
-              Welcome to the Arcade
-            </h2>
-            <p className="text-muted-foreground">
-              Experience next-generation gaming with sleek design, 
-              real-time rewards, and immersive gameplay.
-            </p>
-            <Button 
-              onClick={() => setShowAuthModal(true)}
-              className="w-full gradient-primary hover:glow-primary transition-smooth"
-              size="lg"
-            >
-              Enter the Arena
-            </Button>
-          </div>
-        </div>
-
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-        />
       </div>
     );
   }
@@ -107,61 +67,93 @@ export default function Index() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Balance Display */}
-              <div className="flex items-center space-x-2 glass px-3 py-1 rounded-lg">
-                <Wallet className="w-4 h-4 text-primary" />
-                <span className="font-semibold">
-                  ${userData.balance.toFixed(2)}
-                </span>
-              </div>
+              {/* Balance Display - Only show for authenticated users */}
+              {user && userData && (
+                <div className="flex items-center space-x-2 glass px-3 py-1 rounded-lg">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  <span className="font-semibold">
+                    ${userData.balance.toFixed(2)}
+                  </span>
+                </div>
+              )}
 
-              {/* Rewards Button */}
-              <Button
-                variant="ghost"
-                onClick={() => navigate('/rewards')}
-                className="glass border-0 hover:glow-primary transition-smooth"
-              >
-                <Gift className="w-4 h-4 mr-2" />
-                Rewards
-              </Button>
+              {/* Rewards Button - Only show for authenticated users */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate('/rewards')}
+                  className="glass border-0 hover:glow-primary transition-smooth"
+                >
+                  <Gift className="w-4 h-4 mr-2" />
+                  Rewards
+                </Button>
+              )}
 
-              {/* Enhanced Level Display */}
-              <UserLevelDisplay 
-                username={userData.username}
-                showXP={true}
-                size="md"
-                className="hidden md:flex"
-              />
+              {/* Enhanced Level Display - Only show for authenticated users */}
+              {user && userData && (
+                <UserLevelDisplay 
+                  username={userData.username}
+                  showXP={true}
+                  size="md"
+                  className="hidden md:flex"
+                />
+              )}
 
-              {/* User Menu */}
-              <Button
-                variant="ghost"
-                onClick={() => setShowProfile(true)}
-                className="glass border-0 hover:glow-primary transition-smooth"
-              >
-                <User className="w-4 h-4 mr-2" />
-                {userData.username}
-              </Button>
+              {/* User Menu or Sign In Button */}
+              {user && userData ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowProfile(true)}
+                    className="glass border-0 hover:glow-primary transition-smooth"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    {userData.username}
+                  </Button>
 
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="glass border-0 hover:text-destructive"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="glass border-0 hover:text-destructive"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={() => setShowAuthModal(true)}
+                  className="glass border-0 hover:glow-primary transition-smooth"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
 
-          {/* XP Progress Bar */}
-          {levelStats && (
+          {/* XP Progress Bar - Only show for authenticated users */}
+          {user && levelStats && (
             <div className="mt-3 space-y-1">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Level {levelStats.current_level} Progress</span>
                 <span>{levelStats.current_level_xp} / {levelStats.current_level_xp + levelStats.xp_to_next_level} XP</span>
               </div>
               <Progress value={xpProgress} className="h-2" />
+            </div>
+          )}
+
+          {/* Guest Notice */}
+          {!user && (
+            <div className="mt-3 p-3 glass rounded-lg text-center">
+              <p className="text-sm text-muted-foreground">
+                🎮 Browsing as Guest - <span 
+                  className="text-primary cursor-pointer hover:underline"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  Sign in
+                </span> to play games and earn rewards!
+              </p>
             </div>
           )}
         </div>
@@ -171,34 +163,52 @@ export default function Index() {
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
         {/* Left Sidebar */}
         <div className="lg:col-span-1 space-y-4">
-          <NotificationsPanel />
-          <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />
+          {user && <NotificationsPanel />}
+          {user && userData && <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />}
           
           <Card className="glass border-0">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Trophy className="w-4 h-4 text-accent" />
-                <span>Quick Stats</span>
+                <span>{user ? 'Your Stats' : 'Game Stats'}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Wagered</span>
-                <span className="font-semibold">${userData.total_wagered.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total P&L</span>
-                <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                  {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Games Played</span>
-                <span className="font-semibold">
-                  {userData.gameStats.coinflip.wins + userData.gameStats.coinflip.losses + 
-                   userData.gameStats.crash.wins + userData.gameStats.crash.losses}
-                </span>
-              </div>
+              {user && userData ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Wagered</span>
+                    <span className="font-semibold">${userData.total_wagered.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total P&L</span>
+                    <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                      {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Games Played</span>
+                    <span className="font-semibold">
+                      {userData.gameStats.coinflip.wins + userData.gameStats.coinflip.losses + 
+                       userData.gameStats.crash.wins + userData.gameStats.crash.losses}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-2">🎯</div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Track your gaming performance
+                  </p>
+                  <Button 
+                    size="sm" 
+                    onClick={() => setShowAuthModal(true)}
+                    className="w-full gradient-primary hover:glow-primary"
+                  >
+                    Sign In to View Stats
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -226,7 +236,11 @@ export default function Index() {
             </TabsList>
 
             <TabsContent value="coinflip">
-              <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
+              {user && userData ? (
+                <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
+              ) : (
+                <CoinflipGame userData={null} onUpdateUser={() => {}} />
+              )}
             </TabsContent>
 
             <TabsContent value="roulette">
@@ -234,7 +248,11 @@ export default function Index() {
             </TabsContent>
 
             <TabsContent value="tower">
-              <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
+              {user && userData ? (
+                <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
+              ) : (
+                <TowerGame userData={null} onUpdateUser={() => {}} />
+              )}
             </TabsContent>
 
             <TabsContent value="crash">
@@ -257,15 +275,23 @@ export default function Index() {
         </div>
       </div>
 
-      {/* Profile Modal */}
-      <UserProfile
-        isOpen={showProfile}
-        onClose={() => setShowProfile(false)}
-        userData={userData}
+      {/* Profile Modal - Only show for authenticated users */}
+      {user && userData && (
+        <UserProfile
+          isOpen={showProfile}
+          onClose={() => setShowProfile(false)}
+          userData={userData}
+        />
+      )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
       />
 
-      {/* Live Level-Up Notifications */}
-      <LiveLevelUpNotification />
+      {/* Live Level-Up Notifications - Only show for authenticated users */}
+      {user && <LiveLevelUpNotification />}
     </div>
   );
 }

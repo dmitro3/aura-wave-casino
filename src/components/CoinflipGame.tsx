@@ -14,7 +14,7 @@ import PayoutDisplay from './CoinflipStreak/PayoutDisplay';
 import LiveCoinflipFeed from './CoinflipStreak/LiveCoinflipFeed';
 
 interface CoinflipGameProps {
-  userData: UserProfile;
+  userData: UserProfile | null;
   onUpdateUser: (updatedData: Partial<UserProfile>) => Promise<void>;
 }
 
@@ -65,6 +65,15 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const { toast } = useToast();
 
   const handlePlaceBet = async () => {
+    if (!userData) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to place bets",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Import validation function
     const { validateBetAmount } = await import('@/lib/utils');
     const validation = validateBetAmount(betInput);
@@ -327,53 +336,81 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
           {/* Game Phase: Setup */}
           {gameState.gamePhase === 'setup' && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Bet Amount</label>
-                <Input
-                  type="number"
-                  value={betInput}
-                  onChange={(e) => setBetInput(e.target.value)}
-                  placeholder="Enter bet amount"
-                  className="glass border-0"
-                  max={userData?.balance}
-                  min="0"
-                  step="0.01"
-                />
-                <div className="flex space-x-2">
+              {userData ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Bet Amount</label>
+                    <Input
+                      type="number"
+                      value={betInput}
+                      onChange={(e) => setBetInput(e.target.value)}
+                      placeholder="Enter bet amount"
+                      className="glass border-0"
+                      max={userData.balance}
+                      min="0"
+                      step="0.01"
+                    />
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBetInput('10')}
+                        className="glass border-0"
+                      >
+                        $10
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBetInput('50')}
+                        className="glass border-0"
+                      >
+                        $50
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBetInput(userData.balance.toString())}
+                        className="glass border-0"
+                      >
+                        Max
+                      </Button>
+                    </div>
+                  </div>
+
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBetInput('10')}
-                    className="glass border-0"
+                    onClick={handlePlaceBet}
+                    disabled={!betInput || parseFloat(betInput) <= 0}
+                    className="w-full gradient-primary hover:glow-primary transition-smooth"
                   >
-                    $10
+                    Place Bet ${betInput || '0'}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBetInput('50')}
-                    className="glass border-0"
+                </>
+              ) : (
+                <div className="text-center py-8 space-y-4">
+                  <div className="text-4xl mb-4">🎮</div>
+                  <h3 className="text-lg font-semibold">Coinflip Streak</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    Experience the thrill of our provably fair coinflip game with multiplying streaks! 
+                    Each correct guess multiplies your potential winnings.
+                  </p>
+                  <div className="glass rounded-lg p-4 space-y-2">
+                    <div className="text-sm text-muted-foreground">Demo Mode Features:</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>• Provably Fair</div>
+                      <div>• Live Multipliers</div>
+                      <div>• Streak Rewards</div>
+                      <div>• Real-time Action</div>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handlePlaceBet}
+                    className="w-full gradient-primary hover:glow-primary transition-smooth"
                   >
-                    $50
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setBetInput(userData?.balance?.toString() || '0')}
-                    className="glass border-0"
-                  >
-                    Max
+                    Sign In to Play
                   </Button>
                 </div>
-              </div>
-
-              <Button
-                onClick={handlePlaceBet}
-                disabled={!betInput || parseFloat(betInput) <= 0}
-                className="w-full gradient-primary hover:glow-primary transition-smooth"
-              >
-                Place Bet ${betInput || '0'}
-              </Button>
+              )}
             </div>
           )}
 

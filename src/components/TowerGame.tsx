@@ -13,7 +13,7 @@ import { UserProfile } from '@/hooks/useUserProfile';
 import ClickableUsername from './ClickableUsername';
 
 interface TowerGameProps {
-  userData: UserProfile;
+  userData: UserProfile | null;
   onUpdateUser: (updatedData: Partial<UserProfile>) => Promise<void>;
 }
 
@@ -142,7 +142,16 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
   };
 
   const startGame = async () => {
-    if (!userData || loading) return;
+    if (!userData) {
+      toast({
+        title: "Sign In Required",
+        description: "Please sign in to play Tower",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (loading) return;
 
     const bet = parseFloat(betAmount);
     if (isNaN(bet) || bet <= 0) {
@@ -616,63 +625,97 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
             </CardHeader>
             <CardContent className="space-y-3">
               {/* Difficulty and Bet Controls */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300 truncate block">Choose Hero</label>
-                  <Select value={difficulty} onValueChange={changeDifficulty}>
-                    <SelectTrigger className="glass border-0 h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
-                        <SelectItem key={key} value={key}>
-                          <div className="flex items-center gap-2">
-                            <span>{info.character}</span>
-                            <span className="truncate">{info.name}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {userData ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-300 truncate block">Choose Hero</label>
+                    <Select value={difficulty} onValueChange={changeDifficulty}>
+                      <SelectTrigger className="glass border-0 h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              <span>{info.character}</span>
+                              <span className="truncate">{info.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-300">Wager</label>
+                    <Input
+                      type="number"
+                      value={betAmount}
+                      onChange={(e) => setBetAmount(e.target.value)}
+                      min="1"
+                      disabled={game?.status === 'active'}
+                      className="glass border-0 h-9"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    {!game || game.status !== 'active' ? (
+                      <Button 
+                        onClick={startGame} 
+                        disabled={loading}
+                        className="w-full gradient-primary hover:glow-primary transition-smooth h-9"
+                        size="sm"
+                      >
+                        {loading ? "Starting..." : "Begin"}
+                      </Button>
+                    ) : (
+                      <div className="w-full">
+                        {game.current_level > 0 && (
+                          <Button 
+                            onClick={cashOut} 
+                            disabled={loading} 
+                            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold shadow-lg shadow-emerald-400/30 h-9"
+                            size="sm"
+                          >
+                            <Coins className="mr-1 h-3 w-3" />
+                            Cash ${(game.bet_amount * (PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level - 1] || 1)).toFixed(2)}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-300">Wager</label>
-                  <Input
-                    type="number"
-                    value={betAmount}
-                    onChange={(e) => setBetAmount(e.target.value)}
-                    min="1"
-                    disabled={game?.status === 'active'}
-                    className="glass border-0 h-9"
-                  />
-                </div>
-                <div className="flex items-end">
-                  {!game || game.status !== 'active' ? (
-                    <Button 
-                      onClick={startGame} 
-                      disabled={loading}
-                      className="w-full gradient-primary hover:glow-primary transition-smooth h-9"
-                      size="sm"
-                    >
-                      {loading ? "Starting..." : "Begin"}
-                    </Button>
-                  ) : (
-                    <div className="w-full">
-                      {game.current_level > 0 && (
-                        <Button 
-                          onClick={cashOut} 
-                          disabled={loading} 
-                          className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold shadow-lg shadow-emerald-400/30 h-9"
-                          size="sm"
-                        >
-                          <Coins className="mr-1 h-3 w-3" />
-                          Cash ${(game.bet_amount * (PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level - 1] || 1)).toFixed(2)}
-                        </Button>
-                      )}
+              ) : (
+                <div className="text-center py-6 space-y-4">
+                  <div className="text-4xl mb-2">🏰</div>
+                  <h3 className="text-lg font-semibold">Mystic Tower Quest</h3>
+                  <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                    Embark on an epic adventure through the mystical tower! Choose your hero and navigate deadly traps 
+                    for multiplying rewards. Each level cleared increases your payout potential!
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="glass rounded-lg p-2">
+                      <div className="text-lg mb-1">🛡️</div>
+                      <div className="font-semibold">Novice</div>
+                      <div className="text-muted-foreground">75% Safe</div>
                     </div>
-                  )}
+                    <div className="glass rounded-lg p-2">
+                      <div className="text-lg mb-1">⚔️</div>
+                      <div className="font-semibold">Warrior</div>
+                      <div className="text-muted-foreground">66% Safe</div>
+                    </div>
+                    <div className="glass rounded-lg p-2">
+                      <div className="text-lg mb-1">🧙‍♂️</div>
+                      <div className="font-semibold">Master</div>
+                      <div className="text-muted-foreground">50% Safe</div>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={startGame}
+                    className="w-full gradient-primary hover:glow-primary transition-smooth"
+                  >
+                    Sign In to Play
+                  </Button>
                 </div>
-              </div>
+              )}
 
               {/* Hero Info */}
               <div className={`p-2 rounded-lg border bg-gradient-to-r ${DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].color}`}>
