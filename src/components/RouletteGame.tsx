@@ -928,38 +928,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             </CardContent>
           </Card>
 
-          {/* Round Info & Provably Fair */}
-          <Card className="glass border-0">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Round Info
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Hash:</span>
-                  <span className="font-mono text-xs">{currentRound.server_seed_hash.slice(0, 8)}...</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Nonce:</span>
-                  <span className="font-mono">{currentRound.nonce}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Bets:</span>
-                  <span>{roundBets.length}</span>
-                </div>
-              </div>
-              
-              {currentRound.status === 'completed' && (
-                <Button variant="outline" size="sm" className="w-full">
-                  <Shield className="w-3 h-3 mr-1" />
-                  Verify Fairness
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+
         </div>
       </div>
 
