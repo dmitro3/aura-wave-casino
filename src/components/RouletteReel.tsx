@@ -49,6 +49,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const startTimeRef = useRef<number>(0);
   const startPositionRef = useRef<number>(0);
   const targetPositionRef = useRef<number>(0);
+  const lastFrameTimeRef = useRef<number>(0);
 
   console.log('🎰 RouletteReel:', { 
     isSpinning, 
@@ -76,9 +77,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return () => window.removeEventListener('resize', measureContainer);
   }, []);
 
-  // Create a repeating loop of tiles (60 repetitions for ultra-smooth infinite scroll)
+  // Create a repeating loop of tiles (80 repetitions for ultra-smooth infinite scroll)
   const tiles = [];
-  for (let repeat = 0; repeat < 60; repeat++) {
+  for (let repeat = 0; repeat < 80; repeat++) {
     for (let i = 0; i < WHEEL_SLOTS.length; i++) {
       tiles.push({
         ...WHEEL_SLOTS[i],
@@ -88,73 +89,72 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }
 
-  // High-fidelity physics-based animation function
-  const animateHighFidelity = useCallback((startPosition: number, targetPosition: number) => {
-    const startTime = Date.now();
-    const totalDuration = 4000; // 4 seconds total
-    const accelerationDuration = 800; // 0.8s acceleration
-    const fullSpeedDuration = 2400; // 2.4s full speed
-    const decelerationDuration = 800; // 0.8s deceleration
+  // Proper rolling animation with realistic physics
+  const animateRolling = useCallback((startPosition: number, targetPosition: number) => {
+    const startTime = performance.now();
+    const totalDuration = 5000; // 5 seconds total for more dramatic effect
     
     startTimeRef.current = startTime;
     startPositionRef.current = startPosition;
     targetPositionRef.current = targetPosition;
+    lastFrameTimeRef.current = startTime;
     
-    console.log('🚀 Starting high-fidelity animation:', {
+    console.log('🚀 Starting proper rolling animation:', {
       startPosition,
       targetPosition,
       distance: Math.abs(targetPosition - startPosition),
-      totalDuration,
-      accelerationDuration,
-      fullSpeedDuration,
-      decelerationDuration
+      totalDuration
     });
 
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
       const totalProgress = Math.min(elapsed / totalDuration, 1);
+      
+      // Calculate velocity for smooth movement
+      const deltaTime = currentTime - lastFrameTimeRef.current;
+      lastFrameTimeRef.current = currentTime;
       
       let currentPosition: number;
       let phase: AnimationPhase;
       let velocity: number;
       
-      if (elapsed < accelerationDuration) {
-        // ACCELERATION PHASE (0-0.8s)
-        const phaseProgress = elapsed / accelerationDuration;
-        // Use cubic-bezier(0.6, 0.04, 0.98, 0.335) equivalent
-        const easedProgress = 1 - Math.pow(1 - phaseProgress, 3);
-        const phaseDistance = (targetPosition - startPosition) * 0.3; // 30% of total distance
+      if (elapsed < 1000) {
+        // ACCELERATION PHASE (0-1s) - Rapid acceleration from right to left
+        const phaseProgress = elapsed / 1000;
+        // Use easeInQuad equivalent for momentum buildup
+        const easedProgress = phaseProgress * phaseProgress;
+        const phaseDistance = (targetPosition - startPosition) * 0.25; // 25% of total distance
         currentPosition = startPosition + phaseDistance * easedProgress;
         phase = AnimationPhase.ACCELERATION;
-        velocity = easedProgress * 100; // Velocity indicator
-      } else if (elapsed < accelerationDuration + fullSpeedDuration) {
-        // FULL SPEED PHASE (0.8s-3.2s)
-        const phaseProgress = (elapsed - accelerationDuration) / fullSpeedDuration;
-        const phaseDistance = (targetPosition - startPosition) * 0.6; // 60% of total distance
-        const accelerationDistance = (targetPosition - startPosition) * 0.3;
+        velocity = easedProgress * 100;
+      } else if (elapsed < 4000) {
+        // FULL SPEED PHASE (1s-4s) - Constant high-speed spinning
+        const phaseProgress = (elapsed - 1000) / 3000;
+        const phaseDistance = (targetPosition - startPosition) * 0.65; // 65% of total distance
+        const accelerationDistance = (targetPosition - startPosition) * 0.25;
         currentPosition = startPosition + accelerationDistance + (phaseDistance * phaseProgress);
         phase = AnimationPhase.FULL_SPEED;
         velocity = 100; // Constant high velocity
       } else {
-        // DECELERATION PHASE (3.2s-4.0s)
-        const phaseProgress = (elapsed - accelerationDuration - fullSpeedDuration) / decelerationDuration;
-        // Use easeOutQuart equivalent
+        // DECELERATION PHASE (4s-5s) - Controlled slowdown to target
+        const phaseProgress = (elapsed - 4000) / 1000;
+        // Use easeOutQuart equivalent for realistic deceleration
         const easedProgress = 1 - Math.pow(1 - phaseProgress, 4);
         const phaseDistance = (targetPosition - startPosition) * 0.1; // 10% of total distance
         const previousDistance = (targetPosition - startPosition) * 0.9;
         currentPosition = startPosition + previousDistance + (phaseDistance * easedProgress);
         phase = AnimationPhase.DECELERATION;
-        velocity = (1 - easedProgress) * 100; // Decreasing velocity
+        velocity = (1 - easedProgress) * 100;
       }
       
-      // Apply bounce effect at the end
-      if (phase === AnimationPhase.DECELERATION && totalProgress > 0.95) {
-        const bounceProgress = (totalProgress - 0.95) / 0.05;
-        const bounceOffset = Math.sin(bounceProgress * Math.PI * 2) * 5; // 5px bounce
+      // Apply bounce effect at the very end
+      if (phase === AnimationPhase.DECELERATION && totalProgress > 0.98) {
+        const bounceProgress = (totalProgress - 0.98) / 0.02;
+        const bounceOffset = Math.sin(bounceProgress * Math.PI * 3) * 8; // 8px bounce with 3 oscillations
         currentPosition += bounceOffset;
       }
       
-      // Update state
+      // Update state with smooth movement
       setTranslateX(currentPosition);
       setAnimationPhase(phase);
       setCurrentVelocity(velocity);
@@ -163,7 +163,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         animationRef.current = requestAnimationFrame(animate);
       } else {
         // Animation complete - ensure exact landing
-        console.log('✅ High-fidelity animation complete');
+        console.log('✅ Proper rolling animation complete');
         setTranslateX(targetPosition);
         setIsAnimating(false);
         setAnimationPhase(AnimationPhase.STOPPED);
@@ -184,7 +184,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Start animation when spinning begins
   useEffect(() => {
     if (isSpinning && winningSlot !== null) {
-      console.log('🚀 Starting high-fidelity animation to slot:', winningSlot);
+      console.log('🚀 Starting proper rolling animation to slot:', winningSlot);
       
       // Find the winning slot in our wheel configuration
       const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
@@ -199,10 +199,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       // Add multiple full rotations for dramatic effect
       const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
-      const rotations = 6; // 6 full rotations for dramatic effect
+      const rotations = 8; // 8 full rotations for dramatic effect
       const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
       
-      console.log('🎯 High-fidelity animation setup:', {
+      console.log('🎯 Proper rolling animation setup:', {
         winningSlot,
         slotIndex,
         winningSlotCenter,
@@ -213,10 +213,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         distance: Math.abs(finalTargetPosition - translateX)
       });
 
-      // Start the high-fidelity animation
-      animateHighFidelity(translateX, finalTargetPosition);
+      // Start the proper rolling animation
+      animateRolling(translateX, finalTargetPosition);
     }
-  }, [isSpinning, winningSlot, actualCenterOffset, translateX, animateHighFidelity]);
+  }, [isSpinning, winningSlot, actualCenterOffset, translateX, animateRolling]);
 
   // Clean up animation when round ends
   useEffect(() => {
@@ -242,7 +242,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   };
 
-  // Get tile effects based on animation phase
+  // Get tile effects based on animation phase and velocity
   const getTileEffects = (tileIndex: number) => {
     if (!isAnimating) return '';
     
@@ -252,10 +252,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     if (animationPhase === AnimationPhase.FULL_SPEED && isNearCenter) {
       // Motion blur effect during full speed
-      return 'blur-[0.5px] scale-95';
+      return 'blur-[0.8px] scale-90 opacity-80';
+    } else if (animationPhase === AnimationPhase.ACCELERATION && isNearCenter) {
+      // Subtle blur during acceleration
+      return 'blur-[0.3px] scale-95';
     } else if (animationPhase === AnimationPhase.DECELERATION && isNearCenter) {
-      // Subtle glow during deceleration
-      return 'shadow-lg shadow-emerald-400/30';
+      // Glow effect during deceleration
+      return 'shadow-lg shadow-emerald-400/40 scale-105';
     }
     
     return '';

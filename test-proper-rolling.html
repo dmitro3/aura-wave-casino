@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proper Rolling Animation - Realistic Physics</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e, #16213e);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin: 0;
+            background: linear-gradient(45deg, #10b981, #059669, #047857, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 3s ease-in-out infinite;
+        }
+        
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-top: 10px;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin: 25px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .animation-demo {
+            height: 140px;
+            background: linear-gradient(90deg, #1f2937, #374151, #1f2937);
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(16, 185, 129, 0.4);
+            margin: 25px 0;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+        }
+        
+        .reel-container {
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .center-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #10b981, #059669, #10b981);
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+        }
+        
+        .center-line::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 12px solid #10b981;
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
+        }
+        
+        .center-line::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 12px solid #10b981;
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
+        }
+        
+        .tiles-container {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            transition: none;
+        }
+        
+        .tile {
+            flex-shrink: 0;
+            width: 120px;
+            height: 90px;
+            margin: 0 3px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            transition: all 0.075s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tile.green {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        .tile.red {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        
+        .tile.black {
+            background: linear-gradient(135deg, #374151, #1f2937);
+            color: white;
+            box-shadow: 0 4px 12px rgba(55, 65, 81, 0.4);
+        }
+        
+        .tile.winning {
+            transform: scale(1.15);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+            border-color: #10b981;
+            z-index: 5;
+            animation: winning-pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes winning-pulse {
+            0%, 100% { transform: scale(1.15); }
+            50% { transform: scale(1.2); }
+        }
+        
+        .tile.motion-blur {
+            filter: blur(0.8px);
+            transform: scale(0.9);
+            opacity: 0.8;
+        }
+        
+        .tile.acceleration-blur {
+            filter: blur(0.3px);
+            transform: scale(0.95);
+        }
+        
+        .tile.deceleration-glow {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            transform: scale(1.05);
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 25px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+        
+        .btn.premium {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .status {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        
+        .status h4 {
+            margin: 0 0 15px 0;
+            color: #10b981;
+            font-size: 1.2rem;
+        }
+        
+        .status-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .animation-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .info-item {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .info-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+        }
+        
+        .info-item h4 {
+            margin: 0 0 12px 0;
+            color: #10b981;
+            font-size: 1.1rem;
+        }
+        
+        .info-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: #fbbf24;
+            font-weight: bold;
+        }
+        
+        .timer {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .position-indicator {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .phase-indicator {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            text-transform: uppercase;
+        }
+        
+        .velocity-bar {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            width: 100px;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .velocity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 4px;
+            transition: width 0.1s ease;
+        }
+        
+        .feature-highlight {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-highlight h3 {
+            color: #10b981;
+            margin: 0 0 15px 0;
+            font-size: 1.3rem;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            color: #e5e7eb;
+            position: relative;
+            padding-left: 25px;
+        }
+        
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎰 Proper Rolling Animation</h1>
+            <p>Realistic Physics-Based Roulette Animation</p>
+        </div>
+
+        <div class="feature-highlight">
+            <h3>🚀 Proper Rolling Features</h3>
+            <ul class="feature-list">
+                <li>Realistic physics-based animation with momentum</li>
+                <li>Smooth acceleration from right to left (easeInQuad)</li>
+                <li>Constant high-speed spinning phase</li>
+                <li>Controlled deceleration with easeOutQuart</li>
+                <li>Bounce effect with 3 oscillations on landing</li>
+                <li>Motion blur effects during different phases</li>
+                <li>80 tile repetitions for ultra-smooth infinite scroll</li>
+                <li>8 full rotations for dramatic effect</li>
+                <li>Perfect landing calculation for exact positioning</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h2>⚙️ Animation Configuration</h2>
+            <div class="animation-info">
+                <div class="info-item">
+                    <h4>Total Duration</h4>
+                    <div class="info-value">5000ms (5 seconds)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Acceleration Phase</h4>
+                    <div class="info-value">1000ms (20%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Full Speed Phase</h4>
+                    <div class="info-value">3000ms (60%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Deceleration Phase</h4>
+                    <div class="info-value">1000ms (20%)</div>
+                </div>
+                <div class="info-item">
+                    <h4>Full Rotations</h4>
+                    <div class="info-value">8 rotations</div>
+                </div>
+                <div class="info-item">
+                    <h4>Tile Repetitions</h4>
+                    <div class="info-value">80 sets</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Proper Rolling Animation Demo</h2>
+            <div class="animation-demo">
+                <div class="center-line"></div>
+                <div class="reel-container">
+                    <div class="tiles-container" id="tilesContainer">
+                        <!-- Tiles will be generated by JavaScript -->
+                    </div>
+                </div>
+                <div class="timer" id="timer">0.0s</div>
+                <div class="position-indicator" id="positionIndicator">Position: 0px</div>
+                <div class="phase-indicator" id="phaseIndicator">IDLE</div>
+                <div class="velocity-bar">
+                    <div class="velocity-fill" id="velocityFill"></div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="startAnimation()">🚀 Start Proper Rolling</button>
+                <button class="btn secondary" onclick="resetAnimation()">🔄 Reset</button>
+                <button class="btn premium" onclick="testRandomTarget()">🎲 Random Target</button>
+                <button class="btn" onclick="testGreenZero()">🟢 Test Green 0</button>
+                <button class="btn" onclick="testRedFive()">🔴 Test Red 5</button>
+                <button class="btn" onclick="testBlackEleven()">⚫ Test Black 11</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Real-time Animation Status</h2>
+            <div class="status">
+                <h4>Live Animation Data</h4>
+                <div class="status-content" id="statusContent">
+                    Ready to start proper rolling animation...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animation phases
+        const AnimationPhase = {
+            IDLE: 'idle',
+            ACCELERATION: 'acceleration',
+            FULL_SPEED: 'full_speed',
+            DECELERATION: 'deceleration',
+            STOPPED: 'stopped'
+        };
+
+        // Roulette wheel configuration
+        const WHEEL_SLOTS = [
+            { slot: 0, color: 'green' },
+            { slot: 11, color: 'black' },
+            { slot: 5, color: 'red' },
+            { slot: 10, color: 'black' },
+            { slot: 6, color: 'red' },
+            { slot: 9, color: 'black' },
+            { slot: 7, color: 'red' },
+            { slot: 8, color: 'black' },
+            { slot: 1, color: 'red' },
+            { slot: 14, color: 'black' },
+            { slot: 2, color: 'red' },
+            { slot: 13, color: 'black' },
+            { slot: 3, color: 'red' },
+            { slot: 12, color: 'black' },
+            { slot: 4, color: 'red' }
+        ];
+
+        const TILE_WIDTH = 120;
+        const CONTAINER_WIDTH = 1400;
+        const CENTER_OFFSET = CONTAINER_WIDTH / 2;
+
+        // Animation state
+        let isAnimating = false;
+        let animationId = null;
+        let currentPosition = 0;
+        let targetSlot = 0;
+        let startTime = 0;
+        let currentPhase = AnimationPhase.IDLE;
+        let currentVelocity = 0;
+        let lastFrameTime = 0;
+
+        // DOM elements
+        const tilesContainer = document.getElementById('tilesContainer');
+        const statusContent = document.getElementById('statusContent');
+        const timer = document.getElementById('timer');
+        const positionIndicator = document.getElementById('positionIndicator');
+        const phaseIndicator = document.getElementById('phaseIndicator');
+        const velocityFill = document.getElementById('velocityFill');
+
+        // Initialize tiles
+        function initializeTiles() {
+            tilesContainer.innerHTML = '';
+            
+            // Create 80 repetitions for ultra-smooth infinite scroll
+            for (let repeat = 0; repeat < 80; repeat++) {
+                for (let i = 0; i < WHEEL_SLOTS.length; i++) {
+                    const tile = document.createElement('div');
+                    tile.className = `tile ${WHEEL_SLOTS[i].color}`;
+                    tile.textContent = WHEEL_SLOTS[i].slot;
+                    tile.dataset.slot = WHEEL_SLOTS[i].slot;
+                    tile.dataset.index = repeat * WHEEL_SLOTS.length + i;
+                    tilesContainer.appendChild(tile);
+                }
+            }
+        }
+
+        // Proper rolling animation with realistic physics
+        function animateRolling(startPosition, targetPosition) {
+            startTime = performance.now();
+            const totalDuration = 5000; // 5 seconds total for more dramatic effect
+            
+            lastFrameTime = startTime;
+            
+            console.log('🚀 Starting proper rolling animation:', {
+                startPosition,
+                targetPosition,
+                distance: Math.abs(targetPosition - startPosition),
+                totalDuration
+            });
+
+            const animate = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const totalProgress = Math.min(elapsed / totalDuration, 1);
+                
+                // Calculate velocity for smooth movement
+                const deltaTime = currentTime - lastFrameTime;
+                lastFrameTime = currentTime;
+                
+                let currentPosition: number;
+                let phase: string;
+                let velocity: number;
+                
+                if (elapsed < 1000) {
+                    // ACCELERATION PHASE (0-1s) - Rapid acceleration from right to left
+                    const phaseProgress = elapsed / 1000;
+                    // Use easeInQuad equivalent for momentum buildup
+                    const easedProgress = phaseProgress * phaseProgress;
+                    const phaseDistance = (targetPosition - startPosition) * 0.25; // 25% of total distance
+                    currentPosition = startPosition + phaseDistance * easedProgress;
+                    phase = AnimationPhase.ACCELERATION;
+                    velocity = easedProgress * 100;
+                } else if (elapsed < 4000) {
+                    // FULL SPEED PHASE (1s-4s) - Constant high-speed spinning
+                    const phaseProgress = (elapsed - 1000) / 3000;
+                    const phaseDistance = (targetPosition - startPosition) * 0.65; // 65% of total distance
+                    const accelerationDistance = (targetPosition - startPosition) * 0.25;
+                    currentPosition = startPosition + accelerationDistance + (phaseDistance * phaseProgress);
+                    phase = AnimationPhase.FULL_SPEED;
+                    velocity = 100; // Constant high velocity
+                } else {
+                    // DECELERATION PHASE (4s-5s) - Controlled slowdown to target
+                    const phaseProgress = (elapsed - 4000) / 1000;
+                    // Use easeOutQuart equivalent for realistic deceleration
+                    const easedProgress = 1 - Math.pow(1 - phaseProgress, 4);
+                    const phaseDistance = (targetPosition - startPosition) * 0.1; // 10% of total distance
+                    const previousDistance = (targetPosition - startPosition) * 0.9;
+                    currentPosition = startPosition + previousDistance + (phaseDistance * easedProgress);
+                    phase = AnimationPhase.DECELERATION;
+                    velocity = (1 - easedProgress) * 100;
+                }
+                
+                // Apply bounce effect at the very end
+                if (phase === AnimationPhase.DECELERATION && totalProgress > 0.98) {
+                    const bounceProgress = (totalProgress - 0.98) / 0.02;
+                    const bounceOffset = Math.sin(bounceProgress * Math.PI * 3) * 8; // 8px bounce with 3 oscillations
+                    currentPosition += bounceOffset;
+                }
+                
+                // Update state with smooth movement
+                updateTilesPosition(currentPosition);
+                updatePhaseIndicator(phase);
+                updateVelocityBar(velocity);
+                positionIndicator.textContent = `Position: ${Math.round(currentPosition)}px`;
+                timer.textContent = `${(elapsed / 1000).toFixed(1)}s`;
+
+                if (totalProgress < 1) {
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    // Animation complete - ensure exact landing
+                    isAnimating = false;
+                    updateTilesPosition(targetPosition);
+                    highlightWinningTile(targetSlot);
+                    updatePhaseIndicator(AnimationPhase.STOPPED);
+                    updateVelocityBar(0);
+                    timer.textContent = '5.0s';
+                    positionIndicator.textContent = `Position: ${Math.round(targetPosition)}px`;
+                    updateStatus(`✅ Proper rolling animation complete! Slot ${targetSlot} landed under center line`);
+                }
+            };
+
+            // Cancel any existing animation
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            
+            isAnimating = true;
+            currentPhase = AnimationPhase.ACCELERATION;
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // Animation functions
+        function startAnimation() {
+            if (isAnimating) return;
+            
+            // Generate random target slot
+            targetSlot = Math.floor(Math.random() * 15);
+            
+            // Find the winning slot in our wheel configuration
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === targetSlot);
+            if (slotIndex === -1) {
+                updateStatus('❌ Error: Winning slot not found');
+                return;
+            }
+            
+            // Calculate the exact position to center the winning slot under the indicator
+            const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
+            const baseTargetPosition = CENTER_OFFSET - winningSlotCenter;
+            
+            // Add multiple full rotations for dramatic effect
+            const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
+            const rotations = 8; // 8 full rotations for dramatic effect
+            const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
+            
+            updateStatus(`🚀 Starting proper rolling animation to slot ${targetSlot} (${WHEEL_SLOTS[slotIndex].color})`);
+            
+            // Start the proper rolling animation
+            animateRolling(currentPosition, finalTargetPosition);
+        }
+
+        function resetAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            isAnimating = false;
+            currentPosition = 0;
+            updateTilesPosition(0);
+            updatePhaseIndicator(AnimationPhase.IDLE);
+            updateVelocityBar(0);
+            timer.textContent = '0.0s';
+            positionIndicator.textContent = 'Position: 0px';
+            updateStatus('Animation reset to initial position');
+        }
+
+        function testRandomTarget() {
+            if (isAnimating) return;
+            
+            const randomSlot = Math.floor(Math.random() * 15);
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === randomSlot);
+            
+            updateStatus(`Testing random target: slot ${randomSlot} (${WHEEL_SLOTS[slotIndex].color})`);
+            highlightWinningTile(randomSlot);
+        }
+
+        function testGreenZero() {
+            if (isAnimating) return;
+            
+            updateStatus('Testing specific target: slot 0 (green)');
+            highlightWinningTile(0);
+        }
+
+        function testRedFive() {
+            if (isAnimating) return;
+            
+            updateStatus('Testing specific target: slot 5 (red)');
+            highlightWinningTile(5);
+        }
+
+        function testBlackEleven() {
+            if (isAnimating) return;
+            
+            updateStatus('Testing specific target: slot 11 (black)');
+            highlightWinningTile(11);
+        }
+
+        // Update functions
+        function updateTilesPosition(position) {
+            tilesContainer.style.transform = `translateX(${position}px)`;
+            currentPosition = position;
+        }
+
+        function updatePhaseIndicator(phase) {
+            currentPhase = phase;
+            phaseIndicator.textContent = phase.replace('_', ' ').toUpperCase();
+            
+            // Update tile effects based on phase
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach(tile => {
+                tile.classList.remove('motion-blur', 'acceleration-blur', 'deceleration-glow');
+                
+                if (phase === AnimationPhase.FULL_SPEED) {
+                    const tileIndex = parseInt(tile.dataset.index);
+                    const tileCenter = currentPosition + (tileIndex * TILE_WIDTH + TILE_WIDTH / 2);
+                    const distanceFromCenter = Math.abs(tileCenter - CENTER_OFFSET);
+                    if (distanceFromCenter < TILE_WIDTH / 2) {
+                        tile.classList.add('motion-blur');
+                    }
+                } else if (phase === AnimationPhase.ACCELERATION) {
+                    const tileIndex = parseInt(tile.dataset.index);
+                    const tileCenter = currentPosition + (tileIndex * TILE_WIDTH + TILE_WIDTH / 2);
+                    const distanceFromCenter = Math.abs(tileCenter - CENTER_OFFSET);
+                    if (distanceFromCenter < TILE_WIDTH / 2) {
+                        tile.classList.add('acceleration-blur');
+                    }
+                } else if (phase === AnimationPhase.DECELERATION) {
+                    const tileIndex = parseInt(tile.dataset.index);
+                    const tileCenter = currentPosition + (tileIndex * TILE_WIDTH + TILE_WIDTH / 2);
+                    const distanceFromCenter = Math.abs(tileCenter - CENTER_OFFSET);
+                    if (distanceFromCenter < TILE_WIDTH / 2) {
+                        tile.classList.add('deceleration-glow');
+                    }
+                }
+            });
+        }
+
+        function updateVelocityBar(velocity) {
+            currentVelocity = velocity;
+            velocityFill.style.width = `${velocity}%`;
+        }
+
+        function updateStatus(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            statusContent.innerHTML = `[${timestamp}] ${message}<br>` + statusContent.innerHTML;
+            
+            // Keep only last 10 messages
+            const lines = statusContent.innerHTML.split('<br>');
+            if (lines.length > 10) {
+                statusContent.innerHTML = lines.slice(0, 10).join('<br>');
+            }
+        }
+
+        function highlightWinningTile(slot) {
+            // Remove previous highlights
+            document.querySelectorAll('.tile.winning').forEach(tile => {
+                tile.classList.remove('winning');
+            });
+            
+            // Add highlight to winning tile
+            document.querySelectorAll(`.tile[data-slot="${slot}"]`).forEach(tile => {
+                tile.classList.add('winning');
+            });
+        }
+
+        // Initialize the demo
+        initializeTiles();
+        updateStatus('Proper Rolling Animation ready for testing');
+    </script>
+</body>
+</html>
