@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { RouletteReel } from './RouletteReel';
 import { ProvablyFairModal } from './ProvablyFairModal';
+import { ProvablyFairHistoryModal } from './ProvablyFairHistoryModal';
 
 interface RouletteRound {
   id: string;
@@ -80,6 +81,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [recentResults, setRecentResults] = useState<RouletteResult[]>([]);
   const [userBets, setUserBets] = useState<Record<string, number>>({});
   const [provablyFairModalOpen, setProvablyFairModalOpen] = useState(false);
+  const [provablyFairHistoryOpen, setProvablyFairHistoryOpen] = useState(false);
   const [selectedRoundData, setSelectedRoundData] = useState<RouletteRound | null>(null);
   const [betTotals, setBetTotals] = useState<BetTotals>({
     green: { total: 0, count: 0, users: [] },
@@ -232,20 +234,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
 
 
-  // Open provably fair modal for current round
+  // Open provably fair history modal
   const openProvablyFairModal = () => {
-    if (!currentRound) {
-      console.error('❌ No current round available');
-      toast({
-        title: "No Active Round",
-        description: "There's no active round to show details for.",
-        variant: "destructive",
-      });
-      return;
-    }
-    console.log('🛡️ Opening provably fair modal for current round:', currentRound);
-    setSelectedRoundData(currentRound);
-    setProvablyFairModalOpen(true);
+    console.log('🛡️ Opening provably fair history modal');
+    setProvablyFairHistoryOpen(true);
   };
 
   // Open round details modal
@@ -682,10 +674,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 onClick={openProvablyFairModal}
                 variant="outline" 
                 size="sm"
-                className="bg-blue-50 hover:bg-blue-100"
+                className="glass border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-all duration-200"
                 title="Provably Fair Verification"
               >
-                <Shield className="w-4 h-4" />
+                <Shield className="w-4 h-4 mr-1" />
+                Provably Fair
               </Button>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
@@ -741,10 +734,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setBetAmount(Math.max(1, betAmount - 5))}
+                    onClick={() => setBetAmount(Math.max(1, Math.floor(betAmount / 2)))}
                     disabled={currentRound.status !== 'betting'}
                   >
-                    -$5
+                    ÷2
                   </Button>
                   
                   <div className="flex items-center gap-2">
@@ -752,7 +745,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                     <Input
                       type="number"
                       value={betAmount}
-                      onChange={(e) => setBetAmount(Number(e.target.value))}
+                      onChange={(e) => {
+                        const newAmount = Number(e.target.value);
+                        setBetAmount(newAmount > profile.balance ? profile.balance : Math.max(1, newAmount));
+                      }}
                       min="1"
                       max={profile.balance}
                       className="w-24 text-center"
@@ -763,10 +759,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setBetAmount(betAmount + 5)}
-                    disabled={currentRound.status !== 'betting' || betAmount + 5 > profile.balance}
+                    onClick={() => setBetAmount(Math.min(profile.balance, betAmount * 2))}
+                    disabled={currentRound.status !== 'betting'}
                   >
-                    +$5
+                    ×2
                   </Button>
                   
                   <div className="flex gap-2">
@@ -938,6 +934,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         onClose={() => setProvablyFairModalOpen(false)}
         roundData={selectedRoundData}
         showCurrentRound={selectedRoundData?.id === currentRound?.id}
+      />
+
+      {/* Provably Fair History Modal */}
+      <ProvablyFairHistoryModal
+        isOpen={provablyFairHistoryOpen}
+        onClose={() => setProvablyFairHistoryOpen(false)}
       />
     </div>
   );

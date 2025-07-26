@@ -142,7 +142,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   return (
     <div className="relative w-full max-w-5xl mx-auto">
       {/* Reel Container */}
-      <div className="relative h-36 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl border-4 border-yellow-500 overflow-hidden shadow-2xl">
+      <div className="relative h-36 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl overflow-hidden shadow-2xl">
         
         {/* Center Indicator Line */}
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
