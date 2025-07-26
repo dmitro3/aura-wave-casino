@@ -49,18 +49,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
     });
   }
 
-  // Smooth animation with realistic physics
+    // Smooth animation with realistic physics - synced with backend result
   useEffect(() => {
     if (isSpinning && winningSlot !== null) {
-      console.log('🎰 Starting reel animation to slot:', winningSlot);
+      console.log('🎰 Starting reel animation to predetermined slot:', winningSlot);
       setIsAnimating(true);
       
       const animationDuration = 4000; // 4 seconds total animation
-      
-      // Calculate final position - land exactly on the winning slot at center
-      const finalCycles = 10; // Number of full wheel rotations
-      const cycleDistance = WHEEL_SLOTS.length * TILE_WIDTH;
-      const totalDistance = finalCycles * cycleDistance;
       
       // Find the position of the winning slot in our WHEEL_SLOTS array
       const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningSlot);
@@ -69,16 +64,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
         return;
       }
       
-      const targetSlotOffset = winningSlotIndex * TILE_WIDTH;
-      const finalPosition = -(totalDistance + targetSlotOffset) + CENTER_OFFSET;
+      // Calculate where we need to land for the winning slot to be under the center line
+      // The center line is at CENTER_OFFSET from the left edge
+      // We want the winning slot to be centered under this line
+      const winningSlotTargetPosition = -(winningSlotIndex * TILE_WIDTH) + CENTER_OFFSET - (TILE_WIDTH / 2);
       
-              console.log('🎯 Animation params:', {
-          finalPosition,
-          totalDistance,
-          targetSlotOffset,
-          winningSlot,
-          winningSlotIndex
-        });
+      // Add multiple full rotations for dramatic effect, but always land at the target
+      const fullRotations = 8;
+      const fullRotationDistance = WHEEL_SLOTS.length * TILE_WIDTH;
+      const totalRotationDistance = fullRotations * fullRotationDistance;
+      
+      // Start from current position and add rotation distance to reach final target
+      const startPosition = position;
+      const finalPosition = startPosition - totalRotationDistance + (winningSlotTargetPosition - startPosition);
+      
+      console.log('🎯 Animation params:', {
+        startPosition,
+        finalPosition,
+        winningSlot,
+        winningSlotIndex,
+        winningSlotTargetPosition,
+        totalRotationDistance
+      });
 
       // Reset start time for new animation
       startTimeRef.current = undefined;
@@ -94,15 +101,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
         // Realistic easing: start fast, then slow down smoothly
         const easeProgress = 1 - Math.pow(1 - progress, 3);
         
-        // Simple position calculation from 0 to final position
-        const currentPosition = finalPosition * easeProgress;
+        // Calculate current position from start to final
+        const currentPosition = startPosition + (finalPosition - startPosition) * easeProgress;
         setPosition(currentPosition);
         
         if (progress < 1) {
           animationRef.current = requestAnimationFrame(animate);
         } else {
-          // Animation completed
-          console.log('🎰 Animation completed at position:', currentPosition);
+          // Animation completed - land exactly on target
+          console.log('🎰 Animation completed. Final position:', currentPosition);
+          console.log('🎯 Target position was:', finalPosition);
+          setPosition(finalPosition); // Ensure exact landing
           setIsAnimating(false);
           startTimeRef.current = undefined;
         }
@@ -117,22 +126,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
     }
   }, [isSpinning, winningSlot]);
 
-  // Reset position when round ends
+  // Keep position between rounds - no reset
   useEffect(() => {
-    if (!isSpinning && !showWinAnimation && position !== 0) {
-      setTimeout(() => {
-        console.log('🎰 Resetting reel position');
-        setPosition(0);
-        setIsAnimating(false);
-        
-        // Reset any remaining blur
-        const reelElement = document.getElementById('roulette-reel');
-        if (reelElement) {
-          reelElement.style.filter = 'none';
-        }
-      }, 2000);
+    // Just ensure we're not animating when round ends
+    if (!isSpinning && !showWinAnimation && isAnimating) {
+      console.log('🎰 Round ended, stopping any remaining animation');
+      setIsAnimating(false);
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
     }
-  }, [isSpinning, showWinAnimation, position]);
+  }, [isSpinning, showWinAnimation, isAnimating]);
 
   const getTileColorClass = (color: string) => {
     switch (color) {
@@ -182,11 +186,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation }: Roul
         >
           {tiles.map((tile) => {
             // Check if this tile is the winning one and should be highlighted
+            const tilePosition = position + tile.globalIndex * TILE_WIDTH;
+            const tileCenterPosition = tilePosition + TILE_WIDTH / 2;
             const isWinningTile = showWinAnimation && 
                                   tile.slot === winningSlot && 
                                   !isAnimating &&
-                                  // Only highlight the tile that's actually at the center
-                                  Math.abs((position + tile.globalIndex * TILE_WIDTH) + CENTER_OFFSET) < TILE_WIDTH/4;
+                                  // Only highlight the tile that's actually at the center line
+                                  Math.abs(tileCenterPosition - CENTER_OFFSET) < TILE_WIDTH / 3;
             
             return (
               <div
