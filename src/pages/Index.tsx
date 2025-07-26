@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -18,20 +18,55 @@ import NotificationsPanel from '@/components/NotificationsPanel';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-export default function Index() {
+interface IndexProps {
+  initialGame?: string;
+}
+
+export default function Index({ initialGame }: IndexProps) {
   const { user, signOut, loading: authLoading } = useAuth();
   const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine current game from URL
+  const getCurrentGame = () => {
+    const path = location.pathname;
+    if (path === '/roulette') return 'roulette';
+    if (path === '/coinflip') return 'coinflip';
+    if (path === '/tower') return 'tower';
+    return initialGame || 'coinflip';
+  };
+
+  const [currentGame, setCurrentGame] = useState(getCurrentGame());
+
+  // Update current game when URL changes
+  useEffect(() => {
+    setCurrentGame(getCurrentGame());
+  }, [location.pathname, initialGame]);
 
   const handleLogout = async () => {
     try {
       await signOut();
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleGameChange = (game: string) => {
+    setCurrentGame(game);
+    // Update URL without page reload
+    if (game === 'coinflip' && location.pathname !== '/coinflip') {
+      navigate('/coinflip', { replace: true });
+    } else if (game === 'roulette' && location.pathname !== '/roulette') {
+      navigate('/roulette', { replace: true });
+    } else if (game === 'tower' && location.pathname !== '/tower') {
+      navigate('/tower', { replace: true });
+    } else if (game === 'coinflip' && location.pathname === '/') {
+      navigate('/coinflip', { replace: true });
     }
   };
 
@@ -215,17 +250,17 @@ export default function Index() {
 
         {/* Games Area */}
         <div className="lg:col-span-3">
-          <Tabs defaultValue="coinflip" className="space-y-4">
+          <Tabs value={currentGame} onValueChange={handleGameChange} className="space-y-4">
             <TabsList className="glass w-full">
-              <TabsTrigger value="coinflip" className="flex-1" onClick={() => navigate('/coinflip')}>
+              <TabsTrigger value="coinflip" className="flex-1">
                 <Gamepad2 className="w-4 h-4 mr-2" />
                 Coinflip
               </TabsTrigger>
-              <TabsTrigger value="roulette" className="flex-1" onClick={() => navigate('/roulette')}>
+              <TabsTrigger value="roulette" className="flex-1">
                 <Target className="w-4 h-4 mr-2" />
                 Roulette
               </TabsTrigger>
-              <TabsTrigger value="tower" className="flex-1" onClick={() => navigate('/tower')}>
+              <TabsTrigger value="tower" className="flex-1">
                 <Building className="w-4 h-4 mr-2" />
                 Tower
               </TabsTrigger>

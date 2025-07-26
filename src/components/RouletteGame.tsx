@@ -298,7 +298,7 @@ export const RouletteGame = () => {
     fetchRoundBets();
   }, [currentRound]);
 
-  // Timer countdown
+  // Timer countdown and spinning state management
   useEffect(() => {
     if (!currentRound?.betting_end_time) return;
 
@@ -311,14 +311,32 @@ export const RouletteGame = () => {
         const timeRemaining = Math.max(0, Math.floor((bettingEnd - now) / 1000));
         setTimeLeft(timeRemaining);
 
-        if (timeRemaining === 0) {
+        // When betting time ends, start spinning
+        if (timeRemaining === 0 && !isSpinning) {
+          console.log('🎰 Betting ended, starting spin animation');
           setIsSpinning(true);
         }
-      } else if (currentRound.status === 'spinning' || isSpinning) {
+      } else if (currentRound.status === 'spinning') {
+        // Ensure spinning state is set for spinning rounds
+        if (!isSpinning) {
+          console.log('🎰 Round is spinning, setting spin state');
+          setIsSpinning(true);
+        }
+        
         const timeRemaining = Math.max(0, Math.floor((spinEnd - now) / 1000));
         setTimeLeft(timeRemaining);
-      } else {
+        
+        // Stop spinning when time is up
+        if (timeRemaining === 0 && isSpinning) {
+          console.log('🎰 Spin time ended, stopping animation');
+          setIsSpinning(false);
+        }
+      } else if (currentRound.status === 'completed') {
         setTimeLeft(0);
+        if (isSpinning) {
+          console.log('🎰 Round completed, stopping spin');
+          setIsSpinning(false);
+        }
       }
     }, 1000);
 

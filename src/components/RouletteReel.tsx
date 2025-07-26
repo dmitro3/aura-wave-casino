@@ -30,52 +30,75 @@ export const RouletteReel = ({ isSpinning, winningSlot, showWinAnimation }: Roul
   const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
-    console.log('🎰 Reel state change:', { isSpinning, winningSlot, showWinAnimation });
+    console.log('🎰 Reel state change:', { isSpinning, winningSlot, showWinAnimation, isAnimating });
     
-    if (isSpinning && winningSlot !== null && !isAnimating) {
-      console.log('🎰 Starting reel animation for slot:', winningSlot);
+    // Start animation when spinning begins (even without a predetermined result)
+    if (isSpinning && !isAnimating) {
+      console.log('🎰 Starting reel animation - spinning started');
       setIsAnimating(true);
       setAnimationKey(prev => prev + 1); // Force re-render for animation
       
-      // Calculate target position based on winning slot
-      const slotWidth = 120; // Width of each slot
+      // Start with a long animation that will be adjusted when we get the result
+      const slotWidth = 120;
       const totalSlots = REEL_SLOTS.length; // 15 slots
-      const cycles = 4; // Number of full cycles before stopping
+      const cycles = 4; // Number of full cycles
       
-      // Calculate the final position to land on the winning slot
-      // We need to position the winning slot at the center of the viewport
-      const viewportCenter = 0; // Center position
-      const targetSlotPosition = winningSlot * slotWidth;
-      const totalDistance = cycles * totalSlots * slotWidth + targetSlotPosition;
-      const finalPosition = -(totalDistance);
+      // If we have a winning slot, calculate final position
+      if (winningSlot !== null) {
+        const targetSlotPosition = winningSlot * slotWidth;
+        const totalDistance = cycles * totalSlots * slotWidth + targetSlotPosition;
+        const finalPosition = -(totalDistance);
+        
+        console.log('🎰 Animation with predetermined result:', {
+          slotWidth,
+          totalSlots,
+          cycles,
+          winningSlot,
+          targetSlotPosition,
+          totalDistance,
+          finalPosition
+        });
+        
+        // Start animation immediately
+        setTimeout(() => {
+          setTranslateX(finalPosition);
+        }, 100);
+      } else {
+        // Start a continuous animation until we get the result
+        console.log('🎰 Starting continuous animation until result is known');
+        const continuousDistance = cycles * totalSlots * slotWidth;
+        setTimeout(() => {
+          setTranslateX(-continuousDistance);
+        }, 100);
+      }
       
-      console.log('🎰 Animation params:', {
-        slotWidth,
-        totalSlots,
-        cycles,
-        winningSlot,
-        targetSlotPosition,
-        totalDistance,
-        finalPosition
-      });
-      
-      // Start animation immediately
-      setTimeout(() => {
-        setTranslateX(finalPosition);
-      }, 100);
-      
-      // Stop animation after spin completes
+      // Stop animation after 4 seconds
       setTimeout(() => {
         setIsAnimating(false);
         console.log('🎰 Animation completed');
       }, 4000);
-    } else if (!isSpinning && winningSlot === null) {
-      // Reset position when starting fresh
+    }
+    
+    // Update animation target if we get a result while spinning
+    else if (isSpinning && isAnimating && winningSlot !== null) {
+      console.log('🎰 Updating animation target with new result:', winningSlot);
+      const slotWidth = 120;
+      const totalSlots = REEL_SLOTS.length;
+      const cycles = 4;
+      const targetSlotPosition = winningSlot * slotWidth;
+      const totalDistance = cycles * totalSlots * slotWidth + targetSlotPosition;
+      const finalPosition = -(totalDistance);
+      
+      setTranslateX(finalPosition);
+    }
+    
+    // Reset when not spinning
+    else if (!isSpinning && !showWinAnimation) {
       console.log('🎰 Resetting reel position');
       setTranslateX(0);
       setIsAnimating(false);
     }
-  }, [isSpinning, winningSlot]);
+  }, [isSpinning, winningSlot, showWinAnimation]);
 
   const getSlotColorClass = (color: string) => {
     switch (color) {
