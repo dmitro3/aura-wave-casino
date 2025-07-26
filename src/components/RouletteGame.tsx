@@ -644,6 +644,39 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   };
 
+  const testDailySeeds = async () => {
+    try {
+      console.log('🔧 Testing daily seeds setup...')
+      const { data, error } = await supabase.functions.invoke('roulette-engine', {
+        body: { action: 'setup_daily_seeds' }
+      })
+
+      if (error) {
+        console.error('❌ Daily seeds setup error:', error)
+        toast({
+          title: "Daily Seeds Error",
+          description: error.message,
+          variant: "destructive"
+        })
+        return
+      }
+
+      console.log('✅ Daily seeds setup result:', data)
+      toast({
+        title: "Daily Seeds Setup",
+        description: data.success ? data.message : data.error,
+        variant: data.success ? "default" : "destructive"
+      })
+    } catch (error) {
+      console.error('❌ Daily seeds test error:', error)
+      toast({
+        title: "Setup Error",
+        description: "Failed to test daily seeds setup",
+        variant: "destructive"
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -719,12 +752,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Place Your Bets</span>
-                {user && profile && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Wallet className="w-4 h-4" />
-                    <span>Balance: ${profile.balance.toFixed(2)}</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <Button onClick={testDailySeeds} variant="outline" size="sm">
+                    Test Daily Seeds
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {timeLeft > 0 ? `${timeLeft}s remaining` : 'Bets closed'}
+                  </span>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">

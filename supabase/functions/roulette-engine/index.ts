@@ -156,6 +156,77 @@ serve(async (req) => {
         });
       }
 
+      case 'setup_daily_seeds': {
+        console.log('🔧 Setting up daily seeds system...')
+        
+        try {
+          // Check if daily_seeds table exists
+          const { data: tableCheck, error: tableCheckError } = await supabase
+            .from('daily_seeds')
+            .select('id')
+            .limit(1);
+
+          if (tableCheckError) {
+            console.log('❌ daily_seeds table does not exist:', tableCheckError.message)
+            return new Response(JSON.stringify({
+              error: 'daily_seeds table does not exist',
+              details: tableCheckError.message,
+              instructions: 'Please run the database migration manually'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          console.log('✅ daily_seeds table exists')
+
+          // Check if roulette_rounds has daily_seed_id column
+          const { data: roundsCheck, error: roundsCheckError } = await supabase
+            .from('roulette_rounds')
+            .select('daily_seed_id')
+            .limit(1);
+
+          if (roundsCheckError) {
+            console.log('❌ daily_seed_id column does not exist:', roundsCheckError.message)
+            return new Response(JSON.stringify({
+              error: 'daily_seed_id column does not exist in roulette_rounds',
+              details: roundsCheckError.message,
+              instructions: 'Please run the database migration manually'
+            }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          console.log('✅ daily_seed_id column exists')
+
+          // Create today's seed
+          const dailySeed = await getOrCreateDailySeed(supabase);
+          
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Daily seeds system is properly set up',
+            daily_seed: {
+              date: dailySeed.date,
+              server_seed_hash: dailySeed.server_seed_hash,
+              lotto_hash: dailySeed.lotto_hash
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+
+        } catch (error) {
+          console.error('❌ Setup error:', error)
+          return new Response(JSON.stringify({
+            error: error.message,
+            success: false
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
           status: 400,
