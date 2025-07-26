@@ -79,27 +79,90 @@ export const RouletteGame = () => {
   const testServerConnection = async () => {
     try {
       console.log('🧪 Testing server connection...');
+      
+      // Test 1: Using Supabase function wrapper
+      console.log('🧪 Test 1: Supabase function wrapper...');
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'test' }
       });
 
-      console.log('🧪 Test result:', { data, error });
+      console.log('🧪 Supabase function result:', { data, error });
 
       if (error) {
-        console.error('🧪 Test failed:', error);
-        return false;
+        console.error('🧪 Supabase function failed:', error);
+        
+        // Test 2: Direct fetch to the function URL
+        console.log('🧪 Test 2: Direct fetch to function...');
+        try {
+          const response = await fetch('https://hqdbdczxottbupwbupdu.supabase.co/functions/v1/roulette-engine', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhxZGJkY3p4b3R0YnVwd2J1cGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMxMTU2MjQsImV4cCI6MjA2ODY5MTYyNH0.HVC17e9vmf0qV5Qn2qdf7t1U9T0Im8v7jf7cpZZqmNQ`
+            },
+            body: JSON.stringify({ action: 'test' })
+          });
+          
+          console.log('🧪 Direct fetch response status:', response.status);
+          console.log('🧪 Direct fetch response headers:', Object.fromEntries(response.headers.entries()));
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('🧪 Direct fetch failed:', response.status, errorText);
+            toast({
+              title: "🧪 Direct Fetch Failed",
+              description: `Status: ${response.status}, Error: ${errorText}`,
+              variant: "destructive",
+            });
+            return false;
+          }
+          
+          const directData = await response.json();
+          console.log('🧪 Direct fetch result:', directData);
+          
+          toast({
+            title: "✅ Direct Fetch Success",
+            description: `Function works! Test: ${directData.test}`,
+            variant: "default",
+          });
+          return true;
+          
+        } catch (directError) {
+          console.error('🧪 Direct fetch failed:', directError);
+          toast({
+            title: "🧪 Direct Fetch Error",
+            description: `Network error: ${directError}`,
+            variant: "destructive",
+          });
+          return false;
+        }
       }
 
       if (data.test === 'success') {
         console.log('✅ Server connection test passed');
         console.log('📊 Test details:', data);
+        toast({
+          title: "✅ Test Passed",
+          description: `Database: ${data.database_connection}, Roulette tables: ${data.roulette_tables}`,
+          variant: "default",
+        });
         return true;
       } else {
         console.error('❌ Server test failed:', data);
+        toast({
+          title: "❌ Test Failed",
+          description: `Test result: ${data.test}, Error: ${data.error}`,
+          variant: "destructive",
+        });
         return false;
       }
     } catch (error) {
       console.error('🧪 Test connection failed:', error);
+      toast({
+        title: "🧪 Connection Failed",
+        description: `Network error: ${error}`,
+        variant: "destructive",
+      });
       return false;
     }
   };
@@ -110,7 +173,9 @@ export const RouletteGame = () => {
       // First test the connection
       const connectionWorking = await testServerConnection();
       if (!connectionWorking) {
-        throw new Error('Server connection test failed');
+        console.log('❌ Stopping here - connection test failed');
+        setLoading(false);
+        return;
       }
 
       console.log('🎰 Frontend: Calling roulette-engine...');
@@ -127,6 +192,7 @@ export const RouletteGame = () => {
       
       console.log('🎰 Current round:', data);
       setCurrentRound(data);
+      setLoading(false);
       
       // Fetch bets for this round
       if (data?.id) {
@@ -150,15 +216,7 @@ export const RouletteGame = () => {
         variant: "destructive",
       });
       
-      // Set a dummy round for testing if we can't connect to server
-      setCurrentRound({
-        id: 'test-round',
-        round_number: 1,
-        status: 'betting',
-        betting_end_time: new Date(Date.now() + 15000).toISOString(),
-        spinning_end_time: new Date(Date.now() + 21000).toISOString(),
-        created_at: new Date().toISOString()
-      });
+      setLoading(false);
     }
   };
 
@@ -432,10 +490,16 @@ export const RouletteGame = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading roulette game...</p>
+      <div className="p-6 text-center">
+        <h2 className="text-2xl font-bold mb-4">🎰 Roulette</h2>
+        <p className="text-gray-400">Loading game...</p>
+        <div className="mt-4">
+          <button 
+            onClick={testServerConnection}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            🧪 Test Server Connection
+          </button>
         </div>
       </div>
     );
