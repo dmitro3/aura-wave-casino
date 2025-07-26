@@ -27,6 +27,7 @@ interface UserBet {
   potential_payout: number;
   actual_payout: number;
   is_winner: boolean;
+  profit: number;
 }
 
 interface ProvablyFairModalProps {
@@ -100,7 +101,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
       // Fetch user's bets for this round
       const { data: bets, error: betsError } = await supabase
         .from('roulette_bets')
-        .select('bet_color, bet_amount, potential_payout, actual_payout, is_winner')
+        .select('bet_color, bet_amount, potential_payout, actual_payout, is_winner, profit')
         .eq('round_id', roundData.id)
         .eq('user_id', user.id);
 
@@ -272,8 +273,8 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                           <Badge variant={bet.is_winner ? 'default' : 'destructive'}>
                             {bet.is_winner ? 'WON' : 'LOST'}
                           </Badge>
-                          <span className={bet.actual_payout >= bet.bet_amount ? 'text-emerald-400' : 'text-red-400'}>
-                            {bet.is_winner ? '+' : ''}${(bet.actual_payout - bet.bet_amount).toFixed(2)}
+                          <span className={bet.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                            {bet.profit >= 0 ? '+' : ''}${bet.profit.toFixed(2)}
                           </span>
                         </div>
                       </div>
