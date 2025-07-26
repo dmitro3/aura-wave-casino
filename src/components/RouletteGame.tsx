@@ -139,7 +139,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       setRoundBets(data || []);
       calculateBetTotals(data || []);
       
-      // Calculate user's bets for this round
+      // Calculate user's bets for this round (only update if different)
       if (user) {
         const userRoundBets = (data || []).filter((bet: RouletteBet) => bet.user_id === user.id);
         const userBetsByColor: Record<string, number> = {};
@@ -147,7 +147,23 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           userBetsByColor[bet.bet_color] = (userBetsByColor[bet.bet_color] || 0) + bet.bet_amount;
         });
         console.log('👤 User bets for round:', userBetsByColor);
-        setUserBets(userBetsByColor);
+        
+        // Only update if the bets are different (to avoid overriding optimistic updates)
+        setUserBets(prevBets => {
+          const hasChanges = Object.keys(userBetsByColor).some(color => 
+            prevBets[color] !== userBetsByColor[color]
+          ) || Object.keys(prevBets).some(color => 
+            prevBets[color] !== (userBetsByColor[color] || 0)
+          );
+          
+          if (hasChanges) {
+            console.log('🔄 Updating user bets from database');
+            return userBetsByColor;
+          } else {
+            console.log('⏭️ Keeping current user bets (no changes)');
+            return prevBets;
+          }
+        });
       }
     } catch (error: any) {
       console.error('Failed to fetch round bets:', error);
@@ -241,17 +257,28 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         console.log('🎰 Round update:', payload);
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           const round = payload.new as RouletteRound;
+          const oldRound = payload.old as RouletteRound;
+          
+          // Check if this is a new round (different ID)
+          const isNewRound = currentRound?.id !== round.id;
+          
           setCurrentRound(round);
           
-          // Fetch bets for new/updated round
-          if (round.id) {
+          // Only fetch bets if it's a new round or status changed
+          if (isNewRound) {
+            console.log('🆕 New round detected, fetching bets');
             fetchRoundBets(round.id);
+          } else if (oldRound?.status !== round.status) {
+            console.log('🔄 Round status changed, fetching bets');
+            fetchRoundBets(round.id);
+          } else {
+            console.log('⏭️ Round update but keeping current bets');
           }
         }
       })
       .subscribe();
 
-    // Subscribe to bet updates
+    // Subscribe to bet updates (only for other users' bets)
     const betSubscription = supabase
       .channel('roulette_bets')
       .on('postgres_changes', {
@@ -260,8 +287,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         table: 'roulette_bets'
       }, (payload) => {
         console.log('💰 Bet update:', payload);
-        if (currentRound?.id) {
+        
+        // Only fetch if this is not the current user's bet
+        if (payload.new && payload.new.user_id !== user?.id && currentRound?.id) {
+          console.log('👥 Other user bet, refreshing bets');
           fetchRoundBets(currentRound.id);
+        } else if (payload.new && payload.new.user_id === user?.id) {
+          console.log('👤 Own bet detected, keeping local state');
         }
       })
       .subscribe();
@@ -351,19 +383,21 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         description: `$${betAmount} on ${color}`,
       });
 
-      // Update local user bets immediately
-      setUserBets(prev => ({
-        ...prev,
-        [color]: (prev[color] || 0) + betAmount
-      }));
-
       // Update user balance immediately for instant UI feedback
       await onUpdateUser({ 
         balance: profile.balance - betAmount 
       });
 
-      // Immediately fetch updated round bets to show live bets
-      await fetchRoundBets(currentRound.id);
+      // Update local user bets immediately and preserve them
+      setUserBets(prev => ({
+        ...prev,
+        [color]: (prev[color] || 0) + betAmount
+      }));
+
+      // Wait a bit for database to update, then fetch round bets
+      setTimeout(async () => {
+        await fetchRoundBets(currentRound.id);
+      }, 500);
 
     } catch (error: any) {
       toast({
