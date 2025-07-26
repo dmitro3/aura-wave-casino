@@ -31,14 +31,14 @@ const TILE_WIDTH = 120; // Width of each tile in pixels
 const BACKEND_CONTAINER_WIDTH = 1200; // Backend's container width
 const BACKEND_CENTER_OFFSET = 600; // Backend's center position
 
-// Simple animation configuration
+// Animation configuration
 const ANIMATION_CONFIG = {
-  TOTAL_DURATION: 4000, // 4 seconds total
-  ACCELERATION_TIME: 800, // 800ms to reach max speed
-  FAST_TIME: 2000, // 2 seconds at max speed
-  DECELERATION_TIME: 1200, // 1.2 seconds to slow down
-  MAX_VELOCITY: 1500, // Maximum velocity in pixels per second
-  POSITION_TOLERANCE: 2 // Tolerance for final position in pixels
+  TOTAL_DURATION: 5000, // 5 seconds total
+  ACCELERATION_TIME: 1000, // 1 second to reach max speed
+  FAST_TIME: 2500, // 2.5 seconds at max speed
+  DECELERATION_TIME: 1500, // 1.5 seconds to slow down
+  MAX_VELOCITY: 2000, // Maximum velocity in pixels per second
+  POSITION_TOLERANCE: 1 // Tolerance for final position in pixels
 };
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
@@ -94,9 +94,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [synchronizedPosition, isAnimating, actualCenterOffset]);
 
-  // Create a repeating loop of tiles (20 repetitions for smooth infinite scroll)
+  // Create a repeating loop of tiles (30 repetitions for smooth infinite scroll)
   const tiles = [];
-  for (let repeat = 0; repeat < 20; repeat++) {
+  for (let repeat = 0; repeat < 30; repeat++) {
     for (let i = 0; i < WHEEL_SLOTS.length; i++) {
       tiles.push({
         ...WHEEL_SLOTS[i],
@@ -106,16 +106,31 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }
 
-  // Simple easing function for smooth animation
-  const easeInOutCubic = (t: number) => {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  // Advanced easing function for realistic deceleration
+  const easeOutQuart = (t: number) => {
+    return 1 - Math.pow(1 - t, 4);
   };
 
-  // Simple animation function
+  // Custom easing that starts fast and slows down dramatically
+  const customEasing = (t: number) => {
+    if (t < 0.3) {
+      // Start fast - linear acceleration
+      return t / 0.3 * 0.3;
+    } else if (t < 0.8) {
+      // Maintain speed
+      return 0.3 + (t - 0.3) / 0.5 * 0.5;
+    } else {
+      // Dramatic slowdown
+      const slowT = (t - 0.8) / 0.2;
+      return 0.8 + easeOutQuart(slowT) * 0.2;
+    }
+  };
+
+  // Animate to target with realistic deceleration
   const animateToTarget = useCallback((startPosition: number, targetPosition: number) => {
     const startTime = Date.now();
     
-    console.log('🚀 Starting smooth animation:', {
+    console.log('🚀 Starting realistic animation:', {
       startPosition,
       targetPosition,
       distance: Math.abs(targetPosition - startPosition)
@@ -125,8 +140,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / ANIMATION_CONFIG.TOTAL_DURATION, 1);
       
-      // Use smooth easing function
-      const easedProgress = easeInOutCubic(progress);
+      // Use custom easing for realistic motion
+      const easedProgress = customEasing(progress);
       
       // Calculate current position
       const currentPosition = startPosition + (targetPosition - startPosition) * easedProgress;
@@ -136,7 +151,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         animationRef.current = requestAnimationFrame(animate);
       } else {
         // Animation complete - ensure we land exactly on target
-        console.log('✅ Smooth animation complete');
+        console.log('✅ Realistic animation complete');
         setTranslateX(targetPosition);
         setIsAnimating(false);
         
@@ -157,7 +172,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Start animation when spinning begins
   useEffect(() => {
     if (isSpinning && winningSlot !== null && synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      console.log('🚀 Starting smooth animation to slot:', winningSlot, 'at position:', synchronizedPosition);
+      console.log('🚀 Starting realistic animation to slot:', winningSlot, 'at position:', synchronizedPosition);
       
       // Use the EXACT position calculated by the backend
       const startPosition = translateX;
@@ -166,7 +181,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const centerDifference = actualCenterOffset - BACKEND_CENTER_OFFSET;
       const exactTargetPosition = synchronizedPosition + centerDifference;
       
-      console.log('🎯 Smooth animation setup:', {
+      console.log('🎯 Realistic animation setup:', {
         winningSlot,
         startPosition,
         backendPosition: synchronizedPosition,
@@ -175,7 +190,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         distance: Math.abs(exactTargetPosition - startPosition)
       });
 
-      // Start smooth animation
+      // Start realistic animation
       animateToTarget(startPosition, exactTargetPosition);
     }
   }, [isSpinning, winningSlot, synchronizedPosition, translateX, actualCenterOffset, animateToTarget]);
@@ -191,7 +206,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     let closestDistance = Infinity;
     let closestTileCenter = 0;
     
-    for (let repeat = 0; repeat < 20; repeat++) {
+    for (let repeat = 0; repeat < 30; repeat++) {
       const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
       const tileLeftEdge = finalPosition + (tileGlobalIndex * TILE_WIDTH);
       const tileCenterPosition = tileLeftEdge + (TILE_WIDTH / 2);

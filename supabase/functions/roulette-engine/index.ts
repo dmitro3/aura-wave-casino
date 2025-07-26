@@ -268,14 +268,14 @@ async function getCurrentRound(supabase: any) {
           // Fall back to legacy method
           result = await generateLegacyResult(supabase, activeRound);
           // Calculate reel position for legacy result
-          const perfectReelPosition = calculateSimpleReelPosition(result.slot);
+          const perfectReelPosition = calculateReelPosition(result.slot);
         }
       } else {
         console.log('🔄 Using legacy method (no advanced data)');
         // Use legacy method if no advanced data
         result = await generateLegacyResult(supabase, activeRound);
         // Calculate reel position for legacy result
-        const perfectReelPosition = calculateSimpleReelPosition(result.slot);
+        const perfectReelPosition = calculateReelPosition(result.slot);
       }
       
       // Use simple reel position calculation
@@ -901,8 +901,8 @@ async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId
   const resultSlot = hashNumber % 15;
   const result = WHEEL_SLOTS[resultSlot];
   
-  // Calculate simple reel position for smooth landing
-  const reelPosition = calculateSimpleReelPosition(resultSlot);
+  // Calculate reel position to center the winning slot under the indicator
+  const reelPosition = calculateReelPosition(resultSlot);
   
   console.log(`🎯 Advanced Result Generated:`);
   console.log(`📊 Server Seed: ${dailySeed.server_seed}`);
@@ -917,8 +917,8 @@ async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId
   return { result, hashInput, hash, hashNumber, reelPosition };
 }
 
-// Calculate simple reel position for smooth landing
-function calculateSimpleReelPosition(resultSlot: number): number {
+// Calculate reel position to center the winning slot under the indicator
+function calculateReelPosition(resultSlot: number): number {
   const TILE_WIDTH = 120; // Width of each tile in pixels
   const BACKEND_CENTER_OFFSET = 600; // Backend's center position
   
@@ -929,11 +929,16 @@ function calculateSimpleReelPosition(resultSlot: number): number {
     return 0;
   }
   
-  // Calculate position to center the winning slot
-  const finalPosition = BACKEND_CENTER_OFFSET - (slotIndex * TILE_WIDTH + TILE_WIDTH / 2);
+  // Calculate position so the winning slot's center aligns with the center indicator
+  // The center indicator is at BACKEND_CENTER_OFFSET (600px)
+  // We want the winning slot's center to be at this position
+  const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
+  const finalPosition = BACKEND_CENTER_OFFSET - winningSlotCenter;
   
-  console.log(`🎰 Simple Reel Position Calculation:`);
+  console.log(`🎰 Reel Position Calculation:`);
   console.log(`🎯 Result Slot: ${resultSlot} (index: ${slotIndex})`);
+  console.log(`🎯 Winning Slot Center: ${winningSlotCenter}px`);
+  console.log(`🎯 Center Indicator: ${BACKEND_CENTER_OFFSET}px`);
   console.log(`🎯 Final Position: ${finalPosition}px`);
   
   return finalPosition;
