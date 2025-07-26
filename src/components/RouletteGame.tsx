@@ -1025,13 +1025,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 <div className="w-full">
                   <div className="relative glass rounded-lg px-4 py-3 border border-primary/20 shadow-lg backdrop-blur-lg">
                     <div className="relative flex items-center justify-between gap-4">
-                      {/* Left Side - Bet Amount Input with Label on Top */}
-                      <div className="flex flex-col gap-2 flex-1">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider self-start">
-                          Bet Amount
-                        </label>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2 bg-black/50 border border-primary/40 rounded-lg px-3 py-2 flex-1 max-w-xs">
+                      {/* Left Side - Bet Amount Input with Floating Label */}
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="relative flex-1 max-w-xs">
+                          {/* Floating Label on Border */}
+                          <div className="absolute -top-2 left-3 bg-[#0a0a0a] px-2 z-10">
+                            <label className="text-xs font-medium text-primary uppercase tracking-wider">
+                              Bet Amount
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-2 bg-black/50 border border-primary/40 rounded-lg px-3 py-2">
                             <span className="text-lg font-bold text-primary">$</span>
                             <Input
                               type="number"
@@ -1049,10 +1052,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                               placeholder="0.00"
                             />
                           </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            Max: ${profile?.balance?.toFixed(2) || '0.00'}
-                          </span>
                         </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          Max: ${profile?.balance?.toFixed(2) || '0.00'}
+                        </span>
                       </div>
                       
                       {/* Right Side - Multiplier Controls */}
