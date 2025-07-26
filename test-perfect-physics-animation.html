@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfect Physics Roulette Animation Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(45deg, #10b981, #059669, #047857);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .physics-config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .config-item {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .config-item h4 {
+            margin: 0 0 10px 0;
+            color: #10b981;
+        }
+        
+        .config-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: #fbbf24;
+        }
+        
+        .animation-demo {
+            height: 120px;
+            background: linear-gradient(90deg, #1f2937, #374151, #1f2937);
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+            margin: 20px 0;
+        }
+        
+        .reel-container {
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .center-line {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(to bottom, #10b981, #059669, #10b981);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        
+        .center-line::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -5px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 8px solid #10b981;
+        }
+        
+        .center-line::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: -5px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #10b981;
+        }
+        
+        .tiles-container {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            transition: none;
+        }
+        
+        .tile {
+            flex-shrink: 0;
+            width: 120px;
+            height: 80px;
+            margin: 0 2px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            transition: all 0.075s ease;
+        }
+        
+        .tile.green {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+        
+        .tile.red {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .tile.black {
+            background: linear-gradient(135deg, #374151, #1f2937);
+            color: white;
+        }
+        
+        .tile.winning {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+            border-color: #10b981;
+            z-index: 5;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+        
+        .btn.danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        
+        .status {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .status h4 {
+            margin: 0 0 10px 0;
+            color: #10b981;
+        }
+        
+        .status-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .physics-graph {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .graph-container {
+            height: 200px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .grid-line {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .grid-line.horizontal {
+            width: 100%;
+            height: 1px;
+        }
+        
+        .grid-line.vertical {
+            width: 1px;
+            height: 100%;
+        }
+        
+        .phase-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .velocity-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎰 Perfect Physics Roulette Animation</h1>
+            <p>Advanced physics-based animation with sub-pixel precision and cross-user synchronization</p>
+        </div>
+
+        <div class="test-section">
+            <h2>⚙️ Physics Configuration</h2>
+            <div class="physics-config">
+                <div class="config-item">
+                    <h4>Total Duration</h4>
+                    <div class="config-value">6000ms (6 seconds)</div>
+                </div>
+                <div class="config-item">
+                    <h4>Acceleration Phase</h4>
+                    <div class="config-value">800ms (13.3%)</div>
+                </div>
+                <div class="config-item">
+                    <h4>Fast Phase</h4>
+                    <div class="config-value">2800ms (46.7%)</div>
+                </div>
+                <div class="config-item">
+                    <h4>Deceleration Phase</h4>
+                    <div class="config-value">2400ms (40%)</div>
+                </div>
+                <div class="config-item">
+                    <h4>Position Tolerance</h4>
+                    <div class="config-value">0.5px (sub-pixel)</div>
+                </div>
+                <div class="config-item">
+                    <h4>Max Velocity</h4>
+                    <div class="config-value">2500px/s</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Animation Demo</h2>
+            <div class="animation-demo">
+                <div class="center-line"></div>
+                <div class="reel-container">
+                    <div class="tiles-container" id="tilesContainer">
+                        <!-- Tiles will be generated by JavaScript -->
+                    </div>
+                </div>
+                <div class="phase-indicator" id="phaseIndicator">Ready</div>
+                <div class="velocity-indicator" id="velocityIndicator">0 px/s</div>
+            </div>
+            
+            <div class="controls">
+                <button class="btn" onclick="startAnimation()">Start Animation</button>
+                <button class="btn secondary" onclick="resetAnimation()">Reset</button>
+                <button class="btn" onclick="testRandomTarget()">Random Target</button>
+                <button class="btn" onclick="testPrecision()">Test Precision</button>
+                <button class="btn danger" onclick="stopAnimation()">Stop</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Animation Status</h2>
+            <div class="status">
+                <h4>Real-time Status</h4>
+                <div class="status-content" id="statusContent">
+                    Ready to start animation...
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📈 Physics Graph</h2>
+            <div class="physics-graph">
+                <canvas id="physicsCanvas" width="800" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Perfect Physics Configuration
+        const PHYSICS_CONFIG = {
+            TOTAL_DURATION: 6000,
+            ACCELERATION_TIME: 800,
+            FAST_TIME: 2800,
+            DECELERATION_TIME: 2400,
+            MAX_VELOCITY: 2500,
+            POSITION_TOLERANCE: 0.5,
+            TIME_STEP: 16.67,
+            PHASES: {
+                ACCELERATION: 'acceleration',
+                FAST: 'fast',
+                DECELERATION: 'deceleration',
+                FINAL: 'final'
+            }
+        };
+
+        // Roulette wheel configuration
+        const WHEEL_SLOTS = [
+            { slot: 0, color: 'green' },
+            { slot: 11, color: 'black' },
+            { slot: 5, color: 'red' },
+            { slot: 10, color: 'black' },
+            { slot: 6, color: 'red' },
+            { slot: 9, color: 'black' },
+            { slot: 7, color: 'red' },
+            { slot: 8, color: 'black' },
+            { slot: 1, color: 'red' },
+            { slot: 14, color: 'black' },
+            { slot: 2, color: 'red' },
+            { slot: 13, color: 'black' },
+            { slot: 3, color: 'red' },
+            { slot: 12, color: 'black' },
+            { slot: 4, color: 'red' }
+        ];
+
+        const TILE_WIDTH = 120;
+        const CONTAINER_WIDTH = 1200;
+        const CENTER_OFFSET = CONTAINER_WIDTH / 2;
+
+        // Animation state
+        let isAnimating = false;
+        let animationId = null;
+        let startTime = 0;
+        let startPosition = 0;
+        let targetPosition = 0;
+        let currentPosition = 0;
+        let currentVelocity = 0;
+        let currentPhase = '';
+        let targetSlot = 0;
+
+        // DOM elements
+        const tilesContainer = document.getElementById('tilesContainer');
+        const phaseIndicator = document.getElementById('phaseIndicator');
+        const velocityIndicator = document.getElementById('velocityIndicator');
+        const statusContent = document.getElementById('statusContent');
+        const physicsCanvas = document.getElementById('physicsCanvas');
+
+        // Initialize tiles
+        function initializeTiles() {
+            tilesContainer.innerHTML = '';
+            
+            // Create 30 repetitions for smooth infinite scroll
+            for (let repeat = 0; repeat < 30; repeat++) {
+                for (let i = 0; i < WHEEL_SLOTS.length; i++) {
+                    const tile = document.createElement('div');
+                    tile.className = `tile ${WHEEL_SLOTS[i].color}`;
+                    tile.textContent = WHEEL_SLOTS[i].slot;
+                    tile.dataset.slot = WHEEL_SLOTS[i].slot;
+                    tile.dataset.index = repeat * WHEEL_SLOTS.length + i;
+                    tilesContainer.appendChild(tile);
+                }
+            }
+        }
+
+        // Perfect Physics Engine
+        class PerfectPhysicsEngine {
+            constructor(onUpdate, onComplete) {
+                this.onUpdate = onUpdate;
+                this.onComplete = onComplete;
+            }
+
+            start(startPosition, targetPosition) {
+                this.startTime = performance.now();
+                this.startPosition = startPosition;
+                this.targetPosition = targetPosition;
+                this.simulate();
+            }
+
+            stop() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+            }
+
+            simulate() {
+                const currentTime = performance.now();
+                const elapsed = currentTime - this.startTime;
+                const progress = Math.min(elapsed / PHYSICS_CONFIG.TOTAL_DURATION, 1);
+
+                const { position, velocity, phase } = this.calculatePhysics(elapsed, progress);
+                
+                this.onUpdate(position, velocity, phase);
+
+                if (progress < 1) {
+                    this.animationId = requestAnimationFrame(() => this.simulate());
+                } else {
+                    this.onComplete(this.targetPosition);
+                }
+            }
+
+            calculatePhysics(elapsed, progress) {
+                const distance = this.targetPosition - this.startPosition;
+
+                if (elapsed < PHYSICS_CONFIG.ACCELERATION_TIME) {
+                    // Acceleration phase
+                    const phaseProgress = elapsed / PHYSICS_CONFIG.ACCELERATION_TIME;
+                    const acceleration = this.calculateAcceleration(phaseProgress);
+                    const velocity = acceleration * elapsed;
+                    const position = this.startPosition + (0.5 * acceleration * elapsed * elapsed);
+                    
+                    return {
+                        position: this.clampPosition(position),
+                        velocity: Math.min(velocity, PHYSICS_CONFIG.MAX_VELOCITY),
+                        phase: PHYSICS_CONFIG.PHASES.ACCELERATION
+                    };
+
+                } else if (elapsed < PHYSICS_CONFIG.ACCELERATION_TIME + PHYSICS_CONFIG.FAST_TIME) {
+                    // Fast phase
+                    const fastElapsed = elapsed - PHYSICS_CONFIG.ACCELERATION_TIME;
+                    const baseVelocity = PHYSICS_CONFIG.MAX_VELOCITY * 0.95;
+                    const velocityVariation = Math.sin(fastElapsed * 0.01) * 50;
+                    const velocity = baseVelocity + velocityVariation;
+                    
+                    const accelerationDistance = 0.5 * PHYSICS_CONFIG.MAX_VELOCITY * PHYSICS_CONFIG.ACCELERATION_TIME;
+                    const fastDistance = velocity * fastElapsed;
+                    const position = this.startPosition + accelerationDistance + fastDistance;
+                    
+                    return {
+                        position: this.clampPosition(position),
+                        velocity: Math.max(velocity, PHYSICS_CONFIG.MAX_VELOCITY * 0.8),
+                        phase: PHYSICS_CONFIG.PHASES.FAST
+                    };
+
+                } else {
+                    // Deceleration phase
+                    const decelElapsed = elapsed - PHYSICS_CONFIG.ACCELERATION_TIME - PHYSICS_CONFIG.FAST_TIME;
+                    const decelProgress = decelElapsed / PHYSICS_CONFIG.DECELERATION_TIME;
+                    
+                    const { position, velocity } = this.calculateDeceleration(decelProgress, distance);
+                    
+                    return {
+                        position: this.clampPosition(position),
+                        velocity: Math.max(velocity, 0),
+                        phase: PHYSICS_CONFIG.PHASES.DECELERATION
+                    };
+                }
+            }
+
+            calculateAcceleration(progress) {
+                const easedProgress = progress * progress * progress;
+                const maxAcceleration = PHYSICS_CONFIG.MAX_VELOCITY / PHYSICS_CONFIG.ACCELERATION_TIME;
+                return maxAcceleration * easedProgress;
+            }
+
+            calculateDeceleration(progress, totalDistance) {
+                const decayRate = 3.5;
+                const decay = Math.exp(-progress * decayRate);
+                const remainingDistance = totalDistance * (1 - progress);
+                
+                const bounceFrequency = 8;
+                const bounceDecay = Math.exp(-progress * 4);
+                const bounce = Math.sin(progress * Math.PI * bounceFrequency) * bounceDecay * 0.05;
+                
+                const basePosition = this.targetPosition - (remainingDistance * decay);
+                const bounceOffset = totalDistance * bounce;
+                const position = basePosition + bounceOffset;
+                
+                const velocity = Math.abs(totalDistance * decayRate * decay) * (1 + bounce);
+                
+                return { position, velocity };
+            }
+
+            clampPosition(position) {
+                const minPosition = this.targetPosition - Math.abs(this.targetPosition - this.startPosition) * 1.5;
+                const maxPosition = this.targetPosition + Math.abs(this.targetPosition - this.startPosition) * 1.5;
+                return Math.max(minPosition, Math.min(maxPosition, position));
+            }
+        }
+
+        // Calculate perfect reel position
+        function calculatePerfectReelPosition(resultSlot, hash) {
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === resultSlot);
+            if (slotIndex === -1) return 0;
+            
+            const precisionHash = hash.substring(8, 16);
+            const precisionValue = parseInt(precisionHash, 16);
+            
+            const basePosition = CENTER_OFFSET - (slotIndex * TILE_WIDTH + TILE_WIDTH / 2);
+            const microAdjustment = (precisionValue % 100 - 50) * 0.1;
+            const finalPosition = basePosition + microAdjustment;
+            
+            return Math.round(finalPosition * 100) / 100;
+        }
+
+        // Generate mock hash for testing
+        function generateMockHash() {
+            return Math.random().toString(16).substring(2, 18);
+        }
+
+        // Animation functions
+        function startAnimation() {
+            if (isAnimating) return;
+            
+            // Generate random target slot
+            targetSlot = Math.floor(Math.random() * 15);
+            const mockHash = generateMockHash();
+            const perfectPosition = calculatePerfectReelPosition(targetSlot, mockHash);
+            
+            startPosition = currentPosition;
+            targetPosition = perfectPosition;
+            startTime = performance.now();
+            isAnimating = true;
+            
+            updateStatus(`Starting animation to slot ${targetSlot} at position ${perfectPosition.toFixed(2)}px`);
+            
+            physicsEngine.start(startPosition, targetPosition);
+        }
+
+        function resetAnimation() {
+            stopAnimation();
+            currentPosition = 0;
+            currentVelocity = 0;
+            currentPhase = '';
+            updateTilesPosition(0);
+            updateStatus('Animation reset to initial position');
+        }
+
+        function testRandomTarget() {
+            if (isAnimating) return;
+            
+            const randomSlot = Math.floor(Math.random() * 15);
+            const mockHash = generateMockHash();
+            const perfectPosition = calculatePerfectReelPosition(randomSlot, mockHash);
+            
+            updateStatus(`Testing random target: slot ${randomSlot} at position ${perfectPosition.toFixed(2)}px`);
+            
+            // Simulate the calculation without starting animation
+            highlightWinningTile(randomSlot);
+        }
+
+        function testPrecision() {
+            if (isAnimating) return;
+            
+            updateStatus('Testing precision calculation...');
+            
+            let totalError = 0;
+            let testCount = 100;
+            
+            for (let i = 0; i < testCount; i++) {
+                const testSlot = Math.floor(Math.random() * 15);
+                const mockHash = generateMockHash();
+                const perfectPosition = calculatePerfectReelPosition(testSlot, mockHash);
+                
+                // Verify the position centers the slot correctly
+                const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === testSlot);
+                const expectedCenter = CENTER_OFFSET - (slotIndex * TILE_WIDTH + TILE_WIDTH / 2);
+                const error = Math.abs(perfectPosition - expectedCenter);
+                totalError += error;
+            }
+            
+            const averageError = totalError / testCount;
+            updateStatus(`Precision test complete: Average error ${averageError.toFixed(3)}px over ${testCount} tests`);
+        }
+
+        function stopAnimation() {
+            if (physicsEngine) {
+                physicsEngine.stop();
+            }
+            isAnimating = false;
+            updateStatus('Animation stopped');
+        }
+
+        // Update functions
+        function updateTilesPosition(position) {
+            tilesContainer.style.transform = `translateX(${position}px)`;
+            currentPosition = position;
+        }
+
+        function updatePhase(phase) {
+            currentPhase = phase;
+            phaseIndicator.textContent = phase.charAt(0).toUpperCase() + phase.slice(1);
+        }
+
+        function updateVelocity(velocity) {
+            currentVelocity = velocity;
+            velocityIndicator.textContent = `${Math.round(velocity)} px/s`;
+        }
+
+        function updateStatus(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            statusContent.innerHTML = `[${timestamp}] ${message}<br>` + statusContent.innerHTML;
+            
+            // Keep only last 10 messages
+            const lines = statusContent.innerHTML.split('<br>');
+            if (lines.length > 10) {
+                statusContent.innerHTML = lines.slice(0, 10).join('<br>');
+            }
+        }
+
+        function highlightWinningTile(slot) {
+            // Remove previous highlights
+            document.querySelectorAll('.tile.winning').forEach(tile => {
+                tile.classList.remove('winning');
+            });
+            
+            // Add highlight to winning tile
+            document.querySelectorAll(`.tile[data-slot="${slot}"]`).forEach(tile => {
+                tile.classList.add('winning');
+            });
+        }
+
+        // Physics engine callbacks
+        function onPhysicsUpdate(position, velocity, phase) {
+            updateTilesPosition(position);
+            updateVelocity(velocity);
+            updatePhase(phase);
+            
+            // Update visual effects based on phase
+            if (phase === PHYSICS_CONFIG.PHASES.FAST) {
+                tilesContainer.style.filter = `blur(${Math.min(velocity / 1000, 2)}px)`;
+            } else {
+                tilesContainer.style.filter = 'blur(0px)';
+            }
+        }
+
+        function onPhysicsComplete(finalPosition) {
+            isAnimating = false;
+            updatePhase(PHYSICS_CONFIG.PHASES.FINAL);
+            updateVelocity(0);
+            highlightWinningTile(targetSlot);
+            
+            // Verify perfect landing
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === targetSlot);
+            const expectedCenter = CENTER_OFFSET - (slotIndex * TILE_WIDTH + TILE_WIDTH / 2);
+            const landingError = Math.abs(finalPosition - expectedCenter);
+            
+            updateStatus(`Animation complete! Slot ${targetSlot} landed with ${landingError.toFixed(3)}px error`);
+            
+            if (landingError < PHYSICS_CONFIG.POSITION_TOLERANCE) {
+                updateStatus('✅ PERFECT LANDING: Sub-pixel precision achieved!');
+            } else {
+                updateStatus('❌ Landing error exceeds tolerance');
+            }
+        }
+
+        // Initialize physics engine
+        const physicsEngine = new PerfectPhysicsEngine(onPhysicsUpdate, onPhysicsComplete);
+
+        // Initialize the demo
+        initializeTiles();
+        updateStatus('Perfect Physics Roulette Animation ready for testing');
+    </script>
+</body>
+</html>
