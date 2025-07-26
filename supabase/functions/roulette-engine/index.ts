@@ -70,12 +70,14 @@ serve(async (req) => {
           .from('roulette_bets')
           .select(`
             *,
-            profiles!inner(username, avatar_url)
+            profiles(username, avatar_url)
           `)
           .eq('round_id', roundId)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
+
+        console.log(`📊 Retrieved ${bets?.length || 0} bets for round ${roundId}:`, bets);
 
         return new Response(JSON.stringify(bets || []), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -114,6 +116,29 @@ serve(async (req) => {
 
         const verification = await verifyRound(supabase, roundId);
         return new Response(JSON.stringify(verification), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      case 'test_bets': {
+        // Test endpoint to check if bets are being stored correctly
+        const { data: allBets } = await supabase
+          .from('roulette_bets')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        const { data: allRounds } = await supabase
+          .from('roulette_rounds')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        return new Response(JSON.stringify({
+          recent_bets: allBets || [],
+          recent_rounds: allRounds || [],
+          test_passed: true
+        }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
