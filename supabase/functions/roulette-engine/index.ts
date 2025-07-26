@@ -287,22 +287,14 @@ async function getCurrentRound(supabase: any) {
       }
       
       // Calculate the final reel position that centers the winning slot precisely
-      // The tiles move from right to left (negative direction)
-      // Each tile is TILE_WIDTH pixels wide
-      // The center line is at CENTER_OFFSET from the left edge
-      // We want the winning tile's center to be exactly under the center line
+      // Simplified calculation:
+      // - Winning slot index position in reel: winningSlotIndex * TILE_WIDTH
+      // - Center of winning slot: winningSlotIndex * TILE_WIDTH + TILE_WIDTH/2
+      // - To center this under CENTER_OFFSET: CENTER_OFFSET - (center of winning slot)
+      // - Since reel moves left (negative direction), we use negative position
       
-      // Tile position calculation: index * TILE_WIDTH gives us the LEFT edge of the tile
-      // Tile center is at: LEFT edge + (TILE_WIDTH / 2)
-      const tileLeftEdge = winningSlotIndex * TILE_WIDTH;
-      const tileCenterFromOrigin = tileLeftEdge + (TILE_WIDTH / 2);
-      
-      // To center the tile under the center line:
-      // We need to move the reel so that tileCenterFromOrigin ends up at CENTER_OFFSET
-      // Since tiles move leftward (negative direction): position = -(tileCenterFromOrigin - CENTER_OFFSET)
-      // BUT: if result is always one position before, we need to adjust by +TILE_WIDTH
-      const baseTargetPosition = -(tileCenterFromOrigin - CENTER_OFFSET);
-      const winningSlotTargetPosition = baseTargetPosition + TILE_WIDTH; // Shift one tile forward
+      const winningSlotCenterPosition = winningSlotIndex * TILE_WIDTH + (TILE_WIDTH / 2);
+      const winningSlotTargetPosition = -(winningSlotCenterPosition - CENTER_OFFSET);
       
       // For the first round or if no previous position, start from 0
       // Otherwise, calculate from the previous round's final position
@@ -319,26 +311,30 @@ async function getCurrentRound(supabase: any) {
         previousReelPosition = previousRound.reel_position;
       }
       
-      // Add multiple full rotations for dramatic effect
+      // Add multiple full rotations for dramatic effect (always move left)
       const fullRotations = 8;
       const fullRotationDistance = WHEEL_SLOTS_LENGTH * TILE_WIDTH;
       const totalRotationDistance = fullRotations * fullRotationDistance;
       
-      // Calculate final position from previous position
-      const finalReelPosition = previousReelPosition - totalRotationDistance + (winningSlotTargetPosition - previousReelPosition);
+      // Calculate final position: always move left from previous position with rotations
+      // Ensure we always move left by adding extra rotations if needed
+      let finalReelPosition = previousReelPosition - totalRotationDistance + winningSlotTargetPosition;
+      
+      // If the final position would be to the right of start, add another full rotation left
+      while (finalReelPosition > previousReelPosition) {
+        finalReelPosition -= fullRotationDistance;
+      }
       
       console.log('🎯 Calculated synchronized reel position:', {
         resultSlot: result.slot,
         winningSlotIndex,
-        tileLeftEdge,
-        tileCenterFromOrigin,
+        winningSlotCenterPosition,
         centerOffset: CENTER_OFFSET,
-        baseTargetPosition,
         winningSlotTargetPosition,
-        adjustment: TILE_WIDTH,
         previousReelPosition,
         finalReelPosition,
-        calculation: `slot ${result.slot} at index ${winningSlotIndex}: left=${tileLeftEdge}, center=${tileCenterFromOrigin}, base=${baseTargetPosition}, final=${winningSlotTargetPosition} (+${TILE_WIDTH} adjustment)`
+        totalRotationDistance,
+        calculation: `slot ${result.slot} at index ${winningSlotIndex}: center=${winningSlotCenterPosition}, target=${winningSlotTargetPosition}, final=${finalReelPosition}`
       });
 
       // Update round to spinning with result and synchronized reel position
