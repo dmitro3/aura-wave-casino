@@ -156,303 +156,7 @@ serve(async (req) => {
         });
       }
 
-      case 'setup_daily_seeds': {
-        console.log('🔧 Diagnosing daily seeds system...')
-        
-        try {
-          // Check if daily_seeds table exists and get data
-          const { data: dailySeedsData, error: dailySeedsError } = await supabase
-            .from('daily_seeds')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(5);
 
-          console.log('📊 Daily seeds query result:', { dailySeedsData, dailySeedsError });
-
-          if (dailySeedsError) {
-            return new Response(JSON.stringify({
-              error: 'Failed to query daily_seeds table',
-              details: dailySeedsError.message
-            }), {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-
-          // Check if roulette_rounds has daily_seed_id column and get recent rounds
-          const { data: recentRounds, error: roundsError } = await supabase
-            .from('roulette_rounds')
-            .select('id, status, daily_seed_id, nonce_id, created_at')
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          console.log('📊 Recent rounds query result:', { recentRounds, roundsError });
-
-          if (roundsError) {
-            return new Response(JSON.stringify({
-              error: 'Failed to query roulette_rounds table',
-              details: roundsError.message
-            }), {
-            status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-
-          // Test the advanced verification query
-          const { data: verificationTestData, error: verificationTestError } = await supabase
-            .from('roulette_rounds')
-            .select(`
-              *,
-              daily_seeds (
-                date,
-                server_seed,
-                server_seed_hash,
-                lotto,
-                lotto_hash,
-                is_revealed
-              )
-            `)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          console.log('📊 Verification query test:', { verificationTestData, verificationTestError });
-
-          // Try to create today's seed
-          let dailySeedResult = null;
-          try {
-            dailySeedResult = await getOrCreateDailySeed(supabase);
-            console.log('📊 Daily seed creation result:', dailySeedResult);
-          } catch (seedError) {
-            console.error('❌ Daily seed creation error:', seedError);
-          }
-          
-          return new Response(JSON.stringify({
-            success: true,
-            message: 'Daily seeds diagnostic completed',
-            diagnostic: {
-              daily_seeds_table: {
-                exists: !dailySeedsError,
-                count: dailySeedsData?.length || 0,
-                recent_seeds: dailySeedsData || [],
-                error: dailySeedsError?.message
-              },
-              roulette_rounds_table: {
-                exists: !roundsError,
-                count: recentRounds?.length || 0,
-                recent_rounds: recentRounds || [],
-                rounds_with_daily_seed_id: recentRounds?.filter(r => r.daily_seed_id).length || 0,
-                error: roundsError?.message
-              },
-              verification_query: {
-                works: !verificationTestError,
-                sample_data: verificationTestData,
-                error: verificationTestError?.message
-              },
-              daily_seed_creation: {
-                works: !!dailySeedResult,
-                result: dailySeedResult,
-                error: dailySeedResult ? null : 'Failed to create/fetch daily seed'
-              }
-            }
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-
-        } catch (error) {
-          console.error('❌ Diagnostic error:', error)
-          return new Response(JSON.stringify({
-            error: error.message,
-            success: false
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-      }
-
-      case 'fix_daily_seeds': {
-        console.log('🔧 Fixing daily seeds system...')
-        
-        try {
-          // Check if daily_seed_id column exists by trying to select it
-          const { data: columnTest, error: columnError } = await supabase
-            .from('roulette_rounds')
-            .select('daily_seed_id')
-            .limit(1)
-
-          if (columnError) {
-            console.log('❌ daily_seed_id column missing:', columnError.message)
-            return new Response(JSON.stringify({
-              error: 'daily_seed_id column does not exist in roulette_rounds table',
-              details: columnError.message,
-              solution: 'Please run this SQL in Supabase SQL Editor:\n\nALTER TABLE public.roulette_rounds ADD COLUMN IF NOT EXISTS daily_seed_id UUID REFERENCES public.daily_seeds(id);\nALTER TABLE public.roulette_rounds ADD COLUMN IF NOT EXISTS nonce_id INTEGER;'
-            }), {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            })
-          }
-
-          console.log('✅ daily_seed_id column exists')
-
-          // Test creating a new round with advanced system
-          console.log('🧪 Testing advanced round creation...')
-          const testRound = await createNewRound(supabase)
-          
-          if (testRound.daily_seed_id) {
-            console.log('✅ Advanced round creation works!')
-            
-            return new Response(JSON.stringify({
-              success: true,
-              message: 'Daily seeds system is working! New rounds will use advanced provably fair.',
-              test_round: {
-                id: testRound.id,
-                daily_seed_id: testRound.daily_seed_id,
-                nonce_id: testRound.nonce_id
-              }
-            }), {
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            })
-          } else {
-            return new Response(JSON.stringify({
-              error: 'Test round creation used legacy system instead of advanced',
-              details: 'Round was created but without daily_seed_id'
-            }), {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            })
-          }
-          
-        } catch (error) {
-          console.error('❌ Fix error:', error)
-          return new Response(JSON.stringify({
-            error: error.message,
-            success: false
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-        }
-      }
-
-      case 'force_advanced_round': {
-        console.log('🚀 Force creating advanced round...')
-        
-        try {
-          // Create advanced round WITHOUT fallback to see what fails
-          console.log('📅 Getting daily seed...');
-          const dailySeed = await getOrCreateDailySeed(supabase);
-          console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
-          
-          // Get next nonce ID for today
-          console.log('🔢 Getting next nonce ID...');
-          const { data: lastRound, error: lastRoundError } = await supabase
-            .from('roulette_rounds')
-            .select('nonce_id')
-            .eq('daily_seed_id', dailySeed.id)
-            .order('nonce_id', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (lastRoundError && lastRoundError.code !== 'PGRST116') {
-            console.error('❌ Error fetching last round:', lastRoundError);
-          }
-
-          const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
-          console.log('✅ Next nonce ID:', nextNonceId);
-        
-          const now = new Date();
-          const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
-          const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
-
-          const roundData = {
-            status: 'betting',
-            betting_end_time: bettingEnd.toISOString(),
-            spinning_end_time: spinningEnd.toISOString(),
-            daily_seed_id: dailySeed.id,
-            nonce_id: nextNonceId,
-            server_seed_hash: dailySeed.server_seed_hash,
-            nonce: nextNonceId
-          };
-
-          console.log('📝 Inserting round data:', roundData);
-          const { data: newRound, error: insertError } = await supabase
-            .from('roulette_rounds')
-            .insert(roundData)
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error('❌ Advanced round insert failed:', insertError);
-            console.error('❌ Round data that failed:', roundData);
-            throw new Error(`Insert failed: ${insertError.message}`);
-          }
-
-          console.log('✅ Advanced round created successfully:', newRound);
-          
-          return new Response(JSON.stringify({
-            success: true,
-            message: 'Advanced round created successfully!',
-            round: {
-              id: newRound.id,
-              daily_seed_id: newRound.daily_seed_id,
-              nonce_id: newRound.nonce_id,
-              status: newRound.status,
-              created_at: newRound.created_at
-            },
-            daily_seed: {
-              id: dailySeed.id,
-              date: dailySeed.date,
-              server_seed_hash: dailySeed.server_seed_hash
-            }
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-          
-        } catch (error) {
-          console.error('❌ Force advanced round error:', error)
-          return new Response(JSON.stringify({
-            error: error.message,
-            details: error.details || 'Failed to create advanced round',
-            success: false
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-        }
-      }
-
-      case 'test_daily_seed': {
-        console.log('🧪 Testing daily seed creation...')
-        
-        try {
-          const dailySeed = await getOrCreateDailySeed(supabase);
-          console.log('✅ Daily seed test successful:', dailySeed);
-          
-          return new Response(JSON.stringify({
-            success: true,
-            message: 'Daily seed works!',
-            daily_seed: {
-              id: dailySeed.id,
-              date: dailySeed.date,
-              server_seed_hash: dailySeed.server_seed_hash,
-              lotto_hash: dailySeed.lotto_hash
-            }
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-          
-        } catch (error) {
-          console.error('❌ Daily seed test error:', error)
-          return new Response(JSON.stringify({
-            error: error.message,
-            success: false
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-        }
-      }
 
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
@@ -642,91 +346,55 @@ async function getCurrentRound(supabase: any) {
 async function createNewRound(supabase: any) {
   console.log('🆕 Creating new advanced provably fair round...');
   
-  try {
-    // Get or create today's daily seed
-    console.log('📅 Getting daily seed...');
-    const dailySeed = await getOrCreateDailySeed(supabase);
-    console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
-    
-    // Get next nonce ID for today
-    console.log('🔢 Getting next nonce ID...');
-    const { data: lastRound, error: lastRoundError } = await supabase
-      .from('roulette_rounds')
-      .select('nonce_id')
-      .eq('daily_seed_id', dailySeed.id)
-      .order('nonce_id', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (lastRoundError && lastRoundError.code !== 'PGRST116') {
-      console.error('❌ Error fetching last round:', lastRoundError);
-    }
-
-    const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
-    console.log('✅ Next nonce ID:', nextNonceId);
+  // Get or create today's daily seed
+  const dailySeed = await getOrCreateDailySeed(supabase);
+  console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date });
   
+  // Get next nonce ID for today
+  const { data: lastRound, error: lastRoundError } = await supabase
+    .from('roulette_rounds')
+    .select('nonce_id')
+    .eq('daily_seed_id', dailySeed.id)
+    .order('nonce_id', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (lastRoundError && lastRoundError.code !== 'PGRST116') {
+    console.error('❌ Error fetching last round:', lastRoundError);
+  }
+
+  const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
+  console.log('✅ Next nonce ID:', nextNonceId);
+
   const now = new Date();
   const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
   const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
 
-    const roundData = {
-      status: 'betting',
-      betting_end_time: bettingEnd.toISOString(),
-      spinning_end_time: spinningEnd.toISOString(),
-      daily_seed_id: dailySeed.id,
-      nonce_id: nextNonceId,
-      server_seed_hash: dailySeed.server_seed_hash, // Show the daily seed hash
-      nonce: nextNonceId // Keep for compatibility
-    };
+  const roundData = {
+    status: 'betting',
+    betting_end_time: bettingEnd.toISOString(),
+    spinning_end_time: spinningEnd.toISOString(),
+    daily_seed_id: dailySeed.id,
+    nonce_id: nextNonceId,
+    server_seed_hash: dailySeed.server_seed_hash,
+    nonce: nextNonceId // Keep for compatibility
+  };
 
-    console.log('📝 Inserting round data:', roundData);
-    const { data: newRound, error: insertError } = await supabase
-      .from('roulette_rounds')
-      .insert(roundData)
-      .select()
-      .single();
+  console.log('📝 Inserting advanced round data:', roundData);
+  const { data: newRound, error: insertError } = await supabase
+    .from('roulette_rounds')
+    .insert(roundData)
+    .select()
+    .single();
 
-    if (insertError) {
-      console.error('❌ Advanced round insert failed:', insertError);
-      console.error('❌ Round data that failed:', roundData);
-      throw insertError;
-    }
-
-    console.log('✅ Created new round:', newRound.id);
-    return newRound;
-
-  } catch (error) {
-    console.error('❌ Advanced round creation failed, falling back to legacy system:', error);
-    
-    // Fallback to legacy system if PLG.BET fails
-    const serverSeed = await generateServerSeed();
-    const serverSeedHash = await sha256Hash(serverSeed);
-    
-    const now = new Date();
-    const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
-    const spinningEnd = new Date(bettingEnd.getTime() + SPINNING_DURATION);
-
-    const { data: legacyRound, error: legacyError } = await supabase
-      .from('roulette_rounds')
-      .insert({
-        status: 'betting',
-        betting_end_time: bettingEnd.toISOString(),
-        spinning_end_time: spinningEnd.toISOString(),
-        server_seed: serverSeed,
-        server_seed_hash: serverSeedHash,
-        nonce: 1
-      })
-      .select()
-      .single();
-
-    if (legacyError) {
-      console.error('❌ Legacy round creation also failed:', legacyError);
-      throw legacyError;
-    }
-
-    console.log('✅ Created legacy round:', legacyRound.id);
-    return legacyRound;
+  if (insertError) {
+    console.error('❌ Advanced round creation failed:', insertError);
+    console.error('❌ Failed round data:', roundData);
+    throw new Error(`Failed to create advanced round: ${insertError.message}`);
   }
+
+  console.log('✅ Created advanced round:', newRound.id, 'with daily_seed_id:', newRound.daily_seed_id);
+  return newRound;
 }
 
 async function placeBet(supabase: any, userId: string, roundId: string, betColor: string, betAmount: number, clientSeed?: string) {
