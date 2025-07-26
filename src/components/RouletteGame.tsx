@@ -154,6 +154,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       console.log('🔄 Round changed, clearing user bets');
       setUserBets({});
       setUserBetsDisplay({}); // Clear visual state for new round
+      userBetsDisplayRef.current = {}; // Clear visual ref for new round
       userBetsRef.current = {};
       currentRoundRef.current = currentRound.id;
     }
@@ -727,6 +728,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         ...prev,
         [color]: (prev[color] || 0) + Number(betAmount)
       }));
+      
+      // Update display ref immediately for instant visual feedback
+      userBetsDisplayRef.current = {
+        ...userBetsDisplayRef.current,
+        [color]: (userBetsDisplayRef.current[color] || 0) + Number(betAmount)
+      };
 
       // Update bet limits tracking
       setUserBetLimits(prev => ({
@@ -895,6 +902,17 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       setExtendedWinAnimation(false);
     }
   }, [currentRound?.id]);
+
+  // Stable reference for bet display to prevent flickering
+  const userBetsDisplayRef = useRef<Record<string, number>>({});
+  
+  // Update ref whenever display state changes
+  useEffect(() => {
+    userBetsDisplayRef.current = userBetsDisplay;
+  }, [userBetsDisplay]);
+
+  // Use ref for real-time balance to prevent stale closures
+  const balanceRef = useRef(profile?.balance || 0);
 
 
   if (loading) {
@@ -1209,9 +1227,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <span className="text-xs">{getMultiplierText(color)}</span>
                         {isPlacingBet && <div className="w-3 h-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>}
                       </div>
-                      {userBetsDisplay[color] && (
+                      {userBetsDisplayRef.current[color] && (
                         <span className="text-xs opacity-90 bg-white/20 px-1 py-0.5 rounded">
-                          Your bet: ${userBetsDisplay[color].toFixed(2)}
+                          Your bet: ${userBetsDisplayRef.current[color].toFixed(2)}
                         </span>
                       )}
                     </Button>
