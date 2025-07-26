@@ -98,10 +98,30 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const [testData, setTestData] = useState<any>(null);
   const [lastCompletedRound, setLastCompletedRound] = useState<RouletteRound | null>(null);
   
-  // Use ref to track current round ID and user bets to prevent race conditions
-  const currentRoundRef = useRef<string | null>(null);
-  const userBetsRef = useRef<Record<string, number>>({});
+  // SECURITY: State management for preventing abuse
+  const [isPlacingBet, setIsPlacingBet] = useState(false);
+  const [lastBetTime, setLastBetTime] = useState<number>(0);
+  const [pendingBets, setPendingBets] = useState<Set<string>>(new Set());
+  const [userBetLimits, setUserBetLimits] = useState({ totalThisRound: 0, betCount: 0 });
 
+  // Rate limiting configuration
+  const MIN_BET_INTERVAL = 1000; // 1 second between bets
+  const MAX_BETS_PER_ROUND = 10; // Maximum 10 bets per round
+  const MAX_TOTAL_BET_PER_ROUND = 1000; // Maximum $1000 per round
+
+  // Refs for preventing race conditions
+  const placingBetRef = useRef(false);
+  const userBetsRef = useRef<Record<string, number>>({});
+  const currentRoundRef = useRef<string>('');
+  const balanceRef = useRef<number>(0);
+
+  // Update balance ref when profile changes
+  useEffect(() => {
+    if (profile?.balance !== undefined) {
+      balanceRef.current = profile.balance;
+    }
+  }, [profile?.balance]);
+  
   // Filter roulette bets from live feed (only current round)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
     bet.game_type === 'roulette' && 
@@ -547,6 +567,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
   // Place bet
   const placeBet = async (color: string) => {
+    // SECURITY 1: Comprehensive validation checks
     if (!user || !profile || !currentRound) {
       toast({
         title: "Sign In Required",
@@ -556,6 +577,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       return;
     }
 
+    // SECURITY 2: Round status and timing validation
     if (currentRound.status !== 'betting') {
       toast({
         title: "Betting Closed",
@@ -565,16 +587,103 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       return;
     }
 
-    if (betAmount < 1 || betAmount > profile.balance) {
+    // SECURITY 3: Rate limiting - prevent spam clicking
+    const now = Date.now();
+    if (now - lastBetTime < MIN_BET_INTERVAL) {
       toast({
-        title: "Invalid Bet",
-        description: betAmount > profile.balance ? "Insufficient balance" : "Invalid bet amount",
+        title: "Rate Limited",
+        description: "Please wait before placing another bet",
         variant: "destructive",
       });
       return;
     }
 
+    // SECURITY 4: Prevent concurrent bet placement
+    if (isPlacingBet || placingBetRef.current) {
+      toast({
+        title: "Bet In Progress",
+        description: "Please wait for current bet to complete",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // SECURITY 5: Validate bet amount
+    const currentBalance = balanceRef.current;
+    if (betAmount < 1 || betAmount > 10000) {
+      toast({
+        title: "Invalid Bet Amount",
+        description: "Bet must be between $1 and $10,000",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (betAmount > currentBalance) {
+      toast({
+        title: "Insufficient Balance",
+        description: `Your balance is $${currentBalance.toFixed(2)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // SECURITY 6: Check betting limits per round
+    if (userBetLimits.betCount >= MAX_BETS_PER_ROUND) {
+      toast({
+        title: "Bet Limit Reached",
+        description: `Maximum ${MAX_BETS_PER_ROUND} bets per round`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (userBetLimits.totalThisRound + betAmount > MAX_TOTAL_BET_PER_ROUND) {
+      toast({
+        title: "Round Limit Exceeded",
+        description: `Maximum $${MAX_TOTAL_BET_PER_ROUND} total per round`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // SECURITY 7: Prevent duplicate bet detection
+    const betKey = `${currentRound.id}-${color}-${betAmount}`;
+    if (pendingBets.has(betKey)) {
+      toast({
+        title: "Duplicate Bet",
+        description: "This bet is already being processed",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // SECURITY 8: Set all protection flags
+    setIsPlacingBet(true);
+    placingBetRef.current = true;
+    setLastBetTime(now);
+    setPendingBets(prev => new Set([...prev, betKey]));
+
     try {
+      // SECURITY 9: Final balance check before API call
+      const { data: currentProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !currentProfile) {
+        throw new Error('Failed to verify current balance');
+      }
+
+      if (currentProfile.balance < betAmount) {
+        throw new Error(`Insufficient balance. Current: $${currentProfile.balance.toFixed(2)}`);
+      }
+
+      // SECURITY 10: Update balance ref with latest value
+      balanceRef.current = currentProfile.balance;
+
+      // Make the secure API call
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: {
           action: 'place_bet',
@@ -587,37 +696,97 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
       if (error) throw error;
 
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to place bet');
+      }
+
+      // SECURITY 11: Success handling with optimistic updates
       toast({
         title: "Bet Placed!",
         description: `$${betAmount} on ${color}`,
       });
 
-      // Update user balance immediately (same as TowerGame)
-      await onUpdateUser({
-        balance: profile.balance - betAmount,
-        total_wagered: profile.total_wagered + betAmount
-      });
-
-      // Update local user bets immediately and keep them persistent
+      // Update local user bets immediately
       setUserBets(prev => {
         const newBets = {
           ...prev,
           [color]: (prev[color] || 0) + betAmount
         };
-        console.log('🎯 Setting user bets locally:', newBets);
-        // Also update the ref for persistence
         userBetsRef.current = newBets;
         return newBets;
       });
 
-      // Store the current round ID with user bets to clear when round changes
+      // Update bet limits tracking
+      setUserBetLimits(prev => ({
+        totalThisRound: prev.totalThisRound + betAmount,
+        betCount: prev.betCount + 1
+      }));
+
+      // Update balance optimistically
+      const newBalance = currentProfile.balance - betAmount;
+      balanceRef.current = newBalance;
+      
+      // Update profile balance through the parent component
+      await onUpdateUser({
+        balance: newBalance,
+        total_wagered: profile.total_wagered + betAmount
+      });
+
       currentRoundRef.current = currentRound.id;
 
     } catch (error: any) {
+      console.error('❌ Bet placement failed:', error);
+      
+      // SECURITY 12: Comprehensive error handling
+      let errorMessage = 'Failed to place bet';
+      
+      if (error.message.includes('Rate limit')) {
+        errorMessage = 'Too many requests. Please wait before betting again.';
+      } else if (error.message.includes('Insufficient balance')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('Betting is closed')) {
+        errorMessage = 'Betting period has ended for this round';
+      } else if (error.message.includes('Duplicate bet')) {
+        errorMessage = 'Duplicate bet detected. Please try again.';
+      } else if (error.message.includes('Maximum bet limit')) {
+        errorMessage = error.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: "Bet Failed",
-        description: error.message || 'Failed to place bet',
+        description: errorMessage,
         variant: "destructive",
+      });
+
+      // SECURITY 13: Refresh user balance on error to prevent desync
+      try {
+        const { data: refreshedProfile } = await supabase
+          .from('profiles')
+          .select('balance, total_wagered')
+          .eq('id', user.id)
+          .single();
+
+        if (refreshedProfile) {
+          balanceRef.current = refreshedProfile.balance;
+          await onUpdateUser({
+            balance: refreshedProfile.balance,
+            total_wagered: refreshedProfile.total_wagered
+          });
+        }
+      } catch (refreshError) {
+        console.error('❌ Failed to refresh balance:', refreshError);
+      }
+
+    } finally {
+      // SECURITY 14: Always clean up protection flags
+      setIsPlacingBet(false);
+      placingBetRef.current = false;
+      setPendingBets(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(betKey);
+        return newSet;
       });
     }
   };
@@ -688,6 +857,34 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // SECURITY: Reset bet limits and state when round changes
+  useEffect(() => {
+    if (currentRound?.id && currentRound.id !== currentRoundRef.current) {
+      console.log('🔄 New round detected, resetting security state');
+      
+      // Reset bet limits for new round
+      setUserBetLimits({ totalThisRound: 0, betCount: 0 });
+      
+      // Clear pending bets
+      setPendingBets(new Set());
+      
+      // Reset betting state
+      setIsPlacingBet(false);
+      placingBetRef.current = false;
+      
+      // Clear user bets for new round
+      setUserBets({});
+      userBetsRef.current = {};
+      
+      // Update current round reference
+      currentRoundRef.current = currentRound.id;
+      
+      // Clear any extended win animations
+      setWinningColor(null);
+      setExtendedWinAnimation(false);
+    }
+  }, [currentRound?.id]);
 
 
   if (loading) {
@@ -885,12 +1082,35 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   <div key={color} className="space-y-2">
                     <Button
                       onClick={() => placeBet(color)}
-                      disabled={!user || !profile || currentRound.status !== 'betting'}
-                      className={`w-full h-12 flex flex-col gap-1 border-2 ${getBetColorClass(color)}`}
+                      disabled={
+                        !user || 
+                        !profile || 
+                        currentRound.status !== 'betting' || 
+                        isPlacingBet ||
+                        betAmount > balanceRef.current ||
+                        betAmount < 1 ||
+                        userBetLimits.betCount >= MAX_BETS_PER_ROUND ||
+                        userBetLimits.totalThisRound + betAmount > MAX_TOTAL_BET_PER_ROUND ||
+                        Date.now() - lastBetTime < MIN_BET_INTERVAL
+                      }
+                      className={`w-full h-12 flex flex-col gap-1 border-2 transition-all duration-200 ${getBetColorClass(color)} ${
+                        isPlacingBet ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      title={
+                        !user ? 'Sign in to bet' :
+                        currentRound.status !== 'betting' ? 'Betting closed' :
+                        isPlacingBet ? 'Processing bet...' :
+                        betAmount > balanceRef.current ? 'Insufficient balance' :
+                        userBetLimits.betCount >= MAX_BETS_PER_ROUND ? 'Max bets reached' :
+                        userBetLimits.totalThisRound + betAmount > MAX_TOTAL_BET_PER_ROUND ? 'Round limit reached' :
+                        Date.now() - lastBetTime < MIN_BET_INTERVAL ? 'Rate limited' :
+                        `Bet $${betAmount} on ${color}`
+                      }
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-base font-bold capitalize">{color}</span>
                         <span className="text-xs">{getMultiplierText(color)}</span>
+                        {isPlacingBet && <div className="w-3 h-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>}
                       </div>
                       {(userBets[color] || userBetsRef.current[color]) && (
                         <span className="text-xs opacity-90 bg-white/20 px-1 py-0.5 rounded">

@@ -511,39 +511,149 @@ async function createNewRound(supabase: any) {
 async function placeBet(supabase: any, userId: string, roundId: string, betColor: string, betAmount: number, clientSeed?: string) {
   console.log(`💰 Placing bet: ${betAmount} on ${betColor} for user ${userId}`);
 
-  // Verify round is in betting phase
-  const { data: round } = await supabase
+  // SECURITY 1: Input validation and sanitization
+  if (!userId || typeof userId !== 'string' || userId.length < 10) {
+    throw new Error('Invalid user ID');
+  }
+  
+  if (!roundId || typeof roundId !== 'string') {
+    throw new Error('Invalid round ID');
+  }
+  
+  if (!betColor || !['green', 'red', 'black'].includes(betColor)) {
+    throw new Error('Invalid bet color');
+  }
+  
+  if (!betAmount || typeof betAmount !== 'number' || betAmount < 1 || betAmount > 10000 || betAmount % 1 !== 0) {
+    throw new Error('Invalid bet amount');
+  }
+
+  // SECURITY 2: Rate limiting - prevent spam clicking
+  const rateLimitKey = `bet_rate_limit_${userId}`;
+  const { data: rateLimitData } = await supabase
+    .from('user_rate_limits')
+    .select('last_bet_time, bet_count')
+    .eq('user_id', userId)
+    .single();
+
+  const now = new Date();
+  const oneSecondAgo = new Date(now.getTime() - 1000);
+  
+  if (rateLimitData) {
+    const lastBetTime = new Date(rateLimitData.last_bet_time);
+    
+    // Allow max 1 bet per second
+    if (lastBetTime > oneSecondAgo) {
+      throw new Error('Rate limit exceeded. Please wait before placing another bet.');
+    }
+    
+    // Update rate limit record
+    await supabase
+      .from('user_rate_limits')
+      .upsert({
+        user_id: userId,
+        last_bet_time: now.toISOString(),
+        bet_count: (rateLimitData.bet_count || 0) + 1
+      });
+  } else {
+    // Create new rate limit record
+    await supabase
+      .from('user_rate_limits')
+      .insert({
+        user_id: userId,
+        last_bet_time: now.toISOString(),
+        bet_count: 1
+      });
+  }
+
+  // SECURITY 3: Verify round is in betting phase with time checks
+  const { data: round, error: roundError } = await supabase
     .from('roulette_rounds')
-    .select('status, betting_end_time')
+    .select('status, betting_end_time, betting_start_time')
     .eq('id', roundId)
     .single();
 
-  if (!round || round.status !== 'betting') {
+  if (roundError || !round) {
+    throw new Error('Round not found');
+  }
+
+  if (round.status !== 'betting') {
     throw new Error('Betting is closed for this round');
   }
 
-  if (new Date() >= new Date(round.betting_end_time)) {
+  const currentTime = new Date();
+  const bettingEndTime = new Date(round.betting_end_time);
+  const bettingStartTime = new Date(round.betting_start_time);
+
+  if (currentTime >= bettingEndTime) {
     throw new Error('Betting time has expired');
   }
 
-  // Get user profile and validate balance
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('balance, total_wagered')
-    .eq('id', userId)
-    .single();
-
-  if (!profile || profile.balance < betAmount) {
-    throw new Error('Insufficient balance');
+  if (currentTime < bettingStartTime) {
+    throw new Error('Betting has not started yet');
   }
 
-  // Calculate potential payout
+  // SECURITY 4: Prevent duplicate bets in same transaction (idempotency)
+  const { data: existingBet } = await supabase
+    .from('roulette_bets')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('round_id', roundId)
+    .eq('bet_color', betColor)
+    .eq('bet_amount', betAmount)
+    .gte('created_at', oneSecondAgo.toISOString())
+    .single();
+
+  if (existingBet) {
+    throw new Error('Duplicate bet detected. Please wait before placing the same bet again.');
+  }
+
+  // SECURITY 5: Atomic balance check and deduction using database transaction
+  const { data: balanceResult, error: balanceError } = await supabase.rpc('atomic_bet_balance_check', {
+    p_user_id: userId,
+    p_bet_amount: betAmount,
+    p_round_id: roundId
+  });
+
+  if (balanceError || !balanceResult) {
+    console.error('❌ Atomic balance check failed:', balanceError);
+    throw new Error('Balance validation failed');
+  }
+
+  if (!balanceResult.success) {
+    throw new Error(balanceResult.error_message || 'Insufficient balance');
+  }
+
+  // SECURITY 6: Check total bets per user per round limit
+  const { data: userBetsCount, error: userBetsError } = await supabase
+    .from('roulette_bets')
+    .select('bet_amount')
+    .eq('user_id', userId)
+    .eq('round_id', roundId);
+
+  if (userBetsError) {
+    console.error('❌ Error checking user bets:', userBetsError);
+    throw new Error('Failed to validate user betting history');
+  }
+
+  const totalUserBets = (userBetsCount || []).reduce((sum, bet) => sum + bet.bet_amount, 0);
+  const maxBetsPerUserPerRound = 1000; // Maximum $1000 per user per round
+
+  if (totalUserBets + betAmount > maxBetsPerUserPerRound) {
+    throw new Error(`Maximum bet limit per round is $${maxBetsPerUserPerRound}`);
+  }
+
+  // SECURITY 7: Calculate potential payout with validation
   const multiplier = betColor === 'green' ? 14 : 2;
   const potentialPayout = betAmount * multiplier;
 
-  // Get user's client seed if not provided
+  if (potentialPayout > 140000) { // Max payout $140,000
+    throw new Error('Bet amount too high - maximum payout exceeded');
+  }
+
+  // SECURITY 8: Get and validate user's client seed
   let finalClientSeed = clientSeed;
-  if (!finalClientSeed) {
+  if (!finalClientSeed || typeof finalClientSeed !== 'string') {
     const { data: seedData } = await supabase
       .from('roulette_client_seeds')
       .select('client_seed')
@@ -554,16 +664,13 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
     finalClientSeed = seedData?.client_seed || 'default_client_seed';
   }
 
-  // Deduct balance only (stats will be updated when round completes)
-  await supabase
-    .from('profiles')
-    .update({
-      balance: profile.balance - betAmount
-    })
-    .eq('id', userId);
+  // Validate client seed format
+  if (finalClientSeed.length < 8 || finalClientSeed.length > 64) {
+    throw new Error('Invalid client seed format');
+  }
 
-  // Create bet record
-  const { data: bet } = await supabase
+  // SECURITY 9: Create bet record with additional security fields
+  const { data: bet, error: betError } = await supabase
     .from('roulette_bets')
     .insert({
       round_id: roundId,
@@ -571,14 +678,28 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
       bet_color: betColor,
       bet_amount: betAmount,
       potential_payout: potentialPayout,
-      client_seed: finalClientSeed
+      client_seed: finalClientSeed,
+      ip_address: null, // Would need to be passed from request headers
+      user_agent: null, // Would need to be passed from request headers
+      created_at: new Date().toISOString()
     })
     .select()
     .single();
 
+  if (betError) {
+    console.error('❌ Error creating bet:', betError);
+    
+    // SECURITY 10: Rollback balance deduction if bet creation fails
+    await supabase.rpc('rollback_bet_balance', {
+      p_user_id: userId,
+      p_bet_amount: betAmount
+    });
+    
+    throw new Error('Failed to place bet - balance has been restored');
+  }
+
   // Get user profile for live feed with fallback to auth.users
   let userProfile = null;
-  let profileError = null;
   
   // First try profiles table
   const { data: profileData, error: profileErr } = await supabase
@@ -590,57 +711,59 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   if (profileErr) {
     console.error('❌ Error fetching from profiles:', profileErr);
     
-         // Fallback to auth.users table  
-     const { data: userData, error: userErr } = await supabase.auth.admin.getUserById(userId);
-     if (userData?.user) {
-       userProfile = {
-         username: userData.user.user_metadata?.username || userData.user.email?.split('@')[0] || `User${userId.slice(-4)}`,
-         avatar_url: userData.user.user_metadata?.avatar_url || null
-       };
-     } else {
-       console.error('❌ Error fetching from auth.users:', userErr);
-       // Final fallback
-       userProfile = {
-         username: `User${userId.slice(-4)}`,
-         avatar_url: null
-       };
-     }
+    // Fallback to auth.users table  
+    const { data: userData, error: userErr } = await supabase.auth.admin.getUserById(userId);
+    if (userData?.user) {
+      userProfile = {
+        username: userData.user.user_metadata?.username || userData.user.email?.split('@')[0] || `User${userId.slice(-4)}`,
+        avatar_url: userData.user.user_metadata?.avatar_url || null
+      };
+    } else {
+      console.error('❌ Error fetching from auth.users:', userErr);
+      userProfile = {
+        username: `User${userId.slice(-4)}`,
+        avatar_url: null
+      };
+    }
   } else {
     userProfile = profileData;
   }
 
-  console.log(`👤 User profile for live feed:`, userProfile);
-  console.log(`💰 Bet amount: ${betAmount} (type: ${typeof betAmount})`);
+  // SECURITY 11: Audit log for bet placement
+  await supabase
+    .from('audit_logs')
+    .insert({
+      user_id: userId,
+      action: 'place_bet',
+      details: {
+        round_id: roundId,
+        bet_color: betColor,
+        bet_amount: betAmount,
+        potential_payout: potentialPayout
+      },
+      timestamp: new Date().toISOString()
+    });
 
-  // Add to live bet feed (TowerGame pattern)
-  const liveFeedData = {
-    user_id: userId,
-    username: userProfile?.username || `User${userId.slice(-4)}`,
-    game_type: 'roulette',
-    bet_amount: Number(betAmount), // Ensure it's a number
-    result: 'pending',
-    profit: 0,
-    game_data: {
-      bet_color: betColor,
-      round_id: roundId,
-      potential_payout: potentialPayout
-    }
-  };
-
-  console.log(`📡 About to insert into live feed:`, liveFeedData);
-
-  const { error: feedError } = await supabase
+  // Insert to live bet feed for real-time updates
+  await supabase
     .from('live_bet_feed')
-    .insert(liveFeedData);
+    .insert({
+      user_id: userId,
+      username: userProfile?.username || `User${userId.slice(-4)}`,
+      avatar_url: userProfile?.avatar_url,
+      bet_amount: betAmount,
+      bet_color: betColor,
+      game_type: 'roulette',
+      round_id: roundId
+    });
 
-  if (feedError) {
-    console.error('❌ Error inserting into live feed:', feedError);
-  } else {
-    console.log(`✅ Successfully added to live feed: ${userProfile?.username} bet $${betAmount} on ${betColor}`);
-  }
-
-  console.log(`✅ Bet placed: ${bet.id} and added to live feed`);
-  return bet;
+  console.log(`✅ Bet placed successfully: ${betAmount} on ${betColor} for user ${userId}`);
+  
+  return {
+    success: true,
+    bet,
+    message: 'Bet placed successfully'
+  };
 }
 
 async function completeRound(supabase: any, round: any) {
