@@ -137,24 +137,23 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
     // THREE-PHASE ANIMATION: Acceleration, Fast Roll, Deceleration
+    // Use progress-based approach to ensure full duration
     let easeProgress;
     
-    if (elapsed < ACCELERATION_DURATION) {
-      // ACCELERATION PHASE (0-800ms)
-      const accelProgress = elapsed / ACCELERATION_DURATION;
+    if (progress < 0.2) {
+      // ACCELERATION PHASE (0-20% of total time = 0-800ms)
+      const accelProgress = progress / 0.2;
       easeProgress = Math.pow(accelProgress, 2) * 0.2; // Smooth acceleration to 20%
       
-    } else if (elapsed < ACCELERATION_DURATION + FAST_ROLL_DURATION) {
-      // FAST ROLL PHASE (800-2800ms)
-      const fastRollElapsed = elapsed - ACCELERATION_DURATION;
-      const fastRollProgress = fastRollElapsed / FAST_ROLL_DURATION;
-      easeProgress = 0.2 + (fastRollProgress * 0.6); // Linear from 20% to 80%
+    } else if (progress < 0.7) {
+      // FAST ROLL PHASE (20-70% of total time = 800-2800ms)
+      const fastRollProgress = (progress - 0.2) / 0.5;
+      easeProgress = 0.2 + (fastRollProgress * 0.5); // Linear from 20% to 70%
       
     } else {
-      // DECELERATION PHASE (2800-4000ms)
-      const decelElapsed = elapsed - ACCELERATION_DURATION - FAST_ROLL_DURATION;
-      const decelProgress = decelElapsed / DECELERATION_DURATION;
-      easeProgress = 0.8 + Math.pow(decelProgress, 3) * 0.2; // Smooth deceleration to 100%
+      // DECELERATION PHASE (70-100% of total time = 2800-4000ms)
+      const decelProgress = (progress - 0.7) / 0.3;
+      easeProgress = 0.7 + Math.pow(decelProgress, 3) * 0.3; // Smooth deceleration to 100%
     }
     
     // Calculate the total distance to travel from current position to target
@@ -166,6 +165,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     setTranslateX(currentPosition);
 
     // CRITICAL: Continue animation until we reach the EXACT full duration
+    // Use elapsed time comparison to ensure we don't complete early
     if (elapsed < SPINNING_PHASE_DURATION) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
@@ -186,9 +186,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         expectedDuration: SPINNING_PHASE_DURATION,
         accuracy: Math.abs(elapsed - SPINNING_PHASE_DURATION),
         phases: {
-          acceleration: ACCELERATION_DURATION,
-          fastRoll: FAST_ROLL_DURATION,
-          deceleration: DECELERATION_DURATION
+          acceleration: '0-800ms (0-20%)',
+          fastRoll: '800-2800ms (20-70%)',
+          deceleration: '2800-4000ms (70-100%)'
         },
         savedToStorage: true
       });
