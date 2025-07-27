@@ -29,9 +29,9 @@ const WHEEL_SLOTS = [
 
 // Device-independent configuration - FIXED VALUES that never change
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 35; // Fixed logical tile width (device-independent) - increased from 25
+const LOGICAL_TILE_WIDTH = 50; // Fixed logical tile width (device-independent) - increased to fill reel height
 const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
-const VISIBLE_TILES_COUNT = 12; // Fixed number of visible tiles - reduced from 14 to accommodate larger tiles
+const VISIBLE_TILES_COUNT = 10; // Fixed number of visible tiles - reduced to accommodate larger tiles
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [logicalTranslateX, setLogicalTranslateX] = useState(0); // Logical position (device-independent)
@@ -47,14 +47,26 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const updateScaleFactor = useCallback(() => {
     if (containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
-      const visibleLogicalWidth = VISIBLE_TILES_COUNT * LOGICAL_TILE_WIDTH; // Fixed logical width
-      const newScaleFactor = containerWidth / visibleLogicalWidth;
+      const containerHeight = containerRef.current.offsetHeight;
+      
+      // Calculate scale factor based on height to make tiles fill the reel
+      const heightBasedScaleFactor = containerHeight / LOGICAL_TILE_WIDTH;
+      
+      // Calculate scale factor based on width for visible tiles
+      const visibleLogicalWidth = VISIBLE_TILES_COUNT * LOGICAL_TILE_WIDTH;
+      const widthBasedScaleFactor = containerWidth / visibleLogicalWidth;
+      
+      // Use the smaller scale factor to ensure tiles fit both dimensions
+      const newScaleFactor = Math.min(heightBasedScaleFactor, widthBasedScaleFactor);
       
       setScaleFactor(newScaleFactor);
       
       console.log('📱 Scale factor updated:', {
         containerWidth,
+        containerHeight,
         visibleLogicalWidth,
+        heightBasedScaleFactor,
+        widthBasedScaleFactor,
         newScaleFactor,
         logicalTileWidth: LOGICAL_TILE_WIDTH,
         logicalCenter: LOGICAL_CENTER_POSITION,
