@@ -48,7 +48,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Core state
   const [currentPosition, setCurrentPosition] = useState(() => {
     const saved = localStorage.getItem('roulettePosition');
-    return saved ? parseFloat(saved) : 0;
+    const initialPos = saved ? parseFloat(saved) : 0;
+    console.log('🏁 Initial reel position loaded:', Math.round(initialPos));
+    return initialPos;
   });
   const [isAnimating, setIsAnimating] = useState(false);
   const [showWinGlow, setShowWinGlow] = useState(false);
@@ -60,12 +62,34 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const animationTargetPosition = useRef<number>(0);
   const hasAnimationStarted = useRef<boolean>(false);
   const lastFrameTime = useRef<number>(0);
+  
+  // Position tracking
+  const previousPosition = useRef<number>(currentPosition);
+  const positionChangeCount = useRef<number>(0);
+
+  // Track position changes for debugging
+  useEffect(() => {
+    if (Math.abs(currentPosition - previousPosition.current) > 0.01) {
+      positionChangeCount.current++;
+      const change = currentPosition - previousPosition.current;
+      console.log(`📍 Position changed #${positionChangeCount.current}:`, {
+        from: Math.round(previousPosition.current),
+        to: Math.round(currentPosition),
+        change: Math.round(change),
+        isAnimating,
+        isSpinning,
+        cause: isAnimating ? 'ANIMATION' : 'OTHER'
+      });
+      previousPosition.current = currentPosition;
+    }
+  }, [currentPosition, isAnimating, isSpinning]);
 
   console.log('🎰 Roulette State:', {
     isSpinning,
     winningSlot,
     currentPosition: Math.round(currentPosition),
-    isAnimating
+    isAnimating,
+    positionStable: !isAnimating && !isSpinning
   });
 
   // Generate tile array with buffer cycles
@@ -159,22 +183,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
     // PRECISE timing check - exactly 4000ms
     if (elapsed >= SPINNING_DURATION_MS) {
-      // Animation complete - lock at exact target position
+      // Animation complete - PERMANENTLY lock at exact target position
       const finalPosition = animationTargetPosition.current;
       setCurrentPosition(finalPosition);
       setIsAnimating(false);
       hasAnimationStarted.current = false;
       
-      // Save position permanently
+      // PERMANENTLY save position - this will never change until next animation
       localStorage.setItem('roulettePosition', finalPosition.toString());
       
-      console.log('✅ Animation Complete - EXACTLY 4 SECONDS:', {
+      console.log('✅ Animation Complete - POSITION PERMANENTLY LOCKED:', {
         actualDuration: Math.round(elapsed),
         targetDuration: SPINNING_DURATION_MS,
         durationAccuracy: Math.abs(elapsed - SPINNING_DURATION_MS),
         finalPosition: Math.round(finalPosition),
         positionAccuracy: Math.abs(finalPosition - animationTargetPosition.current),
-        isExactly4Seconds: Math.abs(elapsed - 4000) < 50 // Within 50ms tolerance
+        isExactly4Seconds: Math.abs(elapsed - 4000) < 50, // Within 50ms tolerance
+        positionLocked: true,
+        willNeverChangeUntilNextSpin: true
       });
       
       // Show winning effect
@@ -258,19 +284,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [isSpinning, winningSlot, currentPosition, calculateTargetPosition, animate, isAnimating]);
 
-  // 🔄 Server synchronization only when completely idle
+  // 🚫 DISABLED Server synchronization - position is maintained locally only
+  // This prevents any teleporting/resetting of the reel position
   useEffect(() => {
-    if (synchronizedPosition !== null && 
-        synchronizedPosition !== undefined && 
-        !isSpinning && 
-        !isAnimating && 
-        !hasAnimationStarted.current) {
-      
-      console.log('🔄 Server sync position:', synchronizedPosition);
-      setCurrentPosition(synchronizedPosition);
-      localStorage.setItem('roulettePosition', synchronizedPosition.toString());
+    // Server sync is COMPLETELY DISABLED to prevent position resets
+    // The reel position is now 100% locally controlled
+    if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
+      console.log('🚫 Server sync BLOCKED - maintaining local position:', Math.round(currentPosition));
+      console.log('🚫 Would have synced to:', synchronizedPosition, 'but keeping current position');
     }
-  }, [synchronizedPosition, isSpinning, isAnimating]);
+  }, [synchronizedPosition, currentPosition]);
+
+  // 💾 Save position to localStorage whenever it changes (except during animation)
+  useEffect(() => {
+    if (!isAnimating) {
+      localStorage.setItem('roulettePosition', currentPosition.toString());
+      console.log('💾 Position saved locally:', Math.round(currentPosition));
+    }
+  }, [currentPosition, isAnimating]);
 
   // Cleanup on unmount
   useEffect(() => {
