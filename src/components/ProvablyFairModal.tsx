@@ -326,10 +326,10 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                           <Input 
                             value="••••••••••••••••••••••••••••••••" 
                             readOnly 
-                            className="font-mono text-xs bg-gradient-to-r from-gray-100 to-gray-50 text-gray-400 border-dashed"
+                            className="font-mono text-xs bg-gradient-to-r from-muted/30 to-muted/20 text-muted-foreground border-dashed border-emerald-500/30"
                           />
                           <div className="absolute inset-y-0 right-3 flex items-center">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
                               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                               </svg>
@@ -345,7 +345,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                         />
                       )}
                       {verificationData.server_seed?.includes('[HIDDEN') && (
-                        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600">
+                        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-400/80">
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                           </svg>
@@ -364,10 +364,10 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                           <Input 
                             value="••••••••••" 
                             readOnly 
-                            className="font-mono text-xs bg-gradient-to-r from-gray-100 to-gray-50 text-gray-400 border-dashed"
+                            className="font-mono text-xs bg-gradient-to-r from-muted/30 to-muted/20 text-muted-foreground border-dashed border-emerald-500/30"
                           />
                           <div className="absolute inset-y-0 right-3 flex items-center">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
                               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                               </svg>
@@ -383,7 +383,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                         />
                       )}
                       {verificationData.lotto?.includes('[HIDDEN') && (
-                        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-600">
+                        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-400/80">
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                           </svg>
@@ -403,14 +403,14 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
                   {/* Security Status Message */}
                   {verificationData.verification_message && (
-                    <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/20">
                       <div className="flex items-start gap-3">
-                        <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                         </svg>
                         <div>
-                          <p className="text-sm font-medium text-blue-900">Security Status</p>
-                          <p className="text-sm text-blue-800 mt-1">{verificationData.verification_message}</p>
+                          <p className="text-sm font-medium text-foreground">Security Status</p>
+                          <p className="text-sm text-muted-foreground mt-1">{verificationData.verification_message}</p>
                         </div>
                       </div>
                     </div>
