@@ -77,6 +77,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
   const [showWinGlow, setShowWinGlow] = useState(false);
   const reelRef = useRef<HTMLDivElement>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  // 🛡️ ANIMATION DEDUPLICATION - Prevent repeat animations
+  const lastAnimationRef = useRef<{
+    winningSlot: number | null;
+    serverReelPosition: number | null;
+    isSpinning: boolean;
+  }>({
+    winningSlot: null,
+    serverReelPosition: null,
+    isSpinning: false
+  });
 
   // 🎨 Get tile styling based on color
   const getTileStyle = (color: string): string => {
@@ -150,6 +161,23 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
   // 🎬 Start CSS transition animation when spinning begins
   useEffect(() => {
     if (isSpinning && winningSlot !== null && !isAnimating) {
+      
+      // 🛡️ DEDUPLICATION CHECK - Prevent repeat animations with same parameters
+      const lastAnim = lastAnimationRef.current;
+      if (lastAnim.isSpinning === isSpinning && 
+          lastAnim.winningSlot === winningSlot && 
+          lastAnim.serverReelPosition === serverReelPosition) {
+        console.log('🚫 Skipping duplicate animation - same parameters as last animation');
+        return;
+      }
+      
+      // Update animation tracking
+      lastAnimationRef.current = {
+        isSpinning,
+        winningSlot,
+        serverReelPosition
+      };
+      
       console.log('🚀 Starting PROVABLY FAIR Roulette Animation');
       
       const startPosition = currentPosition;
@@ -267,6 +295,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         setIsAnimating(false);
         setShowWinGlow(true);
         
+        // 🔄 RESET ANIMATION TRACKING - Allow fresh animations for new rounds
+        lastAnimationRef.current = {
+          winningSlot: null,
+          serverReelPosition: null,
+          isSpinning: false
+        };
+        
         // Save normalized position for next round
         localStorage.setItem('rouletteReelPosition', normalizedPosition.toString());
         
@@ -287,7 +322,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         setTimeout(() => setShowWinGlow(false), 2000);
       }, SPIN_DURATION_MS);
     }
-  }, [isSpinning, winningSlot, currentPosition, isAnimating, serverReelPosition]);
+  }, [isSpinning, winningSlot, serverReelPosition]);
+
+  // 🔄 Reset animation tracking when spinning stops (handle round changes)
+  useEffect(() => {
+    if (!isSpinning) {
+      lastAnimationRef.current = {
+        winningSlot: null,
+        serverReelPosition: null,
+        isSpinning: false
+      };
+    }
+  }, [isSpinning]);
 
   // 🧹 Cleanup on unmount
   useEffect(() => {
