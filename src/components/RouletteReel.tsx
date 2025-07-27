@@ -290,6 +290,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       } else if (isSpinning) {
         console.log('🚫 BLOCKING SERVER SYNC - Still in spinning phase, keeping current position');
         return;
+      } else if (winningSlot !== null && isSpinning) {
+        console.log('🚫 BLOCKING SERVER SYNC - Winning slot detected during spinning, keeping current position');
+        return;
+      } else if (winningSlot !== null) {
+        console.log('🚫 BLOCKING SERVER SYNC - Winning slot present, animation may be starting, keeping current position');
+        return;
       } else {
         console.log('🔄 Server sync:', synchronizedPosition);
         setTranslateX(synchronizedPosition);
@@ -297,7 +303,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
       }
     }
-  }, [synchronizedPosition, isAnimating, animationPhase, isSpinning]);
+  }, [synchronizedPosition, isAnimating, animationPhase, isSpinning, winningSlot]);
 
   // Ensure position is saved whenever it changes (except during animation)
   useEffect(() => {
