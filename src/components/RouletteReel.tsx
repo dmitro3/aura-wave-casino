@@ -56,7 +56,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const hasCompletedAnimation = useRef<boolean>(false);
 
   // Animation configuration - EXACT MATCH TO SERVER
-  const SPINNING_PHASE_DURATION = 5000; // 5 seconds (matches server SPINNING_DURATION exactly)
+  const SPINNING_PHASE_DURATION = 4000; // 4 seconds (matches server SPINNING_DURATION exactly)
+  const ACCELERATION_DURATION = 800; // 0.8 seconds acceleration
+  const FAST_ROLL_DURATION = 2000; // 2 seconds fast rolling
+  const DECELERATION_DURATION = 1200; // 1.2 seconds deceleration
   const WINNING_GLOW_DURATION = 2000; // 2 seconds
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, isAnimating, animationPhase });
@@ -126,27 +129,43 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return Math.round(targetPosition);
   }, []);
 
-  // EXACT DURATION ANIMATION FUNCTION - MATCHES SERVER TIMING
+  // THREE-PHASE ANIMATION FUNCTION - MATCHES 4-SECOND SERVER TIMING
   const animate = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
-    // COMPLETELY LINEAR ANIMATION - NO EASING TO ENSURE EXACT DURATION
-    // This ensures the animation lasts exactly 5 seconds
-    const easeProgress = progress;
+    // THREE-PHASE ANIMATION: Acceleration, Fast Roll, Deceleration
+    let easeProgress;
+    
+    if (elapsed < ACCELERATION_DURATION) {
+      // ACCELERATION PHASE (0-800ms)
+      const accelProgress = elapsed / ACCELERATION_DURATION;
+      easeProgress = Math.pow(accelProgress, 2) * 0.2; // Smooth acceleration to 20%
+      
+    } else if (elapsed < ACCELERATION_DURATION + FAST_ROLL_DURATION) {
+      // FAST ROLL PHASE (800-2800ms)
+      const fastRollElapsed = elapsed - ACCELERATION_DURATION;
+      const fastRollProgress = fastRollElapsed / FAST_ROLL_DURATION;
+      easeProgress = 0.2 + (fastRollProgress * 0.6); // Linear from 20% to 80%
+      
+    } else {
+      // DECELERATION PHASE (2800-4000ms)
+      const decelElapsed = elapsed - ACCELERATION_DURATION - FAST_ROLL_DURATION;
+      const decelProgress = decelElapsed / DECELERATION_DURATION;
+      easeProgress = 0.8 + Math.pow(decelProgress, 3) * 0.2; // Smooth deceleration to 100%
+    }
     
     // Calculate the total distance to travel from current position to target
     const totalDistance = targetPosition - translateX;
     
-    // Apply linear progress to the distance
+    // Apply easing to the distance
     const currentPosition = translateX + (easeProgress * totalDistance);
     
     setTranslateX(currentPosition);
 
     // CRITICAL: Continue animation until we reach the EXACT full duration
-    // Use elapsed time comparison to ensure we don't complete early
     if (elapsed < SPINNING_PHASE_DURATION) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
@@ -159,13 +178,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Save the final position to localStorage for persistence
       localStorage.setItem('rouletteReelPosition', targetPosition.toString());
       
-      console.log('✅ ANIMATION COMPLETE - EXACT DURATION:', {
+      console.log('✅ ANIMATION COMPLETE - 4-SECOND DURATION:', {
         targetPosition,
         finalPosition: targetPosition,
         winningSlot,
         totalDuration: elapsed,
         expectedDuration: SPINNING_PHASE_DURATION,
         accuracy: Math.abs(elapsed - SPINNING_PHASE_DURATION),
+        phases: {
+          acceleration: ACCELERATION_DURATION,
+          fastRoll: FAST_ROLL_DURATION,
+          deceleration: DECELERATION_DURATION
+        },
         savedToStorage: true
       });
       

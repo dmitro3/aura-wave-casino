@@ -26,7 +26,7 @@ const WHEEL_SLOTS = [
 ];
 
 const BETTING_DURATION = 15000; // 15 seconds betting
-const SPINNING_DURATION = 5000; // 5 seconds spinning animation
+const SPINNING_DURATION = 4000; // 4 seconds spinning animation
 
 // Advanced Provably Fair Constants
 const DAILY_SEED_LENGTH = 64; // 64 character hex string (256 bits)
