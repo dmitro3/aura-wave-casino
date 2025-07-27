@@ -75,30 +75,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return () => window.removeEventListener('resize', handleResize);
   }, [updateScaleFactor]);
 
-  // Safety check to ensure reel is always visible
-  useEffect(() => {
-    if (containerRef.current && tiles.length > 0) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const visibleTilesWidth = VISIBLE_LOGICAL_TILES * LOGICAL_TILE_SIZE * scaleFactor;
-      
-      console.log('🔍 Reel visibility check:', {
-        containerWidth,
-        visibleTilesWidth,
-        logicalTranslateX,
-        scaleFactor,
-        tilesCount: tiles.length,
-        isVisible: visibleTilesWidth > 0 && Math.abs(logicalTranslateX) < 10000
-      });
-      
-      // If reel is not visible, reset to center
-      if (visibleTilesWidth === 0 || Math.abs(logicalTranslateX) > 10000) {
-        console.warn('⚠️ Reel not visible, resetting to center');
-        setLogicalTranslateX(0);
-        setAnimationPhase('idle');
-      }
-    }
-  }, [logicalTranslateX, scaleFactor, tiles.length]);
-
   // Generate tiles array with buffer for seamless looping
   const tiles = useMemo(() => {
     const tilesArray = [];
@@ -122,6 +98,30 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     return tilesArray;
   }, []);
+
+  // Safety check to ensure reel is always visible
+  useEffect(() => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const visibleTilesWidth = VISIBLE_LOGICAL_TILES * LOGICAL_TILE_SIZE * scaleFactor;
+      
+      console.log('🔍 Reel visibility check:', {
+        containerWidth,
+        visibleTilesWidth,
+        logicalTranslateX,
+        scaleFactor,
+        tilesCount: tiles.length,
+        isVisible: visibleTilesWidth > 0 && Math.abs(logicalTranslateX) < 10000
+      });
+      
+      // If reel is not visible, reset to center
+      if (visibleTilesWidth === 0 || Math.abs(logicalTranslateX) > 10000) {
+        console.warn('⚠️ Reel not visible, resetting to center');
+        setLogicalTranslateX(0);
+        setAnimationPhase('idle');
+      }
+    }
+  }, [logicalTranslateX, scaleFactor, tiles.length]);
 
   // Calculate target logical position for winning slot to be centered
   const calculateTargetLogicalPosition = useCallback((slot: number) => {
