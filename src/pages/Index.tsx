@@ -1,14 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Wallet, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot } from 'lucide-react';
+import { User, Wallet, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserProfile } from '@/hooks/useUserProfile';
+import { useOptimizedUserData } from '@/hooks/useOptimizedUserData';
 import { supabase } from '@/integrations/supabase/client';
 import AuthModal from '@/components/AuthModal';
 import UserProfile from '@/components/UserProfile';
@@ -44,13 +44,16 @@ interface IndexProps {
 
 export default function Index({ initialGame }: IndexProps) {
   const { user, signOut, loading: authLoading } = useAuth();
-  const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
+  const { userData, loading: profileLoading, updateUserData } = useOptimizedUserData();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const subscriptionRef = useRef<any>(null);
+  const mountedRef = useRef(true);
 
   // Determine current game from URL
   const getCurrentGame = () => {
@@ -64,8 +67,8 @@ export default function Index({ initialGame }: IndexProps) {
   const [currentGame, setCurrentGame] = useState(getCurrentGame());
   const { increases, checkBalanceChange } = useBalanceAnimation();
 
-  // Notification functions
-  const fetchNotifications = async () => {
+  // Optimized notification functions
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -77,11 +80,14 @@ export default function Index({ initialGame }: IndexProps) {
         .limit(20);
 
       if (error) throw error;
-      setNotifications((data || []) as Notification[]);
+      if (mountedRef.current) {
+        setNotifications((data || []) as Notification[]);
+        setNotificationsLoaded(true);
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  };
+  }, [user]);
 
   const markNotificationAsRead = async (notificationId: string) => {
     try {
@@ -99,13 +105,11 @@ export default function Index({ initialGame }: IndexProps) {
   };
 
   const markAllNotificationsAsRead = async () => {
-    if (!user) return;
-    
     try {
       await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .eq('is_read', false);
 
       setNotifications(prev =>
@@ -123,7 +127,9 @@ export default function Index({ initialGame }: IndexProps) {
         .delete()
         .eq('id', notificationId);
 
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      setNotifications(prev =>
+        prev.filter(n => n.id !== notificationId)
+      );
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -132,13 +138,28 @@ export default function Index({ initialGame }: IndexProps) {
   // Count unread notifications
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  // Fetch notifications on mount and set up real-time subscription
+  // Progressive loading: Load notifications after user data is loaded
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
+    mountedRef.current = true;
 
-      // Set up real-time subscription for new notifications
-      const channel = supabase
+    if (user && userData && !notificationsLoaded) {
+      // Small delay to prioritize user data loading
+      const timer = setTimeout(() => {
+        if (mountedRef.current) {
+          fetchNotifications();
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user, userData, notificationsLoaded, fetchNotifications]);
+
+  // Set up real-time subscription for notifications (only after initial load)
+  useEffect(() => {
+    if (user && notificationsLoaded) {
+      console.log('🔔 Setting up notifications subscription for user:', user.id);
+      
+      subscriptionRef.current = supabase
         .channel(`notifications_${user.id}`)
         .on(
           'postgres_changes',
@@ -149,7 +170,7 @@ export default function Index({ initialGame }: IndexProps) {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            if (payload.eventType === 'INSERT') {
+            if (payload.eventType === 'INSERT' && mountedRef.current) {
               const newNotification = payload.new as Notification;
               setNotifications(prev => [newNotification, ...prev]);
             }
@@ -158,10 +179,12 @@ export default function Index({ initialGame }: IndexProps) {
         .subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
+        if (subscriptionRef.current) {
+          supabase.removeChannel(subscriptionRef.current);
+        }
       };
     }
-  }, [user]);
+  }, [user, notificationsLoaded]);
 
   // Update current game when URL changes
   useEffect(() => {
@@ -202,6 +225,7 @@ export default function Index({ initialGame }: IndexProps) {
   const getXpForNextLevel = (level: number) => level * 100;
   const xpProgress = levelStats ? (levelStats.current_level_xp / (levelStats.current_level_xp + levelStats.xp_to_next_level)) * 100 : 0;
 
+  // Progressive loading: Show UI immediately after auth, load data progressively
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -533,76 +557,49 @@ export default function Index({ initialGame }: IndexProps) {
               </Button>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Games Area */}
-        <div className="lg:col-span-7">
-          <div className="space-y-4">
-            {currentGame === 'coinflip' && (
-              user && userData ? (
-                <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
-              ) : (
-                <CoinflipGame userData={null} onUpdateUser={() => {}} />
-              )
-            )}
-
-            {currentGame === 'roulette' && (
-              user && userData ? (
-                <RouletteGame userData={userData} onUpdateUser={updateUserProfile} />
-              ) : (
-                <RouletteGame userData={null} onUpdateUser={() => Promise.resolve()} />
-              )
-            )}
-
-            {currentGame === 'tower' && (
-              user && userData ? (
-                <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
-              ) : (
-                <TowerGame userData={null} onUpdateUser={() => {}} />
-              )
-            )}
-
-            {currentGame === 'crash' && (
-              <Card className="glass border-0 p-12 text-center">
-                <div className="space-y-4">
-                  <div className="text-4xl">🚀</div>
-                  <h3 className="text-xl font-semibold">Crash Game Coming Soon!</h3>
-                  <p className="text-muted-foreground">
-                    We're working on an exciting crash game with live multipliers and real-time action.
-                  </p>
+          {/* Chat Section */}
+          <Card className="glass border-0 bg-gradient-to-br from-card/50 to-card/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
+                  <MessageCircle className="w-4 h-4 text-primary" />
                 </div>
-              </Card>
-            )}
-          </div>
+                Chat
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RealtimeChat />
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Right Sidebar - Real-time Chat */}
-        <div className="lg:col-span-2 h-[calc(100vh-16rem)]">
-          <RealtimeChat />
+        {/* Main Game Area */}
+        <div className="lg:col-span-9">
+          {currentGame === 'coinflip' && <CoinflipGame />}
+          {currentGame === 'roulette' && <RouletteGame />}
+          {currentGame === 'tower' && <TowerGame />}
         </div>
       </div>
 
-      {/* Profile Modal - Only show for authenticated users */}
-      {user && userData && (
-        <UserProfile
-          isOpen={showProfile}
-          onClose={() => setShowProfile(false)}
-          userData={userData}
+      {/* Modals */}
+      {showAuthModal && (
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
         />
       )}
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-      />
+      {showProfile && userData && (
+        <UserProfile
+          userData={userData}
+          onClose={() => setShowProfile(false)}
+          onUpdate={updateUserData}
+        />
+      )}
 
-        {/* Live Level-Up Notifications - Only show for authenticated users */}
-        {user && <LiveLevelUpNotification />}
-      </div>
-      
-      {/* Footer */}
-      <Footer />
+      {/* Live Notifications */}
+      <LiveLevelUpNotification />
     </div>
   );
 }

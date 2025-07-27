@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useState, useEffect, useContext, createContext, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -22,8 +22,10 @@ export function LevelSyncProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [levelStats, setLevelStats] = useState<LevelStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const subscriptionRef = useRef<any>(null);
+  const mountedRef = useRef(true);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!user) {
       setLevelStats(null);
       setLoading(false);
@@ -36,6 +38,8 @@ export function LevelSyncProvider({ children }: { children: React.ReactNode }) {
         .select('current_level, lifetime_xp, current_level_xp, xp_to_next_level, border_tier')
         .eq('user_id', user.id)
         .single();
+
+      if (!mountedRef.current) return;
 
       if (error && error.code !== 'PGRST116') {
         throw error;
@@ -50,18 +54,26 @@ export function LevelSyncProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (insertError) throw insertError;
-        setLevelStats(newStats);
+        if (mountedRef.current) {
+          setLevelStats(newStats);
+        }
       } else {
-        setLevelStats(data);
+        if (mountedRef.current) {
+          setLevelStats(data);
+        }
       }
     } catch (error) {
       console.error('Error fetching level stats:', error);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [user]);
 
   useEffect(() => {
+    mountedRef.current = true;
+
     if (!user) {
       setLevelStats(null);
       setLoading(false);
@@ -72,7 +84,7 @@ export function LevelSyncProvider({ children }: { children: React.ReactNode }) {
     
     // Set up real-time subscription for level stats
     console.log('📊 Setting up level stats subscription for user:', user.id);
-    const subscription = supabase
+    subscriptionRef.current = supabase
       .channel(`level_stats_${user.id}_${Date.now()}`)
       .on(
         'postgres_changes',
@@ -84,7 +96,7 @@ export function LevelSyncProvider({ children }: { children: React.ReactNode }) {
         },
         (payload) => {
           console.log('📊 LEVEL STATS UPDATE:', payload);
-          if (payload.new) {
+          if (payload.new && mountedRef.current) {
             const newData = payload.new as any;
             setLevelStats({
               current_level: newData.current_level,
@@ -102,10 +114,13 @@ export function LevelSyncProvider({ children }: { children: React.ReactNode }) {
       });
 
     return () => {
-      console.log('📊 Cleaning up level stats subscription');
-      supabase.removeChannel(subscription);
+      mountedRef.current = false;
+      if (subscriptionRef.current) {
+        console.log('📊 Cleaning up level stats subscription');
+        supabase.removeChannel(subscriptionRef.current);
+      }
     };
-  }, [user]);
+  }, [user, fetchStats]);
 
   return (
     <LevelSyncContext.Provider value={{ levelStats, loading, refreshStats: fetchStats }}>

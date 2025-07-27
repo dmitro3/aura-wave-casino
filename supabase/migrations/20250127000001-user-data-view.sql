@@ -1,0 +1,75 @@
+-- Create optimized view for user data
+-- This view combines profiles and user_level_stats for faster queries
+
+CREATE OR REPLACE VIEW public.user_data_view AS
+SELECT 
+  p.id,
+  p.username,
+  p.registration_date,
+  p.balance,
+  p.badges,
+  p.last_claim_time,
+  p.created_at,
+  p.updated_at,
+  uls.current_level,
+  uls.lifetime_xp,
+  uls.current_level_xp,
+  uls.xp_to_next_level,
+  uls.border_tier,
+  uls.border_unlocked_at,
+  uls.available_cases,
+  uls.total_cases_opened,
+  uls.total_case_value,
+  uls.coinflip_games,
+  uls.coinflip_wins,
+  uls.coinflip_wagered,
+  uls.coinflip_profit,
+  uls.best_coinflip_streak,
+  uls.current_coinflip_streak,
+  uls.crash_games,
+  uls.crash_wins,
+  uls.crash_wagered,
+  uls.crash_profit,
+  uls.roulette_games,
+  uls.roulette_wins,
+  uls.roulette_wagered,
+  uls.roulette_profit,
+  uls.roulette_highest_win,
+  uls.roulette_highest_loss,
+  uls.roulette_green_wins,
+  uls.roulette_red_wins,
+  uls.roulette_black_wins,
+  uls.roulette_favorite_color,
+  uls.roulette_best_streak,
+  uls.roulette_current_streak,
+  uls.roulette_biggest_bet,
+  uls.tower_games,
+  uls.tower_wins,
+  uls.tower_wagered,
+  uls.tower_profit,
+  uls.total_games,
+  uls.total_wins,
+  uls.total_wagered,
+  uls.total_profit,
+  uls.biggest_win,
+  uls.biggest_loss,
+  uls.chat_messages_count,
+  uls.login_days_count,
+  uls.biggest_single_bet,
+  uls.account_created,
+  uls.current_win_streak,
+  uls.best_win_streak,
+  uls.tower_highest_level,
+  uls.tower_biggest_win,
+  uls.tower_biggest_loss,
+  uls.tower_best_streak,
+  uls.tower_current_streak,
+  uls.tower_perfect_games
+FROM public.profiles p
+LEFT JOIN public.user_level_stats uls ON p.id = uls.user_id;
+
+-- Grant access to the view
+GRANT SELECT ON public.user_data_view TO authenticated;
+
+-- Create index on the view for faster lookups
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_data_view_id ON public.user_data_view(id);

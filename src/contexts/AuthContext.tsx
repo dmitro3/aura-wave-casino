@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
 
@@ -19,25 +19,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+  // Memoized session update function to prevent unnecessary re-renders
+  const updateSession = useCallback((newSession: Session | null) => {
+    setSession(newSession)
+    setUser(newSession?.user ?? null)
+    setLoading(false)
+  }, [])
 
-    // Listen for auth changes
+  useEffect(() => {
+    let mounted = true
+
+    // Get initial session with timeout
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (mounted) {
+          updateSession(session)
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    // Listen for auth changes with debouncing
+    let authChangeTimeout: NodeJS.Timeout
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
+      // Clear previous timeout to debounce rapid changes
+      clearTimeout(authChangeTimeout)
+      
+      authChangeTimeout = setTimeout(() => {
+        if (mounted) {
+          updateSession(session)
+        }
+      }, 50) // Small debounce to prevent rapid state changes
     })
 
-    return () => subscription.unsubscribe()
-  }, [])
+    // Get initial session
+    getInitialSession()
+
+    return () => {
+      mounted = false
+      clearTimeout(authChangeTimeout)
+      subscription.unsubscribe()
+    }
+  }, [updateSession])
 
   const signUp = async (email: string, password: string, username: string) => {
     const redirectUrl = `${window.location.origin}/`

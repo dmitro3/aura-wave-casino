@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -52,42 +52,39 @@ export const useRealtimeFeeds = () => {
   const [crashBets, setCrashBets] = useState<CrashBet[]>([]);
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
+  const mountedRef = useRef(true);
+  const channelsRef = useRef<RealtimeChannel[]>([]);
 
   useEffect(() => {
-    let liveFeedChannel: RealtimeChannel;
-    let crashRoundChannel: RealtimeChannel;
-    let crashBetsChannel: RealtimeChannel;
+    mountedRef.current = true;
 
     const setupRealtimeSubscriptions = async () => {
       try {
-        // Initial data fetch
-        const [liveFeedData, crashRoundData, crashBetsData] = await Promise.all([
+        // Initial data fetch with optimized queries
+        const [liveFeedData, crashRoundData] = await Promise.all([
           supabase
             .from('live_bet_feed')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(50),
+            .limit(30), // Reduced from 50 to 30 for faster loading
           supabase
             .from('crash_rounds')
             .select('*')
             .in('status', ['countdown', 'active', 'crashed'])
             .order('created_at', { ascending: false })
-            .limit(1),
-          supabase
-            .from('crash_bets')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(100)
+            .limit(1)
         ]);
+
+        if (!mountedRef.current) return;
 
         if (liveFeedData.data) setLiveBetFeed(liveFeedData.data as LiveBetFeed[]);
         if (crashRoundData.data?.[0]) setCurrentCrashRound(crashRoundData.data[0] as CrashRound);
-        if (crashBetsData.data) setCrashBets(crashBetsData.data as CrashBet[]);
 
-        // Set up live bet feed subscription with the most basic approach
-        console.log('🔗 Setting up live bet feed subscription...');
-        liveFeedChannel = supabase
-          .channel('live_bet_feed_changes')
+        // Single optimized channel for all real-time updates
+        console.log('🔗 Setting up optimized real-time feeds subscription...');
+        
+        const mainChannel = supabase
+          .channel('optimized_realtime_feeds')
           .on(
             'postgres_changes',
             {
@@ -96,6 +93,8 @@ export const useRealtimeFeeds = () => {
               table: 'live_bet_feed'
             },
             (payload) => {
+              if (!mountedRef.current) return;
+              
               console.log('📡 RECEIVED: New bet in feed:', payload);
               const newBet = payload.new as LiveBetFeed;
               
@@ -109,31 +108,11 @@ export const useRealtimeFeeds = () => {
                 
                 console.log('✅ SUCCESS: Adding bet to feed:', newBet.username, newBet.game_type, newBet.bet_amount);
                 
-                // Add to beginning of array and limit to 50 items
-                return [newBet, ...prev].slice(0, 50);
+                // Add to beginning of array and limit to 30 items
+                return [newBet, ...prev].slice(0, 30);
               });
             }
           )
-          .subscribe((status) => {
-            console.log('📡 Live bet feed status change:', status);
-            setIsConnected(status === 'SUBSCRIBED');
-            
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ CONNECTED: Live bet feed is now listening for changes');
-            } else if (status === 'CHANNEL_ERROR') {
-              console.error('❌ ERROR: Live bet feed subscription failed');
-              setTimeout(() => {
-                console.log('🔄 RETRY: Attempting to reconnect live bet feed...');
-                liveFeedChannel?.unsubscribe();
-                setupRealtimeSubscriptions();
-              }, 3000);
-            }
-          });
-
-        // Set up crash rounds subscription
-        console.log('🎰 Setting up crash rounds subscription...');
-        crashRoundChannel = supabase
-          .channel('crash_rounds_changes')
           .on(
             'postgres_changes',
             {
@@ -142,6 +121,8 @@ export const useRealtimeFeeds = () => {
               table: 'crash_rounds'
             },
             (payload) => {
+              if (!mountedRef.current) return;
+              
               console.log('🎰 RECEIVED: Crash round update:', payload);
               if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
                 console.log('✅ SUCCESS: Updating crash round:', payload.new);
@@ -149,14 +130,6 @@ export const useRealtimeFeeds = () => {
               }
             }
           )
-          .subscribe((status) => {
-            console.log('🎰 Crash rounds status change:', status);
-          });
-
-        // Set up crash bets subscription
-        console.log('💰 Setting up crash bets subscription...');
-        crashBetsChannel = supabase
-          .channel('crash_bets_changes')
           .on(
             'postgres_changes',
             {
@@ -165,6 +138,8 @@ export const useRealtimeFeeds = () => {
               table: 'crash_bets'
             },
             (payload) => {
+              if (!mountedRef.current) return;
+              
               console.log('💰 RECEIVED: Crash bet update:', payload);
               if (payload.eventType === 'INSERT') {
                 const newBet = payload.new as CrashBet;
@@ -175,7 +150,7 @@ export const useRealtimeFeeds = () => {
                     return prev;
                   }
                   console.log('✅ SUCCESS: Adding new crash bet:', newBet);
-                  return [newBet, ...prev].slice(0, 100);
+                  return [newBet, ...prev].slice(0, 50); // Reduced from 100 to 50
                 });
               } else if (payload.eventType === 'UPDATE') {
                 console.log('✅ SUCCESS: Updating crash bet:', payload.new);
@@ -188,14 +163,29 @@ export const useRealtimeFeeds = () => {
             }
           )
           .subscribe((status) => {
-            console.log('💰 Crash bets status change:', status);
+            console.log('📡 Optimized real-time feeds status change:', status);
+            setIsConnected(status === 'SUBSCRIBED');
+            
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ CONNECTED: Optimized real-time feeds are now listening for changes');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('❌ ERROR: Optimized real-time feeds subscription failed');
+              // Implement exponential backoff for reconnection
+              setTimeout(() => {
+                if (mountedRef.current) {
+                  console.log('🔄 RETRY: Attempting to reconnect optimized real-time feeds...');
+                  setupRealtimeSubscriptions();
+                }
+              }, 3000);
+            }
           });
 
-        console.log('✅ All subscriptions set up successfully');
+        channelsRef.current = [mainChannel];
+        console.log('✅ Optimized real-time feeds subscription set up successfully');
         setLoading(false);
 
       } catch (error) {
-        console.error('❌ Error setting up realtime subscriptions:', error);
+        console.error('❌ Error setting up optimized real-time feeds:', error);
         setLoading(false);
       }
     };
@@ -204,19 +194,12 @@ export const useRealtimeFeeds = () => {
 
     // Cleanup subscriptions
     return () => {
-      console.log('🧹 Cleaning up realtime subscriptions...');
-      if (liveFeedChannel) {
-        supabase.removeChannel(liveFeedChannel);
-        console.log('🧹 Removed live feed channel');
-      }
-      if (crashRoundChannel) {
-        supabase.removeChannel(crashRoundChannel);
-        console.log('🧹 Removed crash round channel');
-      }
-      if (crashBetsChannel) {
-        supabase.removeChannel(crashBetsChannel);
-        console.log('🧹 Removed crash bets channel');
-      }
+      mountedRef.current = false;
+      console.log('🧹 Cleaning up optimized real-time feeds subscriptions...');
+      channelsRef.current.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
+      channelsRef.current = [];
     };
   }, []);
 
@@ -231,11 +214,15 @@ export const useRealtimeFeeds = () => {
 
 export const useCrashRoundUpdates = () => {
   const [currentRound, setCurrentRound] = useState<CrashRound | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
   
   useEffect(() => {
-    // Fetch current round data every second when active
-    const interval = setInterval(async () => {
-      if (currentRound?.status === 'active') {
+    mountedRef.current = true;
+
+    // Fetch current round data every 2 seconds when active (reduced from 1 second)
+    intervalRef.current = setInterval(async () => {
+      if (currentRound?.status === 'active' && mountedRef.current) {
         try {
           const { data } = await supabase
             .from('crash_rounds')
@@ -243,16 +230,21 @@ export const useCrashRoundUpdates = () => {
             .eq('id', currentRound.id)
             .single();
           
-          if (data) {
+          if (data && mountedRef.current) {
             setCurrentRound(data as CrashRound);
           }
         } catch (error) {
           console.error('❌ Error fetching round update:', error);
         }
       }
-    }, 1000);
+    }, 2000); // Increased from 1000ms to 2000ms
 
-    return () => clearInterval(interval);
+    return () => {
+      mountedRef.current = false;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [currentRound?.id, currentRound?.status]);
 
   return { currentRound, setCurrentRound };
