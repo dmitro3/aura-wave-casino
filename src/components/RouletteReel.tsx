@@ -52,7 +52,19 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const targetTileCenter = targetTileIndex * TILE_WIDTH + TILE_WIDTH / 2;
     
     // Calculate position so that the tile center aligns with the container center
-    return CENTER_OFFSET - targetTileCenter;
+    const targetPosition = CENTER_OFFSET - targetTileCenter;
+    
+    console.log('🎯 Target position calculation:', {
+      slot,
+      slotIndex,
+      centerRepeat,
+      targetTileIndex,
+      targetTileCenter,
+      centerOffset: CENTER_OFFSET,
+      targetPosition
+    });
+    
+    return targetPosition;
   }, []);
 
   // Simple spinning animation with infinite scrolling
@@ -76,27 +88,41 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Animate to the final position when we have the result
       const startPosition = translateX;
       
-      // Use the synchronized position from the backend, but ensure it's properly aligned
-      let targetPosition = synchronizedPosition;
+      // Calculate the exact target position for the winning slot to be centered
+      const targetPosition = calculateTargetPosition(winningSlot);
       
-      // If we have a winning slot, calculate the exact position for it to be centered
-      if (winningSlot !== null) {
-        const calculatedPosition = calculateTargetPosition(winningSlot);
-        // Use the calculated position but adjust based on the backend's position if needed
-        targetPosition = calculatedPosition;
-      }
+      console.log('🎲 Starting deceleration animation:', {
+        startPosition,
+        targetPosition,
+        distance: Math.abs(targetPosition - startPosition),
+        winningSlot
+      });
       
-      const duration = 2000; // 2 seconds
+      const duration = 3000; // 3 seconds for smoother deceleration
       const startTime = Date.now();
       
       const animateToResult = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        // Ease out cubic for smooth deceleration
-        const easeOutCubic = 1 - Math.pow(1 - progress, 3);
-        const newPosition = startPosition + (targetPosition - startPosition) * easeOutCubic;
+        // Enhanced easing function for ultra-smooth deceleration
+        let easeProgress;
+        if (progress < 0.3) {
+          // First 30%: Still moving fast
+          const phaseProgress = progress / 0.3;
+          easeProgress = phaseProgress * 0.4; // 0% to 40% distance
+        } else if (progress < 0.7) {
+          // 30%-70%: Slowing down
+          const phaseProgress = (progress - 0.3) / 0.4;
+          easeProgress = 0.4 + phaseProgress * 0.4; // 40% to 80% distance
+        } else {
+          // Last 30%: Very slow final approach
+          const phaseProgress = (progress - 0.7) / 0.3;
+          const smoothEaseOut = 1 - Math.pow(1 - phaseProgress, 4); // Quartic ease-out
+          easeProgress = 0.8 + smoothEaseOut * 0.2; // 80% to 100% distance
+        }
         
+        const newPosition = startPosition + (targetPosition - startPosition) * easeProgress;
         setTranslateX(newPosition);
         
         if (progress < 1) {
@@ -176,6 +202,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // Find the closest instance of the winning slot to the center
     let closestDistance = Infinity;
     let closestTileCenter = 0;
+    let closestRepeat = 0;
     
     for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
       const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
@@ -186,22 +213,33 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       if (distanceFromCenter < closestDistance) {
         closestDistance = distanceFromCenter;
         closestTileCenter = tileCenterPosition;
+        closestRepeat = repeat;
       }
     }
     
-    const isAccurate = closestDistance < 10; // 10px tolerance
+    const isAccurate = closestDistance < 5; // 5px tolerance for precision
     
     console.log('🎯 PROVABLY FAIR VERIFICATION:', {
       expectedSlot: winningSlot,
       expectedCenter: CENTER_OFFSET,
       actualTileCenter: closestTileCenter,
       distanceOff: closestDistance.toFixed(2) + 'px',
+      closestRepeat,
       result: isAccurate ? '✅ PERFECT LANDING' : '❌ POSITION ERROR',
-      tolerance: '10px'
+      tolerance: '5px'
     });
     
     if (!isAccurate) {
       console.warn(`⚠️ Position adjustment needed: Slot ${winningSlot} is ${closestDistance.toFixed(2)}px off center`);
+      
+      // Auto-correct if significantly off
+      if (closestDistance > 20) {
+        const correction = CENTER_OFFSET - closestTileCenter;
+        console.log(`🔧 Auto-correcting position by ${correction.toFixed(2)}px`);
+        setTranslateX(prev => prev + correction);
+      }
+    } else {
+      console.log(`🎉 Perfect! Slot ${winningSlot} landed exactly under the center line!`);
     }
   }, [winningSlot]);
 
