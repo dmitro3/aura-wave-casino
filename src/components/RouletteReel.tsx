@@ -175,6 +175,49 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
   const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.12; // Slightly reduced for smoother animation
   const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
+  const FULL_SPEED_DURATION = 2000; // 2 seconds of full speed spinning
+
+  // Calculate complete animation path based on provably fair result
+  const calculateAnimationPath = useCallback((winningSlot: number) => {
+    const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
+    
+    // Calculate how far we need to travel during deceleration
+    const decelerationDistance = FULL_SPEED_VELOCITY * (DECELERATION_DURATION / 1000) * 0.5; // Average velocity during deceleration
+    
+    // Calculate the position where deceleration should start
+    const decelerationStartPosition = targetLogicalPosition + decelerationDistance;
+    
+    // Calculate how far we travel during full speed
+    const fullSpeedDistance = FULL_SPEED_VELOCITY * (FULL_SPEED_DURATION / 1000);
+    
+    // Calculate the position where full speed should start (after acceleration)
+    const fullSpeedStartPosition = decelerationStartPosition + fullSpeedDistance;
+    
+    // Calculate how far we travel during acceleration
+    const accelerationDistance = FULL_SPEED_VELOCITY * (ACCELERATION_DURATION / 1000) * 0.5; // Average velocity during acceleration
+    
+    // Calculate the starting position
+    const animationStartPosition = fullSpeedStartPosition + accelerationDistance;
+    
+    console.log('🎯 COMPLETE ANIMATION PATH CALCULATION:', {
+      serverWinningSlot: winningSlot,
+      targetLogicalPosition,
+      decelerationDistance,
+      decelerationStartPosition,
+      fullSpeedDistance,
+      fullSpeedStartPosition,
+      accelerationDistance,
+      animationStartPosition,
+      totalDistance: Math.abs(animationStartPosition - targetLogicalPosition)
+    });
+    
+    return {
+      startPosition: animationStartPosition,
+      fullSpeedStartPosition,
+      decelerationStartPosition,
+      targetPosition: targetLogicalPosition
+    };
+  }, [calculateTargetLogicalPosition]);
 
   // Full speed spinning animation with proper frame timing
   const animateFullSpeed = useCallback(() => {
@@ -284,12 +327,26 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         setIsAnimating(true);
         setAnimationPhase('idle');
         
+        // Calculate the complete animation path if we have a winning slot
+        if (winningSlot !== null) {
+          const animationPath = calculateAnimationPath(winningSlot);
+          
+          // Set the starting position for the animation
+          setLogicalTranslateX(animationPath.startPosition);
+          setDecelerationStartPosition(animationPath.decelerationStartPosition);
+          
+          console.log('🎯 ANIMATION PATH SET:', {
+            serverWinningSlot: winningSlot,
+            startPosition: animationPath.startPosition,
+            targetPosition: animationPath.targetPosition
+          });
+        }
+        
         // Start animation immediately
         const startAnimation = () => {
           console.log('🚀 Starting roulette acceleration');
           setAnimationPhase('accelerating');
           setSpinStartTime(Date.now());
-          setDecelerationStartPosition(logicalTranslateX);
           
           const animateAcceleration = () => {
             const currentTime = Date.now();
@@ -347,7 +404,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         setIsAnimating(false);
       }
     }
-  }, [isSpinning, logicalTranslateX, animateFullSpeed]);
+  }, [isSpinning, logicalTranslateX, animateFullSpeed, winningSlot, calculateAnimationPath]);
 
   // Handle deceleration when winning slot is received
   useEffect(() => {
@@ -356,15 +413,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Starting deceleration');
       setAnimationPhase('decelerating');
       setDecelerationStartTime(Date.now());
-      setDecelerationStartPosition(logicalTranslateX);
       
-      // Calculate target position and log it
-      const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
+      // Use the pre-calculated animation path
+      const animationPath = calculateAnimationPath(winningSlot);
+      const targetLogicalPosition = animationPath.targetPosition;
+      
       console.log('🎲 DECELERATION CALCULATION:', {
         serverWinningSlot: winningSlot,
-        decelerationStartPosition: logicalTranslateX,
+        decelerationStartPosition: decelerationStartPosition,
         targetLogicalPosition,
-        distance: Math.abs(targetLogicalPosition - logicalTranslateX)
+        distance: Math.abs(targetLogicalPosition - decelerationStartPosition)
       });
       
       const animateDeceleration = () => {
@@ -382,7 +440,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           decelerationProgress = 0.8 + (finalProgress * 0.2);
         }
         
-        // Calculate the target position for the winning slot
+        // Interpolate between start and target position
         const newLogicalPosition = decelerationStartPosition + (targetLogicalPosition - decelerationStartPosition) * decelerationProgress;
         
         // Ensure position stays within bounds during deceleration
@@ -402,8 +460,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           animationRef.current = requestAnimationFrame(animateDeceleration);
         } else {
           // Animation complete - ensure we land exactly on target
-          const exactTargetPosition = calculateTargetLogicalPosition(winningSlot);
-          let exactFinalPosition = exactTargetPosition;
+          let exactFinalPosition = targetLogicalPosition;
           
           // Ensure final position is within bounds
           if (exactFinalPosition < -halfWidth) {
@@ -417,8 +474,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           console.log('✅ DECELERATION COMPLETE:', {
             serverWinningSlot: winningSlot,
             finalLogicalPosition: exactFinalPosition,
-            targetLogicalPosition: exactTargetPosition,
-            accuracy: Math.abs(exactFinalPosition - exactTargetPosition)
+            targetLogicalPosition,
+            accuracy: Math.abs(exactFinalPosition - targetLogicalPosition)
           });
           
           setAnimationPhase('stopped');
@@ -429,7 +486,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       animateDeceleration();
     }
-  }, [isSpinning, winningSlot, animationPhase, logicalTranslateX, calculateTargetLogicalPosition, decelerationStartPosition]);
+  }, [isSpinning, winningSlot, animationPhase, decelerationStartPosition, calculateAnimationPath]);
 
   // Debug animation state
   useEffect(() => {
