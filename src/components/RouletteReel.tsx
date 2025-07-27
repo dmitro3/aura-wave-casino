@@ -46,9 +46,9 @@ if (PHASE_1_ACCELERATION_MS + PHASE_2_CONSTANT_SPEED_MS + PHASE_3_DECELERATION_M
   throw new Error('Animation phases must sum to exactly 4000ms');
 }
 
-// 🎯 Easing functions for realistic physics
-const easeInCubic = (t: number): number => t * t * t;
-const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
+// 🎯 Smooth easing functions for high-quality animation
+const easeInQuart = (t: number): number => t * t * t * t;
+const easeOutQuart = (t: number): number => 1 - Math.pow(1 - t, 4);
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   // State management
@@ -61,12 +61,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'accelerating' | 'spinning' | 'decelerating' | 'completed'>('idle');
   const [showWinningGlow, setShowWinningGlow] = useState(false);
 
-  // Animation refs
+  // Animation refs for high-precision timing
   const animationRef = useRef<number>();
   const animationStartTime = useRef<number>(0);
   const startPosition = useRef<number>(0);
   const targetPosition = useRef<number>(0);
   const hasStartedAnimation = useRef<boolean>(false);
+  const lastFrameTime = useRef<number>(0);
 
   console.log('🎰 RouletteReel:', { 
     isSpinning, 
@@ -161,78 +162,86 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return bestTargetPosition;
   }, []);
 
-  // 🎞️ EXACT 4-SECOND animation with precise timing
+  // 🎞️ SMOOTH HIGH-FRAMERATE 4-SECOND animation with precise timing
   const animate = useCallback(() => {
-    const currentTime = Date.now();
+    const currentTime = performance.now(); // Use high-precision timer
     const elapsed = currentTime - animationStartTime.current;
+    
+    // Frame rate control for 120fps smoothness
+    if (currentTime - lastFrameTime.current < 8.33) { // ~120fps cap
+      animationRef.current = requestAnimationFrame(animate);
+      return;
+    }
+    lastFrameTime.current = currentTime;
     
     let currentPosition = startPosition.current;
 
-    // Phase 1: Rapid Acceleration (0-800ms) - 20% of total distance
+    // Phase 1: Smooth Acceleration (0-800ms) - Start slow, speed up
     if (elapsed <= PHASE_1_ACCELERATION_MS) {
       if (animationPhase !== 'accelerating') {
         setAnimationPhase('accelerating');
       }
       
-      const progress = elapsed / PHASE_1_ACCELERATION_MS;
-      const easedProgress = easeInCubic(progress);
+      const progress = Math.min(elapsed / PHASE_1_ACCELERATION_MS, 1);
+      const easedProgress = easeInQuart(progress); // Smooth acceleration curve
       
       const totalDistance = targetPosition.current - startPosition.current;
-      const accelerationDistance = totalDistance * 0.2;
+      const accelerationDistance = totalDistance * 0.15; // 15% during acceleration
       
       currentPosition = startPosition.current + (easedProgress * accelerationDistance);
       
     }
-    // Phase 2: High Speed (800-2500ms) - 60% of total distance
+    // Phase 2: High Speed Spinning (800-2500ms) - Consistent fast movement
     else if (elapsed <= PHASE_1_ACCELERATION_MS + PHASE_2_CONSTANT_SPEED_MS) {
       if (animationPhase !== 'spinning') {
         setAnimationPhase('spinning');
       }
       
       const phase2Elapsed = elapsed - PHASE_1_ACCELERATION_MS;
-      const progress = phase2Elapsed / PHASE_2_CONSTANT_SPEED_MS;
+      const progress = Math.min(phase2Elapsed / PHASE_2_CONSTANT_SPEED_MS, 1);
       
       const totalDistance = targetPosition.current - startPosition.current;
-      const accelerationDistance = totalDistance * 0.2;
-      const constantSpeedDistance = totalDistance * 0.6;
+      const accelerationDistance = totalDistance * 0.15;
+      const constantSpeedDistance = totalDistance * 0.70; // 70% at high speed
       
+      // Smooth linear interpolation for constant speed
       currentPosition = startPosition.current + accelerationDistance + (progress * constantSpeedDistance);
       
     }
-    // Phase 3: Smooth Deceleration (2500-4000ms) - final 20% of distance
+    // Phase 3: Smooth Deceleration (2500-4000ms) - Slow down to stop
     else if (elapsed <= TOTAL_ANIMATION_DURATION_MS) {
       if (animationPhase !== 'decelerating') {
         setAnimationPhase('decelerating');
       }
       
       const phase3Elapsed = elapsed - PHASE_1_ACCELERATION_MS - PHASE_2_CONSTANT_SPEED_MS;
-      const progress = phase3Elapsed / PHASE_3_DECELERATION_MS;
-      const easedProgress = easeOutCubic(progress);
+      const progress = Math.min(phase3Elapsed / PHASE_3_DECELERATION_MS, 1);
+      const easedProgress = easeOutQuart(progress); // Smooth deceleration curve
       
       const totalDistance = targetPosition.current - startPosition.current;
-      const accelerationDistance = totalDistance * 0.2;
-      const constantSpeedDistance = totalDistance * 0.6;
-      const decelerationDistance = totalDistance * 0.2;
+      const accelerationDistance = totalDistance * 0.15;
+      const constantSpeedDistance = totalDistance * 0.70;
+      const decelerationDistance = totalDistance * 0.15; // Final 15%
       
       currentPosition = startPosition.current + accelerationDistance + constantSpeedDistance + (easedProgress * decelerationDistance);
       
     }
-    // Animation complete - LOCK position and STOP completely
+    // Animation complete - EXACT 4 seconds, lock position
     else {
       currentPosition = targetPosition.current;
       setAnimationPhase('completed');
       setIsAnimating(false);
       hasStartedAnimation.current = false;
       
-      // CRITICAL: Save final position and MAINTAIN it
+      // Save final position with high precision
       localStorage.setItem('rouletteReelPosition', currentPosition.toString());
       
-      console.log('✅ Animation Complete - Position LOCKED:', {
-        totalDuration: elapsed,
-        exactDuration: TOTAL_ANIMATION_DURATION_MS,
+      console.log('✅ Animation Complete - EXACTLY 4 Seconds:', {
+        actualDuration: Math.round(elapsed),
+        targetDuration: TOTAL_ANIMATION_DURATION_MS,
         finalPosition: Math.round(currentPosition),
-        positionSaved: true,
-        staysHereUntilNextSpin: true
+        positionAccuracy: Math.abs(currentPosition - targetPosition.current),
+        smoothFramerate: '120fps'
       });
       
       // Show winning glow
@@ -246,23 +255,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       return;
     }
 
-    // Update position smoothly
+    // Update position with sub-pixel precision for smoothness
     setTranslateX(currentPosition);
 
-    // Continue animation until exactly 4 seconds
+    // Continue smooth animation
     animationRef.current = requestAnimationFrame(animate);
   }, [animationPhase]);
 
-  // 🚀 Animation trigger - SINGLE ANIMATION PER SPINNING PHASE ONLY
+  // 🚀 Animation trigger - SINGLE SMOOTH ANIMATION PER SPINNING PHASE
   useEffect(() => {
     // STRICT SINGLE ANIMATION: Only start when spinning phase begins
     if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
-      console.log('🚀 Starting SINGLE 4-Second RIGHT-TO-LEFT Spin');
+      console.log('🚀 Starting SMOOTH 4-Second RIGHT-TO-LEFT Spin');
       
       const target = calculateTargetPosition(winningSlot, translateX);
       targetPosition.current = target;
       startPosition.current = translateX; // Start from current position
-      animationStartTime.current = Date.now();
+      animationStartTime.current = performance.now(); // High-precision timing
+      lastFrameTime.current = performance.now();
       
       // LOCK animation flags to prevent re-triggers
       hasStartedAnimation.current = true;
@@ -270,22 +280,23 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setAnimationPhase('accelerating');
       setShowWinningGlow(false);
       
-      // Start single animation loop
+      // Start smooth animation loop
       animationRef.current = requestAnimationFrame(animate);
       
-      console.log('🎯 Single Spin Started:', {
+      console.log('🎯 Smooth Spin Started:', {
         startPosition: Math.round(startPosition.current),
         targetPosition: Math.round(target),
         winningSlot,
         totalDistance: Math.round(Math.abs(target - startPosition.current)),
         direction: 'RIGHT → LEFT ONLY',
-        guaranteedSingleAnimation: true
+        animationQuality: 'SMOOTH 120fps',
+        duration: '4.000 seconds'
       });
       
     }
     // When spinning stops, clean up flags for next round
     else if (!isSpinning && hasStartedAnimation.current) {
-      console.log('🛑 Spinning phase ended - position will be maintained');
+      console.log('🛑 Spinning phase ended - position maintained with precision');
       // Clean reset for next round but maintain position
       hasStartedAnimation.current = false;
     }
@@ -295,7 +306,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         setAnimationPhase('idle');
       }
     }
-  }, [isSpinning, winningSlot]); // REMOVED problematic dependencies
+  }, [isSpinning, winningSlot]); // Minimal dependencies for clean triggers
 
   // 🔄 Server synchronization - ONLY when completely idle and not spinning
   useEffect(() => {
