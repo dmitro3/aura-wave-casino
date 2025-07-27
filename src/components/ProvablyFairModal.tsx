@@ -64,6 +64,16 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
   const [clientSeed, setClientSeed] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // Smooth modal entrance animation
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => setIsModalVisible(true), 50);
+    } else {
+      setIsModalVisible(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && roundData) {
@@ -209,8 +219,12 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-y-auto transition-all duration-500 ease-out ${
+        isModalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+      }`}>
+        <DialogHeader className={`transition-all duration-300 ease-out delay-100 ${
+          isModalVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+        }`}>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
             {showCurrentRound ? 'Current Round - Provably Fair' : `Round #${roundData?.round_number} - Details`}
@@ -222,7 +236,9 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className={`space-y-6 transition-all duration-400 ease-out delay-200 ${
+            isModalVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+          }`}>
             {/* Round Result Visualization */}
             {roundData && (
               <Card>

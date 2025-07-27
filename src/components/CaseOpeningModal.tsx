@@ -47,7 +47,20 @@ export const CaseOpeningModal = ({ isOpen, onClose, caseId, level, onCaseOpened 
   const [showReward, setShowReward] = useState(false);
   const [reward, setReward] = useState<CaseReward | null>(null);
   const [animationPhase, setAnimationPhase] = useState<'spinning' | 'revealing' | 'complete'>('spinning');
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const { toast } = useToast();
+
+  // Smooth modal entrance animation
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => setIsModalVisible(true), 50);
+    } else {
+      setIsModalVisible(false);
+      setReward(null);
+      setShowReward(false);
+      setAnimationPhase('spinning');
+    }
+  }, [isOpen]);
 
   const generateReward = (): { rarity: CaseReward['rarity']; amount: number } => {
     const random = Math.random() * 100;
@@ -172,7 +185,9 @@ export const CaseOpeningModal = ({ isOpen, onClose, caseId, level, onCaseOpened 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md mx-auto bg-background border border-border">
+      <DialogContent className={`max-w-md mx-auto bg-background border border-border transition-all duration-500 ease-out ${
+        isModalVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+      }`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <Gift className="w-5 h-5" />

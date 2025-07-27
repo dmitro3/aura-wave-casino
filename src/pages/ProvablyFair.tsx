@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,12 +16,24 @@ import {
 } from 'lucide-react';
 
 export function ProvablyFair() {
+  const [isPageVisible, setIsPageVisible] = useState(false);
+
+  // Smooth page entrance animation
+  useEffect(() => {
+    setIsPageVisible(true);
+  }, []);
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="container mx-auto px-4 py-8">
+    <div className={`min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 transition-all duration-700 ease-out ${
+      isPageVisible ? 'opacity-100' : 'opacity-0'
+    }`}>
+      <div className={`container mx-auto px-4 py-8 transition-all duration-600 ease-out delay-100 ${
+        isPageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      }`}>
         
         {/* Header */}
-        <div className="mb-8">
+        <div className={`mb-8 transition-all duration-500 ease-out delay-200 ${
+          isPageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+        }`}>
           <Link to="/">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -28,7 +41,9 @@ export function ProvablyFair() {
             </Button>
           </Link>
           
-          <div className="text-center space-y-4">
+          <div className={`text-center space-y-4 transition-all duration-500 ease-out delay-300 ${
+            isPageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}>
             <div className="flex items-center justify-center gap-3">
               <Shield className="w-12 h-12 text-emerald-400" />
               <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-blue-400 bg-clip-text text-transparent">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,13 @@ export default function Rewards() {
   const { caseStatuses, selectedFreeCase, openFreeCaseModal, handleFreeCaseOpened, closeFreeCaseModal } = useFreeCases();
   const [selectedCase, setSelectedCase] = useState<string | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
+  const [isPageVisible, setIsPageVisible] = useState(false);
   const { toast } = useToast();
+
+  // Smooth page entrance animation
+  useEffect(() => {
+    setIsPageVisible(true);
+  }, []);
 
   const handleOpenCase = (caseId: string, level: number) => {
     setSelectedCase(caseId);
@@ -65,9 +71,13 @@ export default function Rewards() {
   }
 
   return (
-    <div className="min-h-screen p-4">
+    <div className={`min-h-screen p-4 transition-all duration-700 ease-out ${
+      isPageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+    }`}>
       {/* Header */}
-      <header className="mb-6">
+      <header className={`mb-6 transition-all duration-500 ease-out delay-100 ${
+        isPageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+      }`}>
         <div className="glass rounded-xl p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -87,10 +97,14 @@ export default function Rewards() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className={`max-w-6xl mx-auto space-y-6 transition-all duration-600 ease-out delay-200 ${
+        isPageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
+      }`}>
         {/* Daily Rewards Section */}
         {user && userData && (
-          <div className="mb-6">
+          <div className={`mb-6 transition-all duration-500 ease-out delay-300 ${
+            isPageVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          }`}>
             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-primary" />
               Daily Rewards
