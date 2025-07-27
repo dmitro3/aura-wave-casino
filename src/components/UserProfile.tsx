@@ -812,6 +812,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       case 'login_days': currentValue = userStats.login_days_count || 0; break;
       case 'win_streak': currentValue = userStats.best_win_streak || 0; break;
       case 'biggest_single_bet': currentValue = userStats.biggest_single_bet || 0; break;
+      case 'user_level': currentValue = userStats.current_level || 0; break;
       default: currentValue = 0;
     }
 
