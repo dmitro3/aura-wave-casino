@@ -301,6 +301,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       } else if (winningSlot !== null) {
         console.log('🚫 BLOCKING SERVER SYNC - Winning slot present, animation may be starting, keeping current position');
         return;
+      } else if (hasStartedAnimation.current) {
+        console.log('🚫 BLOCKING SERVER SYNC - Animation has started for this phase, keeping current position');
+        return;
+      } else if (isSpinning && winningSlot !== null) {
+        console.log('🚫 BLOCKING SERVER SYNC - Spinning with winning slot, animation should be running, keeping current position');
+        return;
       } else {
         console.log('🔄 Server sync:', synchronizedPosition);
         setTranslateX(synchronizedPosition);
