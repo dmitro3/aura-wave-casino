@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Rolling Test - Fixed Animation</title>
+    <title>Simple Rolling Test - New Approach</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -172,7 +172,7 @@
     <div class="container">
         <div class="header">
             <h1>🎰 Simple Rolling Test</h1>
-            <p>Fixed Animation with Proper Movement Calculation</p>
+            <p>New Approach - Pure Visual Animation</p>
         </div>
 
         <div class="test-section">
@@ -180,27 +180,27 @@
             <div class="info">
                 <div class="info-item">
                     <h4>Total Duration</h4>
-                    <div class="info-value">4000ms (4 seconds)</div>
+                    <div class="info-value">3000ms (3 seconds)</div>
                 </div>
                 <div class="info-item">
                     <h4>Acceleration Phase</h4>
-                    <div class="info-value">800ms (20%)</div>
+                    <div class="info-value">600ms (20%)</div>
                 </div>
                 <div class="info-item">
                     <h4>Full Speed Phase</h4>
-                    <div class="info-value">2400ms (60%)</div>
+                    <div class="info-value">1800ms (60%)</div>
                 </div>
                 <div class="info-item">
                     <h4>Deceleration Phase</h4>
-                    <div class="info-value">800ms (20%)</div>
+                    <div class="info-value">600ms (20%)</div>
                 </div>
                 <div class="info-item">
                     <h4>Full Rotations</h4>
-                    <div class="info-value">12 rotations</div>
+                    <div class="info-value">8 rotations</div>
                 </div>
                 <div class="info-item">
                     <h4>Tile Repetitions</h4>
-                    <div class="info-value">150 sets</div>
+                    <div class="info-value">100 sets</div>
                 </div>
             </div>
         </div>
@@ -272,8 +272,8 @@
         function initializeTiles() {
             tilesContainer.innerHTML = '';
             
-            // Create 150 repetitions for ultra-smooth infinite scroll
-            for (let repeat = 0; repeat < 150; repeat++) {
+            // Create 100 repetitions for smooth infinite scroll
+            for (let repeat = 0; repeat < 100; repeat++) {
                 for (let i = 0; i < WHEEL_SLOTS.length; i++) {
                     const tile = document.createElement('div');
                     tile.className = `tile ${WHEEL_SLOTS[i].color}`;
@@ -283,12 +283,45 @@
             }
         }
 
-        // Fixed rolling animation with proper movement calculation
+        // Start the rolling animation
+        function startRollingAnimation(targetSlot) {
+            // Find the winning slot in our wheel configuration
+            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === targetSlot);
+            if (slotIndex === -1) {
+                console.error('❌ Winning slot not found:', targetSlot);
+                return;
+            }
+
+            // Calculate the target position to center the winning slot
+            const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
+            const targetPosition = CENTER_OFFSET - winningSlotCenter;
+            
+            // Add multiple full rotations for dramatic effect
+            const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
+            const rotations = 8; // 8 full rotations for dramatic effect
+            const finalTargetPosition = targetPosition - (rotations * fullRotation);
+            
+            console.log('🎯 Animation setup:', {
+                targetSlot,
+                slotIndex,
+                winningSlotCenter,
+                targetPosition,
+                finalTargetPosition,
+                currentPosition: currentPosition,
+                rotations,
+                distance: Math.abs(finalTargetPosition - currentPosition)
+            });
+
+            // Start the animation from current position
+            animateRolling(currentPosition, finalTargetPosition);
+        }
+
+        // The actual rolling animation function
         function animateRolling(startPosition, targetPosition) {
             const startTime = performance.now();
-            const totalDuration = 4000; // 4 seconds total
+            const totalDuration = 3000; // 3 seconds total
             
-            console.log('🚀 Starting fixed rolling animation:', {
+            console.log('🚀 Starting rolling animation:', {
                 startPosition,
                 targetPosition,
                 distance: Math.abs(targetPosition - startPosition),
@@ -299,39 +332,42 @@
                 const elapsed = currentTime - startTime;
                 const totalProgress = Math.min(elapsed / totalDuration, 1);
                 
-                // Calculate smooth position based on elapsed time with proper movement
-                let currentPosition: number;
+                // Calculate smooth position with continuous movement
+                let currentPosition;
+                let phase;
+                let velocity;
                 
-                if (elapsed < 800) {
-                    // ACCELERATION PHASE (0-0.8s) - Rapid acceleration from right to left
-                    const phaseProgress = elapsed / 800;
-                    // Use easeInQuad for momentum buildup
-                    const easedProgress = phaseProgress * phaseProgress;
-                    // Move tiles from right to left (decreasing translateX)
-                    const accelerationDistance = (targetPosition - startPosition) * 0.3;
+                if (elapsed < 600) {
+                    // ACCELERATION PHASE (0-0.6s) - Rapid acceleration
+                    const phaseProgress = elapsed / 600;
+                    const easedProgress = phaseProgress * phaseProgress; // easeInQuad
+                    const accelerationDistance = (targetPosition - startPosition) * 0.2;
                     currentPosition = startPosition + (accelerationDistance * easedProgress);
-                } else if (elapsed < 3200) {
-                    // FULL SPEED PHASE (0.8s-3.2s) - Constant high-speed spinning
-                    const phaseProgress = (elapsed - 800) / 2400;
-                    const accelerationDistance = (targetPosition - startPosition) * 0.3;
-                    const fullSpeedDistance = (targetPosition - startPosition) * 0.6;
-                    // Continue moving tiles from right to left
+                    phase = 'acceleration';
+                    velocity = easedProgress * 100;
+                } else if (elapsed < 2400) {
+                    // FULL SPEED PHASE (0.6s-2.4s) - Constant high-speed spinning
+                    const phaseProgress = (elapsed - 600) / 1800;
+                    const accelerationDistance = (targetPosition - startPosition) * 0.2;
+                    const fullSpeedDistance = (targetPosition - startPosition) * 0.7;
                     currentPosition = startPosition + accelerationDistance + (fullSpeedDistance * phaseProgress);
+                    phase = 'full_speed';
+                    velocity = 100;
                 } else {
-                    // DECELERATION PHASE (3.2s-4.0s) - Controlled slowdown to target
-                    const phaseProgress = (elapsed - 3200) / 800;
-                    // Use easeOutQuart for realistic deceleration
-                    const easedProgress = 1 - Math.pow(1 - phaseProgress, 4);
+                    // DECELERATION PHASE (2.4s-3.0s) - Controlled slowdown
+                    const phaseProgress = (elapsed - 2400) / 600;
+                    const easedProgress = 1 - Math.pow(1 - phaseProgress, 3); // easeOutCubic
                     const previousDistance = (targetPosition - startPosition) * 0.9;
                     const decelerationDistance = (targetPosition - startPosition) * 0.1;
-                    // Final movement to target position
                     currentPosition = startPosition + previousDistance + (decelerationDistance * easedProgress);
+                    phase = 'deceleration';
+                    velocity = (1 - easedProgress) * 100;
                 }
                 
                 // Apply bounce effect at the very end
-                if (totalProgress > 0.98) {
-                    const bounceProgress = (totalProgress - 0.98) / 0.02;
-                    const bounceOffset = Math.sin(bounceProgress * Math.PI * 3) * 5;
+                if (phase === 'deceleration' && totalProgress > 0.95) {
+                    const bounceProgress = (totalProgress - 0.95) / 0.05;
+                    const bounceOffset = Math.sin(bounceProgress * Math.PI * 2) * 3;
                     currentPosition += bounceOffset;
                 }
                 
@@ -344,7 +380,7 @@
                     // Animation complete - ensure exact landing
                     isAnimating = false;
                     tilesContainer.style.transform = `translateX(${targetPosition}px)`;
-                    updateStatus(`✅ Fixed rolling animation complete! Slot ${targetSlot} landed under center line`);
+                    updateStatus(`✅ Rolling animation complete! Slot ${targetSlot} landed under center line`);
                 }
             };
 
@@ -364,26 +400,10 @@
             // Generate random target slot
             targetSlot = Math.floor(Math.random() * 15);
             
-            // Find the winning slot in our wheel configuration
-            const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === targetSlot);
-            if (slotIndex === -1) {
-                updateStatus('❌ Error: Winning slot not found');
-                return;
-            }
+            updateStatus(`🚀 Starting rolling animation to slot ${targetSlot} (${WHEEL_SLOTS[targetSlot].color})`);
             
-            // Calculate the exact position to center the winning slot under the indicator
-            const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
-            const baseTargetPosition = CENTER_OFFSET - winningSlotCenter;
-            
-            // Add multiple full rotations for dramatic effect
-            const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
-            const rotations = 12; // 12 full rotations for dramatic effect
-            const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
-            
-            updateStatus(`🚀 Starting fixed rolling animation to slot ${targetSlot} (${WHEEL_SLOTS[slotIndex].color})`);
-            
-            // Start the fixed rolling animation
-            animateRolling(currentPosition, finalTargetPosition);
+            // Start the rolling animation
+            startRollingAnimation(targetSlot);
         }
 
         function resetAnimation() {
@@ -398,17 +418,23 @@
 
         function testGreenZero() {
             if (isAnimating) return;
-            updateStatus('Testing specific target: slot 0 (green)');
+            targetSlot = 0;
+            updateStatus(`🟢 Testing rolling animation for slot 0 (green)`);
+            startRollingAnimation(targetSlot);
         }
 
         function testRedFive() {
             if (isAnimating) return;
-            updateStatus('Testing specific target: slot 5 (red)');
+            targetSlot = 5;
+            updateStatus(`🔴 Testing rolling animation for slot 5 (red)`);
+            startRollingAnimation(targetSlot);
         }
 
         function testBlackEleven() {
             if (isAnimating) return;
-            updateStatus('Testing specific target: slot 11 (black)');
+            targetSlot = 11;
+            updateStatus(`⚫ Testing rolling animation for slot 11 (black)`);
+            startRollingAnimation(targetSlot);
         }
 
         function updateStatus(message) {
@@ -424,7 +450,7 @@
 
         // Initialize the demo
         initializeTiles();
-        updateStatus('Simple Rolling Test ready for testing');
+        updateStatus('Simple rolling test ready');
     </script>
 </body>
 </html>

@@ -39,50 +39,17 @@ enum AnimationPhase {
   STOPPED = 'stopped'
 }
 
-interface AnimationKeyframe {
-  frame: number;
-  elapsed: number;
-  progress: number;
-  position: number;
-  phase: AnimationPhase;
-  velocity: number;
-}
-
-interface ServerAnimationData {
-  winningSlot: number;
-  winningColor: string;
-  slotIndex: number;
-  baseTargetPosition: number;
-  finalTargetPosition: number;
-  totalDistance: number;
-  keyframes: AnimationKeyframe[];
-  timing: {
-    ACCELERATION_DURATION: number;
-    FULL_SPEED_DURATION: number;
-    DECELERATION_DURATION: number;
-    TOTAL_DURATION: number;
-  };
-  configuration: {
-    tileWidth: number;
-    containerWidth: number;
-    centerOffset: number;
-    fullRotation: number;
-    totalRotations: number;
-    tileRepetitions: number;
-  };
-}
-
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation, roundId }: RouletteReelProps) {
   const [translateX, setTranslateX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationPhase, setAnimationPhase] = useState<AnimationPhase>(AnimationPhase.IDLE);
   const [currentVelocity, setCurrentVelocity] = useState(0);
-  const [serverAnimationData, setServerAnimationData] = useState<ServerAnimationData | null>(null);
   const animationRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const [actualCenterOffset, setActualCenterOffset] = useState(600);
   const startTimeRef = useRef<number>(0);
   const lastFrameTimeRef = useRef<number>(0);
+  const animationStartPositionRef = useRef<number>(0);
 
   console.log('🎰 RouletteReel:', { 
     isSpinning, 
@@ -91,8 +58,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     synchronizedPosition, 
     animationPhase,
     currentVelocity,
-    roundId,
-    hasServerData: !!serverAnimationData
+    roundId
   });
 
   // Measure actual container size for responsive design
@@ -112,153 +78,67 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return () => window.removeEventListener('resize', measureContainer);
   }, []);
 
-  // Fetch server-side animation data when spinning starts
+  // Start animation when spinning begins
   useEffect(() => {
-    if (isSpinning && roundId && !serverAnimationData) {
-      fetchServerAnimationData(roundId);
+    if (isSpinning && winningSlot !== null) {
+      console.log('🚀 Starting rolling animation to slot:', winningSlot);
+      startRollingAnimation(winningSlot);
     }
-  }, [isSpinning, roundId, serverAnimationData]);
+  }, [isSpinning, winningSlot]);
 
-  // Fetch animation data from server
-  const fetchServerAnimationData = async (roundId: string) => {
-    try {
-      console.log('🎰 Fetching server animation data for round:', roundId);
-      
-      const response = await fetch('/api/roulette-engine', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'get_animation_data',
-          roundId: roundId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('🎰 Server animation data received:', data);
-      
-      setServerAnimationData(data);
-      
-      // Start the synchronized animation
-      if (data.keyframes && data.keyframes.length > 0) {
-        startSynchronizedAnimation(data);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error fetching server animation data:', error);
-      // Fallback to local animation if server data fails
-      startLocalAnimation();
-    }
-  };
-
-  // Start synchronized animation using server data
-  const startSynchronizedAnimation = useCallback((animationData: ServerAnimationData) => {
-    console.log('🎰 Starting synchronized animation with server data');
-    
-    const startTime = performance.now();
-    startTimeRef.current = startTime;
-    lastFrameTimeRef.current = startTime;
-    
-    setIsAnimating(true);
-    setAnimationPhase(AnimationPhase.ACCELERATION);
-    
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const totalProgress = Math.min(elapsed / animationData.timing.TOTAL_DURATION, 1);
-      
-      // Find the appropriate keyframe for this time
-      const frameIndex = Math.floor(totalProgress * (animationData.keyframes.length - 1));
-      const keyframe = animationData.keyframes[frameIndex];
-      
-      if (keyframe) {
-        // Use server-calculated position for perfect synchronization
-        setTranslateX(keyframe.position);
-        setAnimationPhase(keyframe.phase);
-        setCurrentVelocity(keyframe.velocity);
-        
-        console.log(`🎬 Frame ${frameIndex}/${animationData.keyframes.length}:`, {
-          elapsed: Math.round(elapsed),
-          progress: Math.round(totalProgress * 100),
-          position: Math.round(keyframe.position),
-          phase: keyframe.phase,
-          velocity: Math.round(keyframe.velocity)
-        });
-      }
-      
-      if (totalProgress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        // Animation complete - ensure exact landing
-        console.log('✅ Synchronized animation complete');
-        setTranslateX(animationData.finalTargetPosition);
-        setIsAnimating(false);
-        setAnimationPhase(AnimationPhase.STOPPED);
-        setCurrentVelocity(0);
-      }
-    };
-
-    // Cancel any existing animation
-    if (animationRef.current) {
+  // Clean up animation when round ends
+  useEffect(() => {
+    if (!isSpinning && animationRef.current) {
       cancelAnimationFrame(animationRef.current);
+      setIsAnimating(false);
+      setAnimationPhase(AnimationPhase.IDLE);
+      setCurrentVelocity(0);
     }
-    
-    animationRef.current = requestAnimationFrame(animate);
-  }, []);
+  }, [isSpinning]);
 
-  // Fallback local animation (if server data fails)
-  const startLocalAnimation = useCallback(() => {
-    console.log('🎰 Starting fallback local animation');
-    
-    if (!winningSlot) {
-      console.error('❌ No winning slot for local animation');
-      return;
-    }
-    
+  // Start the rolling animation
+  const startRollingAnimation = useCallback((targetSlot: number) => {
     // Find the winning slot in our wheel configuration
-    const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
+    const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === targetSlot);
     if (slotIndex === -1) {
-      console.error('❌ Winning slot not found:', winningSlot);
+      console.error('❌ Winning slot not found:', targetSlot);
       return;
     }
-    
-    // Calculate the exact position to center the winning slot under the indicator
+
+    // Calculate the target position to center the winning slot
     const winningSlotCenter = slotIndex * TILE_WIDTH + TILE_WIDTH / 2;
-    const baseTargetPosition = actualCenterOffset - winningSlotCenter;
+    const targetPosition = actualCenterOffset - winningSlotCenter;
     
     // Add multiple full rotations for dramatic effect
     const fullRotation = WHEEL_SLOTS.length * TILE_WIDTH;
-    const rotations = 12; // 12 full rotations for dramatic effect
-    const finalTargetPosition = baseTargetPosition - (rotations * fullRotation);
+    const rotations = 8; // 8 full rotations for dramatic effect
+    const finalTargetPosition = targetPosition - (rotations * fullRotation);
     
-    console.log('🎯 Local animation setup:', {
-      winningSlot,
+    console.log('🎯 Animation setup:', {
+      targetSlot,
       slotIndex,
       winningSlotCenter,
-      baseTargetPosition,
+      targetPosition,
       finalTargetPosition,
       currentPosition: translateX,
       rotations,
       distance: Math.abs(finalTargetPosition - translateX)
     });
 
-    // Start the local animation
-    animateLocalRolling(translateX, finalTargetPosition);
+    // Start the animation from current position
+    animateRolling(translateX, finalTargetPosition);
   }, [winningSlot, actualCenterOffset, translateX]);
 
-  // Local rolling animation (fallback)
-  const animateLocalRolling = useCallback((startPosition: number, targetPosition: number) => {
+  // The actual rolling animation function
+  const animateRolling = useCallback((startPosition: number, targetPosition: number) => {
     const startTime = performance.now();
-    const totalDuration = 4000; // 4 seconds total
+    const totalDuration = 3000; // 3 seconds total
     
     startTimeRef.current = startTime;
     lastFrameTimeRef.current = startTime;
+    animationStartPositionRef.current = startPosition;
     
-    console.log('🚀 Starting local rolling animation:', {
+    console.log('🚀 Starting rolling animation:', {
       startPosition,
       targetPosition,
       distance: Math.abs(targetPosition - startPosition),
@@ -269,51 +149,46 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const elapsed = currentTime - startTime;
       const totalProgress = Math.min(elapsed / totalDuration, 1);
       
-      // Calculate smooth position based on elapsed time with proper movement
+      // Calculate smooth position with continuous movement
       let currentPosition: number;
       let phase: AnimationPhase;
       let velocity: number;
       
-      if (elapsed < 800) {
-        // ACCELERATION PHASE (0-0.8s) - Rapid acceleration from right to left
-        const phaseProgress = elapsed / 800;
-        // Use easeInQuad for momentum buildup
-        const easedProgress = phaseProgress * phaseProgress;
-        // Move tiles from right to left (decreasing translateX)
-        const accelerationDistance = (targetPosition - startPosition) * 0.3;
+      if (elapsed < 600) {
+        // ACCELERATION PHASE (0-0.6s) - Rapid acceleration
+        const phaseProgress = elapsed / 600;
+        const easedProgress = phaseProgress * phaseProgress; // easeInQuad
+        const accelerationDistance = (targetPosition - startPosition) * 0.2;
         currentPosition = startPosition + (accelerationDistance * easedProgress);
         phase = AnimationPhase.ACCELERATION;
         velocity = easedProgress * 100;
-      } else if (elapsed < 3200) {
-        // FULL SPEED PHASE (0.8s-3.2s) - Constant high-speed spinning
-        const phaseProgress = (elapsed - 800) / 2400;
-        const accelerationDistance = (targetPosition - startPosition) * 0.3;
-        const fullSpeedDistance = (targetPosition - startPosition) * 0.6;
-        // Continue moving tiles from right to left
+      } else if (elapsed < 2400) {
+        // FULL SPEED PHASE (0.6s-2.4s) - Constant high-speed spinning
+        const phaseProgress = (elapsed - 600) / 1800;
+        const accelerationDistance = (targetPosition - startPosition) * 0.2;
+        const fullSpeedDistance = (targetPosition - startPosition) * 0.7;
         currentPosition = startPosition + accelerationDistance + (fullSpeedDistance * phaseProgress);
         phase = AnimationPhase.FULL_SPEED;
         velocity = 100;
       } else {
-        // DECELERATION PHASE (3.2s-4.0s) - Controlled slowdown to target
-        const phaseProgress = (elapsed - 3200) / 800;
-        // Use easeOutQuart for realistic deceleration
-        const easedProgress = 1 - Math.pow(1 - phaseProgress, 4);
+        // DECELERATION PHASE (2.4s-3.0s) - Controlled slowdown
+        const phaseProgress = (elapsed - 2400) / 600;
+        const easedProgress = 1 - Math.pow(1 - phaseProgress, 3); // easeOutCubic
         const previousDistance = (targetPosition - startPosition) * 0.9;
         const decelerationDistance = (targetPosition - startPosition) * 0.1;
-        // Final movement to target position
         currentPosition = startPosition + previousDistance + (decelerationDistance * easedProgress);
         phase = AnimationPhase.DECELERATION;
         velocity = (1 - easedProgress) * 100;
       }
       
       // Apply bounce effect at the very end
-      if (phase === AnimationPhase.DECELERATION && totalProgress > 0.98) {
-        const bounceProgress = (totalProgress - 0.98) / 0.02;
-        const bounceOffset = Math.sin(bounceProgress * Math.PI * 3) * 5;
+      if (phase === AnimationPhase.DECELERATION && totalProgress > 0.95) {
+        const bounceProgress = (totalProgress - 0.95) / 0.05;
+        const bounceOffset = Math.sin(bounceProgress * Math.PI * 2) * 3;
         currentPosition += bounceOffset;
       }
       
-      // Update state with smooth movement - this is the key to visible rolling
+      // Update position - this is the key to visible rolling
       setTranslateX(currentPosition);
       setAnimationPhase(phase);
       setCurrentVelocity(velocity);
@@ -322,7 +197,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         animationRef.current = requestAnimationFrame(animate);
       } else {
         // Animation complete - ensure exact landing
-        console.log('✅ Local rolling animation complete');
+        console.log('✅ Rolling animation complete');
         setTranslateX(targetPosition);
         setIsAnimating(false);
         setAnimationPhase(AnimationPhase.STOPPED);
@@ -340,20 +215,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     animationRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // Clean up animation when round ends
-  useEffect(() => {
-    if (!isSpinning && animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      setIsAnimating(false);
-      setAnimationPhase(AnimationPhase.IDLE);
-      setCurrentVelocity(0);
-      setServerAnimationData(null);
-    }
-  }, [isSpinning]);
-
-  // Create a repeating loop of tiles (150 repetitions for ultra-smooth infinite scroll)
+  // Create a repeating loop of tiles (100 repetitions for smooth infinite scroll)
   const tiles = [];
-  for (let repeat = 0; repeat < 150; repeat++) {
+  for (let repeat = 0; repeat < 100; repeat++) {
     for (let i = 0; i < WHEEL_SLOTS.length; i++) {
       tiles.push({
         ...WHEEL_SLOTS[i],
@@ -387,10 +251,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     if (animationPhase === AnimationPhase.FULL_SPEED && isNearCenter) {
       // Motion blur effect during full speed
-      return 'blur-[0.8px] scale-90 opacity-80';
+      return 'blur-[0.5px] scale-95 opacity-90';
     } else if (animationPhase === AnimationPhase.ACCELERATION && isNearCenter) {
       // Subtle blur during acceleration
-      return 'blur-[0.3px] scale-95';
+      return 'blur-[0.2px] scale-98';
     } else if (animationPhase === AnimationPhase.DECELERATION && isNearCenter) {
       // Glow effect during deceleration
       return 'shadow-lg shadow-emerald-400/40 scale-105';
@@ -408,11 +272,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           {isAnimating && (
             <div className="text-xs text-emerald-400">
               Velocity: {Math.round(currentVelocity)}%
-            </div>
-          )}
-          {serverAnimationData && (
-            <div className="text-xs text-blue-400">
-              Server Sync: ✅
             </div>
           )}
         </div>
