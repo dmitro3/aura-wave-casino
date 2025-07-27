@@ -100,18 +100,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const viewportCenter = REEL_VIEWPORT_WIDTH_PX / 2; // 750px
     const wheelSize = WHEEL_SLOTS.length * TILE_SIZE_PX; // 1500px per wheel cycle
     
-    // FORCE RIGHT-TO-LEFT: Always move left (negative direction) from current position
-    const minSpinCycles = 30; // Minimum 30 wheel cycles to the left
-    const maxSpinCycles = 60; // Maximum 60 wheel cycles to the left
+    // ABSOLUTE RIGHT-TO-LEFT: Always move left (negative direction) from current position
+    const minSpinCycles = 40; // Minimum 40 wheel cycles to the left
+    const maxSpinCycles = 80; // Maximum 80 wheel cycles to the left
     
-    // Calculate how far LEFT we want to travel (negative direction)
+    // Calculate how far LEFT we must travel (always negative direction)
     const spinCycles = minSpinCycles + Math.random() * (maxSpinCycles - minSpinCycles);
-    const leftwardDistance = spinCycles * wheelSize;
+    const leftwardDistance = spinCycles * wheelSize; // Always positive value
     
-    // Target area: currentPos - leftwardDistance (move left)
-    const targetArea = currentPos - leftwardDistance;
+    // Target MUST be to the left: currentPos - leftwardDistance (always negative movement)
+    const targetArea = currentPos - leftwardDistance; // This guarantees leftward movement
     
-    // Find the winning slot closest to our target area (but still to the left)
+    // Find the winning slot closest to our target area (but MUST be to the left)
     let bestTargetPosition = targetArea;
     let closestDistance = Infinity;
     
@@ -121,8 +121,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const tileCenter = tileAbsoluteIndex * TILE_SIZE_PX + (TILE_SIZE_PX / 2);
       const targetOffset = viewportCenter - tileCenter;
       
-      // Only consider positions that are to the LEFT of current position
-      if (targetOffset <= currentPos) {
+      // STRICT ENFORCEMENT: Only consider positions that are significantly to the LEFT
+      if (targetOffset < currentPos - (wheelSize * 10)) { // Must be at least 10 wheel cycles to the left
         const distanceFromTargetArea = Math.abs(targetOffset - targetArea);
         
         if (distanceFromTargetArea < closestDistance) {
@@ -132,14 +132,31 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       }
     }
 
+    // SAFETY CHECK: Ensure target is always to the left
+    if (bestTargetPosition >= currentPos) {
+      console.warn('⚠️ Target calculation error - forcing leftward movement');
+      bestTargetPosition = currentPos - (minSpinCycles * wheelSize);
+    }
+
+    // FINAL VERIFICATION: Ensure movement is RIGHT-TO-LEFT
+    const movementDirection = bestTargetPosition - currentPos;
+    const isMovingLeft = movementDirection < 0;
+    
     console.log('🎯 RIGHT-TO-LEFT Target Calculation:', {
       slot,
       currentPosition: Math.round(currentPos),
       targetPosition: Math.round(bestTargetPosition),
       leftwardDistance: Math.round(Math.abs(bestTargetPosition - currentPos)),
-      direction: 'RIGHT → LEFT ←',
+      movementDirection: movementDirection < 0 ? 'LEFT ←' : 'RIGHT →',
+      isCorrectDirection: isMovingLeft,
       wheelCycles: Math.round(Math.abs(bestTargetPosition - currentPos) / wheelSize)
     });
+
+    // ABSOLUTE GUARANTEE: If somehow target is not to the left, force it
+    if (!isMovingLeft) {
+      console.error('❌ FORCING LEFT MOVEMENT');
+      return currentPos - (minSpinCycles * wheelSize);
+    }
 
     return bestTargetPosition;
   }, []);
