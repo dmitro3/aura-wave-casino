@@ -845,48 +845,48 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
     setLoading(true);
     
     try {
-      // Fetch only essential data for faster loading
-      const [achievementsResult, userStatsResult, readyToClaimResult] = await Promise.all([
-        // Fetch all achievements (lightweight)
-        supabase
-          .from('achievements')
-          .select('id, name, description, category, icon, rarity, difficulty, reward_amount, reward_type, criteria')
-          .order('rarity', { ascending: true })
-          .order('difficulty', { ascending: true }),
-        
-        // Fetch user stats (only essential fields for achievements)
-        supabase
-          .from('user_level_stats')
-          .select(`
-            total_games,
-            total_wins,
-            total_profit,
-            total_wagered,
-            roulette_games,
-            roulette_wins,
-            roulette_green_wins,
-            roulette_highest_win,
-            tower_games,
-            tower_highest_level,
-            tower_perfect_games,
-            coinflip_wins,
-            total_cases_opened,
-            chat_messages_count,
-            login_days_count,
-            account_created,
-            best_win_streak,
-            biggest_single_bet,
-            current_level
-          `)
-          .eq('user_id', userId)
-          .single(),
-        
-        // Fetch ready-to-claim achievements
-        supabase
-          .from('ready_to_claim_achievements')
-          .select('achievement_id, ready_at')
-          .eq('user_id', userId)
-      ]);
+              // Fetch only essential data for faster loading
+        const [achievementsResult, userStatsResult, unlockedResult] = await Promise.all([
+          // Fetch all achievements (lightweight)
+          supabase
+            .from('achievements')
+            .select('id, name, description, category, icon, rarity, difficulty, reward_amount, reward_type, criteria')
+            .order('rarity', { ascending: true })
+            .order('difficulty', { ascending: true }),
+          
+          // Fetch user stats (only essential fields for achievements)
+          supabase
+            .from('user_level_stats')
+            .select(`
+              total_games,
+              total_wins,
+              total_profit,
+              total_wagered,
+              roulette_games,
+              roulette_wins,
+              roulette_green_wins,
+              roulette_highest_win,
+              tower_games,
+              tower_highest_level,
+              tower_perfect_games,
+              coinflip_wins,
+              total_cases_opened,
+              chat_messages_count,
+              login_days_count,
+              account_created,
+              best_win_streak,
+              biggest_single_bet,
+              current_level
+            `)
+            .eq('user_id', userId)
+            .single(),
+          
+          // Fetch unlocked but unclaimed achievements
+          supabase
+            .from('unlocked_achievements')
+            .select('achievement_id, unlocked_at')
+            .eq('user_id', userId)
+        ]);
 
       // Handle achievements
       if (achievementsResult.error) {
@@ -914,15 +914,15 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
         const unlockedAchievements = userAchievements || [];
         setUserAchievements(unlockedAchievements);
 
-        // Get ready-to-claim achievements from the database
-        if (readyToClaimResult.error) {
-          console.error('Error fetching ready-to-claim achievements:', readyToClaimResult.error);
+        // Get unlocked but unclaimed achievements from the database
+        if (unlockedResult.error) {
+          console.error('Error fetching unlocked achievements:', unlockedResult.error);
         } else {
-          const readyToClaimIds = (readyToClaimResult.data || []).map(rta => rta.achievement_id);
+          const unlockedIds = (unlockedResult.data || []).map(ua => ua.achievement_id);
           
-          // Get full achievement details for ready-to-claim achievements
+          // Get full achievement details for unlocked but unclaimed achievements
           const claimable = (achievementsResult.data || []).filter(achievement => 
-            readyToClaimIds.includes(achievement.id)
+            unlockedIds.includes(achievement.id)
           );
 
           setClaimableAchievements(claimable);
@@ -1125,18 +1125,18 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       console.log('🎯 Refreshing achievement data...');
       await fetchData();
       
-      // Verify the achievement was removed from ready-to-claim
-      console.log('🎯 Verifying achievement was removed from ready-to-claim...');
-      const { data: remainingReadyToClaim } = await supabase
-        .from('ready_to_claim_achievements')
+      // Verify the achievement was removed from unlocked achievements
+      console.log('🎯 Verifying achievement was removed from unlocked achievements...');
+      const { data: remainingUnlocked } = await supabase
+        .from('unlocked_achievements')
         .select('achievement_id')
         .eq('user_id', userId)
         .eq('achievement_id', achievement.id);
       
-      if (remainingReadyToClaim && remainingReadyToClaim.length > 0) {
-        console.error('❌ Achievement still in ready-to-claim after claiming!');
+      if (remainingUnlocked && remainingUnlocked.length > 0) {
+        console.error('❌ Achievement still in unlocked achievements after claiming!');
       } else {
-        console.log('✅ Achievement successfully removed from ready-to-claim');
+        console.log('✅ Achievement successfully removed from unlocked achievements');
       }
       
       // Verify the achievement was added to unlocked
