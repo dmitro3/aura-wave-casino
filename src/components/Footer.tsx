@@ -126,8 +126,8 @@ export function Footer() {
             © 2024 Aura Wave Casino. All rights reserved.
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2 md:mt-0">
-            <span>🛡️ Cryptographically Secure & Provably Fair</span>
             <span className="text-xs bg-muted px-2 py-1 rounded-md font-mono">v0.0.1</span>
+            <span>🛡️ Cryptographically Secure & Provably Fair</span>
           </div>
         </div>
       </div>
