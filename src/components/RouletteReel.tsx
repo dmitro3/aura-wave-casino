@@ -361,8 +361,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       {/* Reel container */}
       <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
-        {/* Center indicator line */}
-        <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
+        {/* Center indicator line - positioned using JavaScript for consistency */}
+        <div 
+          className="absolute inset-y-0 w-1 z-30 pointer-events-none"
+          style={{ 
+            left: `${centerOffset}px`,
+            transform: 'translateX(-50%)'
+          }}
+        >
           {/* Top arrow */}
           <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
             <div className="w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-emerald-400"></div>
