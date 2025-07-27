@@ -126,24 +126,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return Math.round(targetPosition);
   }, []);
 
-  // ACCURATE SMOOTH ANIMATION FUNCTION
+  // ACCURATE SMOOTH ANIMATION FUNCTION - FULL DURATION
   const animate = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
-    // More accurate easing curve for realistic roulette movement
-    // Start fast, maintain speed, then slow down smoothly
-    let easeProgress;
+    // Ensure animation lasts the FULL duration by using progress directly
+    // Don't let easing complete before the full time
+    let easeProgress = progress; // Start with linear progress
+    
+    // Apply smoothing only within the progress bounds
     if (progress < 0.3) {
-      // Acceleration phase (0-30%)
-      easeProgress = Math.pow(progress / 0.3, 2);
+      // Acceleration phase (0-30%) - smooth ease-in
+      const accelProgress = progress / 0.3;
+      easeProgress = Math.pow(accelProgress, 2) * 0.3;
     } else if (progress < 0.7) {
-      // Constant speed phase (30-70%)
-      easeProgress = 0.09 + (progress - 0.3) * 2.05; // Smooth transition
+      // Constant speed phase (30-70%) - mostly linear
+      const constProgress = (progress - 0.3) / 0.4;
+      easeProgress = 0.3 + constProgress * 0.4;
     } else {
-      // Deceleration phase (70-100%)
+      // Deceleration phase (70-100%) - smooth ease-out
       const decelProgress = (progress - 0.7) / 0.3;
       easeProgress = 0.7 + Math.pow(decelProgress, 3) * 0.3;
     }
@@ -156,7 +160,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     setTranslateX(currentPosition);
 
-    // Continue animation until we reach the full duration
+    // CRITICAL: Continue animation until we reach the EXACT full duration
     if (elapsed < SPINNING_PHASE_DURATION) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
@@ -169,7 +173,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Save the final position to localStorage for persistence
       localStorage.setItem('rouletteReelPosition', targetPosition.toString());
       
-      console.log('✅ ANIMATION COMPLETE:', {
+      console.log('✅ ANIMATION COMPLETE - FULL DURATION:', {
         targetPosition,
         finalPosition: targetPosition,
         winningSlot,
@@ -203,15 +207,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [animationPhase, startTime, targetPosition, translateX, SPINNING_PHASE_DURATION, winningSlot]);
 
-  // Main animation trigger - PREVENT DOUBLE ANIMATION
+  // Main animation trigger - STRICT SINGLE ANIMATION
   useEffect(() => {
     // Create a unique identifier for this spinning phase
     const spinningPhaseId = `${isSpinning}-${winningSlot}`;
     
     if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
-      console.log('🚀 STARTING ANIMATION - New spinning phase detected');
+      console.log('🚀 STARTING SINGLE ANIMATION - New spinning phase detected');
       
-      // Mark that we've started animation for this phase
+      // Mark that we've started animation for this phase - NEVER RESET DURING SPINNING
       hasStartedAnimation.current = true;
       hasCompletedAnimation.current = false; // Reset completion flag
       currentSpinningPhase.current = spinningPhaseId;
@@ -225,17 +229,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setShowWinningGlow(false);
       
     } else if (!isSpinning && isAnimating) {
-      console.log('🛑 STOPPING ANIMATION - Spinning phase ended');
+      console.log('🛑 SPINNING PHASE ENDED - Animation should be complete');
       setIsAnimating(false);
       setAnimationPhase('stopped');
-      // Don't reset hasStartedAnimation here - keep it true until next round
+      // DO NOT reset hasStartedAnimation here - keep it true until next round
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     } else if (!isSpinning && !isAnimating) {
       setAnimationPhase('idle');
-      // Only reset animation flags when we're completely idle
+      // Only reset animation flags when we're completely idle AND animation completed
       if (hasCompletedAnimation.current) {
+        console.log('🔄 RESETTING ANIMATION FLAGS - Ready for next round');
         hasStartedAnimation.current = false; // Reset for next phase
         hasCompletedAnimation.current = false; // Reset completion flag
       }
