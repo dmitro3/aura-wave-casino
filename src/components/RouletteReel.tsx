@@ -27,13 +27,28 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// IMMUTABLE PIXEL-PERFECT DIMENSIONS - NEVER CHANGE
-const TILE_SIZE = 80; // Fixed 80px tiles
-const VISIBLE_TILES = 11; // Always show exactly 11 tiles
-const REEL_VIEWPORT_WIDTH = TILE_SIZE * VISIBLE_TILES; // 880px fixed viewport
-const REEL_HEIGHT = 100; // Fixed height
-const CENTER_TILE_INDEX = Math.floor(VISIBLE_TILES / 2); // 5th tile (0-indexed)
-const BUFFER_TILES = 100; // Extra tiles for smooth scrolling
+// 🎡 IMMUTABLE PIXEL-PERFECT DIMENSIONS - NEVER CHANGE
+const TILE_SIZE_PX = 100; // Fixed 100px tiles (using px values only)
+const VISIBLE_TILE_COUNT = 15; // Always show exactly 15 tiles
+const REEL_VIEWPORT_WIDTH_PX = TILE_SIZE_PX * VISIBLE_TILE_COUNT; // 1500px fixed viewport
+const REEL_HEIGHT_PX = 120; // Fixed height in px
+const CENTER_TILE_INDEX = Math.floor(VISIBLE_TILE_COUNT / 2); // 7th tile (0-indexed)
+const BUFFER_TILES_COUNT = 200; // Extra tiles for smooth scrolling
+
+// ⏱️ 3-PHASE ANIMATION TIMING (4000ms total)
+const TOTAL_ANIMATION_DURATION_MS = 4000;
+const PHASE_1_ACCELERATION_MS = 800;
+const PHASE_2_CONSTANT_SPEED_MS = 1700;
+const PHASE_3_DECELERATION_MS = 1500;
+
+// Validate timing adds up to 4 seconds
+if (PHASE_1_ACCELERATION_MS + PHASE_2_CONSTANT_SPEED_MS + PHASE_3_DECELERATION_MS !== TOTAL_ANIMATION_DURATION_MS) {
+  throw new Error('Animation phases must sum to 4000ms');
+}
+
+// 🎯 Easing functions
+const easeInQuad = (t: number): number => t * t;
+const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   // State management
@@ -43,32 +58,23 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return savedPosition ? parseInt(savedPosition, 10) : 0;
   });
   const [isAnimating, setIsAnimating] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<'idle' | 'accelerating' | 'fullSpeed' | 'decelerating' | 'stopped'>('idle');
-  const [startTime, setStartTime] = useState(0);
-  const [decelerationStartTime, setDecelerationStartTime] = useState(0);
-  const [targetPosition, setTargetPosition] = useState(0);
+  const [animationPhase, setAnimationPhase] = useState<'idle' | 'phase1' | 'phase2' | 'phase3' | 'completed'>('idle');
   const [showWinningGlow, setShowWinningGlow] = useState(false);
 
-  // Refs
+  // Animation refs
   const animationRef = useRef<number>();
+  const animationStartTime = useRef<number>(0);
+  const startPosition = useRef<number>(0);
+  const targetPosition = useRef<number>(0);
   const hasStartedAnimation = useRef<boolean>(false);
-  const currentSpinningPhase = useRef<string>('');
-  const hasCompletedAnimation = useRef<boolean>(false);
-  const isCurrentlyAnimating = useRef<boolean>(false); // Track animation state that can't be overridden
-  const isInCriticalStartPhase = useRef<boolean>(false); // Track critical animation start phase
-
-  // Animation configuration - EXACT MATCH TO SERVER
-  const SPINNING_PHASE_DURATION = 4000; // 4 seconds (matches server SPINNING_DURATION exactly)
-  const ACCELERATION_DURATION = 800; // 0.8 seconds acceleration
-  const FAST_ROLL_DURATION = 2000; // 2 seconds fast rolling
-  const DECELERATION_DURATION = 1200; // 1.2 seconds deceleration
-  const WINNING_GLOW_DURATION = 2000; // 2 seconds
+  const phase2StartPosition = useRef<number>(0);
+  const phase3StartPosition = useRef<number>(0);
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, isAnimating, animationPhase });
 
   // Generate tiles array with buffer
   const tiles = [];
-  for (let i = 0; i < WHEEL_SLOTS.length * BUFFER_TILES; i++) {
+  for (let i = 0; i < WHEEL_SLOTS.length * BUFFER_TILES_COUNT; i++) {
     const slotIndex = i % WHEEL_SLOTS.length;
     const slot = WHEEL_SLOTS[slotIndex];
     tiles.push({
@@ -79,260 +85,199 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     });
   }
 
-  // SIMPLE target position calculation - ensures winning tile is under vertical line
-  const calculateTargetPosition = useCallback((slot: number) => {
+  // 🧱 Calculate target position for winning slot
+  const calculateTargetPosition = useCallback((slot: number): number => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
       console.error('❌ Invalid slot:', slot);
       return 0;
     }
 
-    // Find the center instance of the winning slot
-    const centerRepeat = Math.floor(BUFFER_TILES / 2);
-    const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
+    // Find the center instance of the winning slot in the buffer
+    const centerRepeat = Math.floor(BUFFER_TILES_COUNT / 2);
+    const winningTileAbsoluteIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
     
-    // Calculate the position where the winning tile is under the vertical line
-    const targetTileLeft = targetTileIndex * TILE_SIZE;
-    const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
+    // Calculate the position where the winning tile is perfectly centered under the marker
+    const winningTileLeftEdge = winningTileAbsoluteIndex * TILE_SIZE_PX;
+    const winningTileCenter = winningTileLeftEdge + (TILE_SIZE_PX / 2);
+    const viewportCenter = REEL_VIEWPORT_WIDTH_PX / 2;
     
-    // Ensure the winning tile is under the vertical line
-    // The vertical line should be somewhere on the winning tile (not necessarily centered)
-    const randomOffset = (Math.random() - 0.5) * TILE_SIZE * 0.8; // ±40% of tile width
-    const targetPosition = viewportCenter - targetTileLeft - randomOffset;
+    // Calculate offset to center the winning tile under the marker
+    const targetOffset = Math.round(viewportCenter - winningTileCenter);
 
-    // Verify the calculation ensures the tile is under the line
-    const finalTileLeft = targetTileLeft + targetPosition;
-    const finalTileRight = finalTileLeft + TILE_SIZE;
-    const isUnderLine = finalTileLeft <= viewportCenter && finalTileRight >= viewportCenter;
-
-    console.log('🎯 ACCURATE TARGET CALCULATION:', {
+    console.log('🎯 Target Position Calculation:', {
       slot,
       slotIndex,
-      targetTileIndex,
-      targetTileLeft,
+      winningTileAbsoluteIndex,
+      winningTileLeftEdge,
+      winningTileCenter,
       viewportCenter,
-      randomOffset: Math.round(randomOffset),
-      targetPosition: Math.round(targetPosition),
+      targetOffset,
       verification: {
-        finalTileLeft: Math.round(finalTileLeft),
-        finalTileRight: Math.round(finalTileRight),
-        viewportCenter: Math.round(viewportCenter),
-        isUnderLine,
-        tileWidth: TILE_SIZE
+        finalTileCenter: winningTileCenter + targetOffset,
+        shouldEqual: viewportCenter,
+        isExact: Math.abs((winningTileCenter + targetOffset) - viewportCenter) < 1
       }
     });
 
-    if (!isUnderLine) {
-      console.error('❌ TARGET CALCULATION ERROR: Winning tile will not be under vertical line!');
-      // Fallback: center the tile
-      return Math.round(viewportCenter - targetTileLeft - TILE_SIZE / 2);
-    }
-
-    return Math.round(targetPosition);
+    return targetOffset;
   }, []);
 
-  // THREE-PHASE ANIMATION FUNCTION - MATCHES 4-SECOND SERVER TIMING
+  // 🎞️ Three-phase animation function
   const animate = useCallback(() => {
-    if (animationPhase !== 'accelerating') return;
+    const elapsed = Date.now() - animationStartTime.current;
+    let currentPosition = startPosition.current;
+    let newPhase = animationPhase;
 
-    const elapsed = Date.now() - startTime;
-    const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
-    
-    // DEBUG: Log animation progress
-    console.log('🎰 ANIMATION PROGRESS:', {
-      elapsed,
-      progress: progress.toFixed(3),
-      expectedDuration: SPINNING_PHASE_DURATION,
-      remaining: SPINNING_PHASE_DURATION - elapsed
-    });
-    
-    // SIMPLE LINEAR ANIMATION - GUARANTEED TO LAST FULL DURATION
-    // Use linear progress to ensure animation lasts exactly 4 seconds
-    let easeProgress = progress;
-    
-    // Apply minimal smoothing that doesn't affect duration
-    if (progress < 0.1) {
-      // Very gentle acceleration (0-10%)
-      easeProgress = Math.pow(progress / 0.1, 1.5) * 0.1;
-    } else if (progress > 0.9) {
-      // Very gentle deceleration (90-100%)
-      const decelProgress = (progress - 0.9) / 0.1;
-      easeProgress = 0.9 + Math.pow(decelProgress, 2) * 0.1;
+    // Phase 1: Acceleration (0-800ms)
+    if (elapsed <= PHASE_1_ACCELERATION_MS) {
+      if (animationPhase !== 'phase1') {
+        newPhase = 'phase1';
+        setAnimationPhase('phase1');
+      }
+      
+      const phase1Progress = elapsed / PHASE_1_ACCELERATION_MS;
+      const easedProgress = easeInQuad(phase1Progress);
+      
+      // Move 80+ tiles during acceleration for realistic effect
+      const phase1Distance = 80 * TILE_SIZE_PX;
+      currentPosition = startPosition.current - (easedProgress * phase1Distance);
+      phase2StartPosition.current = currentPosition;
+      
     }
-    // Middle 80% stays completely linear
-    
-    // Calculate the total distance to travel from current position to target
-    const totalDistance = targetPosition - translateX;
-    
-    // Apply easing to the distance
-    const currentPosition = translateX + (easeProgress * totalDistance);
-    
-    setTranslateX(currentPosition);
-
-    // CRITICAL: Continue animation until we reach the EXACT full duration
-    // Use elapsed time comparison to ensure we don't complete early
-    if (elapsed < SPINNING_PHASE_DURATION) {
-      animationRef.current = requestAnimationFrame(animate);
-    } else {
-      // Animation complete - set exact target position
-      setTranslateX(targetPosition);
-      setAnimationPhase('stopped');
+    // Phase 2: Constant Speed (800-2500ms)
+    else if (elapsed <= PHASE_1_ACCELERATION_MS + PHASE_2_CONSTANT_SPEED_MS) {
+      if (animationPhase !== 'phase2') {
+        newPhase = 'phase2';
+        setAnimationPhase('phase2');
+      }
+      
+      const phase2Elapsed = elapsed - PHASE_1_ACCELERATION_MS;
+      const phase2Progress = phase2Elapsed / PHASE_2_CONSTANT_SPEED_MS;
+      
+      // Linear movement at constant speed - cover lots of distance
+      const phase2Distance = 120 * TILE_SIZE_PX;
+      currentPosition = phase2StartPosition.current - (phase2Progress * phase2Distance);
+      phase3StartPosition.current = currentPosition;
+      
+    }
+    // Phase 3: Deceleration (2500-4000ms)
+    else if (elapsed <= TOTAL_ANIMATION_DURATION_MS) {
+      if (animationPhase !== 'phase3') {
+        newPhase = 'phase3';
+        setAnimationPhase('phase3');
+      }
+      
+      const phase3Elapsed = elapsed - PHASE_1_ACCELERATION_MS - PHASE_2_CONSTANT_SPEED_MS;
+      const phase3Progress = phase3Elapsed / PHASE_3_DECELERATION_MS;
+      const easedProgress = easeOutCubic(phase3Progress);
+      
+      // Decelerate to exact target position
+      const remainingDistance = targetPosition.current - phase3StartPosition.current;
+      currentPosition = phase3StartPosition.current + (easedProgress * remainingDistance);
+      
+    }
+    // Animation complete
+    else {
+      currentPosition = targetPosition.current;
+      setAnimationPhase('completed');
       setIsAnimating(false);
-      isCurrentlyAnimating.current = false; // Clear animation ref
-      hasCompletedAnimation.current = true; // Mark animation as completed
+      hasStartedAnimation.current = false;
       
-      // Save the final position to localStorage for persistence
-      localStorage.setItem('rouletteReelPosition', targetPosition.toString());
+      // Save final position
+      localStorage.setItem('rouletteReelPosition', Math.round(currentPosition).toString());
       
-      console.log('✅ ANIMATION COMPLETE - FULL 4-SECOND DURATION:', {
-        targetPosition,
-        finalPosition: targetPosition,
-        winningSlot,
+      console.log('✅ Animation Complete:', {
         totalDuration: elapsed,
-        expectedDuration: SPINNING_PHASE_DURATION,
-        accuracy: Math.abs(elapsed - SPINNING_PHASE_DURATION),
-        phases: {
-          acceleration: '0-400ms (0-10%)',
-          linear: '400-3600ms (10-90%)',
-          deceleration: '3600-4000ms (90-100%)'
-        },
-        savedToStorage: true
+        targetDuration: TOTAL_ANIMATION_DURATION_MS,
+        finalPosition: Math.round(currentPosition),
+        targetPosition: targetPosition.current,
+        accuracy: Math.abs(currentPosition - targetPosition.current)
       });
       
-      // Verify final position
-      const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
-      const centerRepeat = Math.floor(BUFFER_TILES / 2);
-      const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
-      const targetTileLeft = targetTileIndex * TILE_SIZE;
-      const finalTileLeft = targetTileLeft + targetPosition;
-      const finalTileRight = finalTileLeft + TILE_SIZE;
-      const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
-      const isUnderLine = finalTileLeft <= viewportCenter && finalTileRight >= viewportCenter;
-      
-      console.log('🎯 FINAL POSITION VERIFICATION:', {
-        finalTileLeft: Math.round(finalTileLeft),
-        finalTileRight: Math.round(finalTileRight),
-        viewportCenter: Math.round(viewportCenter),
-        isUnderLine,
-        success: isUnderLine
-      });
-      
-      // Start winning glow
+      // Show winning glow
       setShowWinningGlow(true);
-      setTimeout(() => setShowWinningGlow(false), WINNING_GLOW_DURATION);
+      setTimeout(() => setShowWinningGlow(false), 2000);
+      
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = undefined;
+      }
+      return;
     }
-  }, [animationPhase, startTime, targetPosition, translateX, SPINNING_PHASE_DURATION, winningSlot]);
 
-  // Main animation trigger - STRICT SINGLE ANIMATION
+    // Update position (rounded to prevent sub-pixel drift)
+    setTranslateX(Math.round(currentPosition));
+
+    // Continue animation
+    animationRef.current = requestAnimationFrame(animate);
+  }, [animationPhase]);
+
+  // 🚀 Main animation trigger
   useEffect(() => {
-    // Create a unique identifier for this spinning phase
-    const spinningPhaseId = `${isSpinning}-${winningSlot}`;
-    
-    // Only start animation if we haven't started one for this phase
     if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
-      console.log('🚀 STARTING SINGLE ANIMATION - New spinning phase detected');
+      console.log('🚀 Starting 3-Phase Roulette Animation');
       
-      // IMMEDIATELY set all animation flags to prevent any interference
-      hasStartedAnimation.current = true;
-      hasCompletedAnimation.current = false;
-      currentSpinningPhase.current = spinningPhaseId;
-      isCurrentlyAnimating.current = true; // CRITICAL: Set this BEFORE any state updates
-      isInCriticalStartPhase.current = true; // CRITICAL: Mark critical start phase
-      
+      // Calculate target and set up animation
       const target = calculateTargetPosition(winningSlot);
-      setTargetPosition(target);
+      targetPosition.current = target;
+      startPosition.current = translateX;
+      animationStartTime.current = Date.now();
       
-      // Set animation state immediately
+      // Set flags and start
+      hasStartedAnimation.current = true;
       setIsAnimating(true);
-      setAnimationPhase('accelerating');
-      setStartTime(Date.now());
+      setAnimationPhase('phase1');
       setShowWinningGlow(false);
       
-      console.log('✅ ANIMATION FLAGS SET - Protected from server sync');
+      // Start animation loop
+      animationRef.current = requestAnimationFrame(animate);
       
-      // Clear critical start phase after a short delay
-      setTimeout(() => {
-        isInCriticalStartPhase.current = false;
-        console.log('✅ CRITICAL START PHASE CLEARED - Animation fully protected');
-      }, 500); // 500ms should be enough for animation to fully start
+      console.log('🎯 Animation Setup:', {
+        startPosition: startPosition.current,
+        targetPosition: target,
+        winningSlot,
+        totalDistance: Math.abs(target - startPosition.current)
+      });
       
-    } else if (!isSpinning && isAnimating && hasCompletedAnimation.current) {
-      console.log('🛑 SPINNING PHASE ENDED - Animation completed successfully');
-      setIsAnimating(false);
-      setAnimationPhase('stopped');
-      isCurrentlyAnimating.current = false;
-      // DO NOT reset hasStartedAnimation here - keep it true until next round
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+    } else if (!isSpinning && isAnimating) {
+      // Spinning stopped but animation might still be running
+      console.log('🛑 Spin ended, letting animation complete naturally');
     } else if (!isSpinning && !isAnimating) {
+      // Reset to idle state
       setAnimationPhase('idle');
-      // Only reset animation flags when we're completely idle AND animation completed
-      if (hasCompletedAnimation.current) {
-        console.log('🔄 RESETTING ANIMATION FLAGS - Ready for next round');
-        hasStartedAnimation.current = false;
-        hasCompletedAnimation.current = false;
-        isCurrentlyAnimating.current = false;
-      }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
+        animationRef.current = undefined;
       }
     }
-  }, [isSpinning, winningSlot, isAnimating, calculateTargetPosition]);
+  }, [isSpinning, winningSlot, isAnimating, calculateTargetPosition, animate, translateX]);
 
-  // Trigger animation phases
+  // 🔄 Server synchronization (only when idle)
   useEffect(() => {
-    if (animationPhase === 'accelerating') {
-      animate();
-    } else if (animationPhase === 'idle' || animationPhase === 'stopped') {
-      // Only cancel animation if we're not in a spinning phase
-      if (animationRef.current && !isSpinning) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    }
-  }, [animationPhase, animate, isSpinning]);
-
-  // Server synchronization - COMPLETELY DISABLED DURING ANIMATION
-  useEffect(() => {
-    if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // ULTRA AGGRESSIVE BLOCKING: Block sync if ANY animation-related condition is true
-      const shouldBlockSync = 
-        isSpinning || 
-        isAnimating || 
-        hasStartedAnimation.current || 
-        isCurrentlyAnimating.current || 
-        isInCriticalStartPhase.current ||
-        hasCompletedAnimation.current ||
-        animationPhase !== 'idle' && animationPhase !== 'stopped';
+    if (synchronizedPosition !== null && 
+        synchronizedPosition !== undefined && 
+        !isSpinning && 
+        !isAnimating && 
+        animationPhase === 'idle' &&
+        !hasStartedAnimation.current) {
       
-      if (shouldBlockSync) {
-        console.log('🚫 BLOCKING SERVER SYNC - Animation protection active:', {
-          isSpinning,
-          isAnimating,
-          hasStartedAnimation: hasStartedAnimation.current,
-          isCurrentlyAnimating: isCurrentlyAnimating.current,
-          isInCriticalStartPhase: isInCriticalStartPhase.current,
-          hasCompletedAnimation: hasCompletedAnimation.current,
-          animationPhase
-        });
-        return;
-      }
-      
-      // Only sync when completely idle and no animation flags are set
       console.log('🔄 Server sync:', synchronizedPosition);
       setTranslateX(synchronizedPosition);
       localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
     }
   }, [synchronizedPosition, isSpinning, isAnimating, animationPhase]);
 
-  // Ensure position is saved whenever it changes (except during animation)
+  // Cleanup on unmount
   useEffect(() => {
-    if (!isAnimating && animationPhase !== 'accelerating' && !isSpinning) {
-      localStorage.setItem('rouletteReelPosition', translateX.toString());
-    }
-  }, [translateX, isAnimating, animationPhase, isSpinning]);
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, []);
 
-  // Get tile color class
+  // 🎨 Get tile color classes
   const getTileColor = (color: string) => {
     switch (color) {
       case 'green': return 'bg-gradient-to-br from-green-500 to-green-600 border-green-400 text-white';
@@ -344,32 +289,47 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   return (
     <div className="flex justify-center w-full">
-      {/* IMMUTABLE FIXED-WIDTH CONTAINER - NEVER CHANGES */}
+      {/* 🧱 IMMUTABLE FIXED-WIDTH CONTAINER */}
       <div 
         className="relative overflow-hidden rounded-xl shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800"
         style={{ 
-          width: `${REEL_VIEWPORT_WIDTH}px`,
-          height: `${REEL_HEIGHT}px`,
-          minWidth: `${REEL_VIEWPORT_WIDTH}px`,
-          maxWidth: `${REEL_VIEWPORT_WIDTH}px`
+          width: `${REEL_VIEWPORT_WIDTH_PX}px`,
+          height: `${REEL_HEIGHT_PX}px`,
+          minWidth: `${REEL_VIEWPORT_WIDTH_PX}px`,
+          maxWidth: `${REEL_VIEWPORT_WIDTH_PX}px`,
+          minHeight: `${REEL_HEIGHT_PX}px`,
+          maxHeight: `${REEL_HEIGHT_PX}px`
         }}
       >
-        {/* Center marker - ALWAYS at the same pixel position */}
-        <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
+        {/* 🎯 Center marker - FIXED POSITION */}
+        <div 
+          className="absolute inset-y-0 z-30 pointer-events-none"
+          style={{ 
+            left: `${REEL_VIEWPORT_WIDTH_PX / 2}px`,
+            transform: 'translateX(-0.5px)', // Center the 1px line
+            width: '1px'
+          }}
+        >
           {/* Top arrow */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-emerald-400"></div>
+          <div 
+            className="absolute top-0 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-emerald-400"
+            style={{ left: '-4px' }}
+          ></div>
           
           {/* Bottom arrow */}
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-emerald-400"></div>
+          <div 
+            className="absolute bottom-0 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-emerald-400"
+            style={{ left: '-4px' }}
+          ></div>
           
           {/* Center line */}
-          <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-emerald-400"></div>
+          <div className="absolute inset-y-0 w-0.5 bg-emerald-400"></div>
           
           {/* Glow effect */}
-          <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-emerald-400/20 blur-sm"></div>
+          <div className="absolute inset-y-0 w-1 bg-emerald-400/20 blur-sm" style={{ left: '-2px' }}></div>
         </div>
 
-        {/* Reel with tiles - IMMUTABLE TILE SIZES */}
+        {/* 🎞️ Reel with tiles */}
         <div 
           className="flex h-full items-center"
           style={{
@@ -380,12 +340,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         >
           {tiles.map((tile) => {
             // Calculate if this tile is under the center marker
-            const tileLeft = tile.index * TILE_SIZE;
-            const tileCenter = tileLeft + TILE_SIZE / 2;
-            const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
-            const distanceFromCenter = Math.abs(tileCenter + translateX - viewportCenter);
-            const isUnderCenter = distanceFromCenter < TILE_SIZE / 3;
-            const isWinningTile = tile.slot === winningSlot && isUnderCenter && !isAnimating;
+            const tileLeftEdge = tile.index * TILE_SIZE_PX;
+            const tileCenter = tileLeftEdge + TILE_SIZE_PX / 2;
+            const viewportCenter = REEL_VIEWPORT_WIDTH_PX / 2;
+            const tileCenterOnScreen = tileCenter + translateX;
+            const distanceFromCenter = Math.abs(tileCenterOnScreen - viewportCenter);
+            const isUnderCenter = distanceFromCenter < TILE_SIZE_PX / 3;
+            const isWinningTile = tile.slot === winningSlot && isUnderCenter && animationPhase === 'completed';
             const isWinningGlow = isWinningTile && showWinningGlow;
 
             return (
@@ -400,15 +361,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   ${isWinningGlow ? 'ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 animate-pulse' : ''}
                 `}
                 style={{ 
-                  width: `${TILE_SIZE}px`,
-                  height: `${TILE_SIZE}px`,
-                  minWidth: `${TILE_SIZE}px`,
-                  maxWidth: `${TILE_SIZE}px`,
-                  minHeight: `${TILE_SIZE}px`,
-                  maxHeight: `${TILE_SIZE}px`
+                  width: `${TILE_SIZE_PX}px`,
+                  height: `${TILE_SIZE_PX}px`,
+                  minWidth: `${TILE_SIZE_PX}px`,
+                  maxWidth: `${TILE_SIZE_PX}px`,
+                  minHeight: `${TILE_SIZE_PX}px`,
+                  maxHeight: `${TILE_SIZE_PX}px`
                 }}
               >
-                <div className={`text-lg font-bold drop-shadow-lg transition-all duration-200 ${
+                <div className={`text-xl font-bold drop-shadow-lg transition-all duration-200 ${
                   isWinningGlow ? 'text-emerald-200 scale-125' : 
                   isWinningTile ? 'text-emerald-200 scale-110' : 
                   isUnderCenter ? 'scale-110' : ''
@@ -419,6 +380,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             );
           })}
         </div>
+
+        {/* 📐 Debug overlay (development only) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="absolute top-2 left-2 bg-black/50 text-white text-xs p-2 rounded">
+            <div>Phase: {animationPhase}</div>
+            <div>Position: {Math.round(translateX)}</div>
+            <div>Target: {Math.round(targetPosition.current)}</div>
+            <div>Winning: {winningSlot}</div>
+          </div>
+        )}
       </div>
     </div>
   );
