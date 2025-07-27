@@ -142,12 +142,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         const minSpinDistance = 3 * WHEEL_SLOTS.length * TILE_SIZE_PX; // At least 3 full rotations
         const maxReasonableDistance = 100 * WHEEL_SLOTS.length * TILE_SIZE_PX; // Max 100 rotations
         
-        if (serverDistance >= minSpinDistance && serverDistance <= maxReasonableDistance) {
+        // IMPORTANT: Also ensure server position moves LEFT (right to left)
+        const movesLeft = serverReelPosition < startPosition;
+        
+        if (serverDistance >= minSpinDistance && serverDistance <= maxReasonableDistance && movesLeft) {
           targetPosition = serverReelPosition;
-          console.log('🌐 Using validated server position:', Math.round(targetPosition));
+          console.log('🌐 Using validated server position (moves left):', Math.round(targetPosition));
         } else {
           targetPosition = clientCalculatedPosition;
-          console.log('🖥️ Server position invalid, using client calculation:', Math.round(targetPosition));
+          console.log('🖥️ Server position invalid or wrong direction, using client calculation:', Math.round(targetPosition));
         }
       } else {
         targetPosition = clientCalculatedPosition;
@@ -155,6 +158,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       }
       
       if (!reelRef.current) return;
+      
+      // 🛡️ FINAL SAFEGUARD: Absolutely ensure LEFT movement (right → left)
+      if (targetPosition >= startPosition) {
+        console.log('🔧 Forcing left movement by adding rotations');
+        targetPosition = startPosition - (5 * WHEEL_SLOTS.length * TILE_SIZE_PX); // Force 5 rotations left
+        
+        // Re-align to correct winning slot
+        const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningSlot);
+        const correctAlignment = CENTER_MARKER_PX - (winningSlotIndex * TILE_SIZE_PX + TILE_SIZE_PX / 2);
+        
+        // Find the closest alignment position that's still left of start
+        while (targetPosition + (WHEEL_SLOTS.length * TILE_SIZE_PX) < startPosition) {
+          const testPosition = targetPosition + (WHEEL_SLOTS.length * TILE_SIZE_PX);
+          const testAlignment = testPosition + (winningSlotIndex * TILE_SIZE_PX + TILE_SIZE_PX / 2);
+          
+          if (Math.abs(testAlignment - CENTER_MARKER_PX) < 1) {
+            targetPosition = testPosition;
+            break;
+          }
+          targetPosition = testPosition;
+        }
+      }
       
       const animationDistance = Math.abs(targetPosition - startPosition);
       const rotations = animationDistance / (WHEEL_SLOTS.length * TILE_SIZE_PX);
@@ -165,7 +190,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         distance: Math.round(animationDistance),
         rotations: Math.round(rotations * 100) / 100,
         duration: SPIN_DURATION_MS,
-        winningSlot
+        winningSlot,
+        direction: targetPosition < startPosition ? 'LEFT (Right → Left) ✅' : 'RIGHT (Left → Right) ❌'
       });
       
       // Set animation state
@@ -190,7 +216,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (reelRef.current) {
-            console.log('🎬 Animating from', Math.round(startPosition), 'to', Math.round(targetPosition));
+            const direction = targetPosition < startPosition ? 'RIGHT → LEFT' : 'LEFT → RIGHT';
+            const distance = Math.abs(targetPosition - startPosition);
+            console.log(`🎬 Animating ${direction} | Distance: ${Math.round(distance)}px | From: ${Math.round(startPosition)} → To: ${Math.round(targetPosition)}`);
             reelRef.current.style.transform = `translateX(${targetPosition}px)`;
           }
         });
