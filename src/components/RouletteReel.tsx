@@ -292,10 +292,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [animationPhase, animate, isSpinning]);
 
-  // Server synchronization - ULTRA STRICT BLOCKING DURING ANIMATION
+  // Server synchronization - COMPLETELY DISABLED DURING ANIMATION
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // COMPREHENSIVE BLOCKING: Block server sync during ANY animation-related state
+      // ABSOLUTE BLOCKING: Never sync during any animation or spinning state
       const shouldBlockSync = 
         isCurrentlyAnimating.current || 
         isInCriticalStartPhase.current ||
@@ -307,7 +307,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         (isSpinning && winningSlot !== null) ||
         (winningSlot !== null && hasStartedAnimation.current) ||
         (isSpinning && isAnimating) ||
-        (hasStartedAnimation.current && !hasCompletedAnimation.current);
+        (hasStartedAnimation.current && !hasCompletedAnimation.current) ||
+        (isSpinning && translateX !== synchronizedPosition); // Block if spinning and position differs
       
       if (shouldBlockSync) {
         console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress, keeping current position');
@@ -316,23 +317,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
         return;
       } else {
-        // ADD DELAY TO PREVENT RACE CONDITION WITH ANIMATION START
-        const syncTimeout = setTimeout(() => {
-                  // Double-check blocking conditions after delay
-        if (isCurrentlyAnimating.current || isInCriticalStartPhase.current || isAnimating || hasStartedAnimation.current) {
-          console.log('🚫 BLOCKING DELAYED SERVER SYNC - Animation started during delay');
-          return;
-        }
-          console.log('🔄 Server sync:', synchronizedPosition);
-          setTranslateX(synchronizedPosition);
-          // Save server position to localStorage
-          localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
-        }, 100); // 100ms delay to prevent race condition
-        
-        return () => clearTimeout(syncTimeout);
+        // Only sync when completely idle and not in any animation state
+        console.log('🔄 Server sync:', synchronizedPosition);
+        setTranslateX(synchronizedPosition);
+        // Save server position to localStorage
+        localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
       }
     }
-  }, [synchronizedPosition, isAnimating, animationPhase, isSpinning, winningSlot]);
+  }, [synchronizedPosition, isAnimating, animationPhase, isSpinning, winningSlot, translateX]);
 
   // Ensure position is saved whenever it changes (except during animation)
   useEffect(() => {
