@@ -313,8 +313,8 @@ async function getCurrentRound(supabase: any) {
 
       console.log('🎯 Using advanced provably fair method (legacy system disabled for security)');
       
-      // Get daily seed for this round
-      const { data: dailySeed, error: seedError } = await supabase
+      // 🛡️ SECURITY FIX: Get ACTUAL seed data directly for calculation (bypassing hidden response)
+      const { data: actualDailySeed, error: seedError } = await supabase
         .from('daily_seeds')
         .select('*')
         .eq('id', activeRound.daily_seed_id)
@@ -324,12 +324,14 @@ async function getCurrentRound(supabase: any) {
         throw new Error(`Daily seed fetch error: ${seedError.message}`);
       }
 
-      if (!dailySeed) {
+      if (!actualDailySeed) {
         throw new Error('Daily seed not found for round');
       }
 
-      // Generate provably fair result using advanced method
-      const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
+      console.log(`🔒 Using ACTUAL seed data for calculation (date: ${actualDailySeed.date}, revealed: ${actualDailySeed.is_revealed})`);
+
+      // Generate provably fair result using ACTUAL (unhidden) seed values
+      const resultData = await generateProvablyFairResult(supabase, actualDailySeed, activeRound.nonce_id);
       result = resultData.result;
       
       // Calculate final reel position for cross-user sync (MUST MATCH FRONTEND EXACTLY)
@@ -1101,29 +1103,47 @@ async function generateLegacyResult(supabase: any, round: any) {
 
 // Daily Seed Management
 async function getOrCreateDailySeed(supabase: any) {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  // 🛡️ SECURITY FIX: Always use UTC date to ensure consistent global daily switching
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format in UTC
+  console.log(`📅 Getting/creating daily seed for UTC date: ${today}`);
   
-  // Try to get existing daily seed
-  const { data: existingSeed } = await supabase
+  // 🛡️ SECURITY FIX: First, auto-reveal any expired seeds for transparency
+  try {
+    await revealExpiredDailySeeds(supabase);
+  } catch (error) {
+    console.warn('⚠️ Failed to auto-reveal expired seeds:', error);
+    // Continue anyway - revelation failure shouldn't block game
+  }
+  
+  // Try to get existing daily seed for today
+  const { data: existingSeed, error: fetchError } = await supabase
     .from('daily_seeds')
     .select('*')
     .eq('date', today)
     .single();
 
-  if (existingSeed) {
-    console.log(`📅 Using existing daily seed for ${today}`);
-    return existingSeed;
+  if (fetchError && fetchError.code !== 'PGRST116') {
+    console.error('❌ Error fetching daily seed:', fetchError);
+    throw new Error(`Failed to fetch daily seed: ${fetchError.message}`);
   }
 
-  // Generate new daily seed and lotto
-  console.log(`🆕 Creating new daily seed for ${today}`);
+  if (existingSeed) {
+    console.log(`📅 Using existing daily seed for ${today}`);
+    console.log(`🔒 Seed status: ${existingSeed.is_revealed ? 'REVEALED' : 'HIDDEN (secure)'}`);
+    
+    // 🛡️ SECURITY FIX: Return seed with hidden values if not revealed
+    return getSecureSeedResponse(existingSeed);
+  }
+
+  // Generate new daily seed and lotto for today
+  console.log(`🆕 Creating NEW daily seed for ${today}`);
   
   const serverSeed = await generateSecureServerSeed();
   const serverSeedHash = await sha256Hash(serverSeed);
   const lotto = await generateSecureLotto();
   const lottoHash = await sha256Hash(lotto);
 
-  const { data: newDailySeed } = await supabase
+  const { data: newDailySeed, error: insertError } = await supabase
     .from('daily_seeds')
     .insert({
       date: today,
@@ -1136,9 +1156,36 @@ async function getOrCreateDailySeed(supabase: any) {
     .select()
     .single();
 
-  console.log(`✅ Created daily seed: hash=${serverSeedHash.substring(0, 16)}..., lotto_hash=${lottoHash.substring(0, 16)}...`);
+  if (insertError) {
+    console.error('❌ Error creating daily seed:', insertError);
+    throw new Error(`Failed to create daily seed: ${insertError.message}`);
+  }
+
+  console.log(`✅ Created daily seed for ${today}: hash=${serverSeedHash.substring(0, 16)}..., lotto_hash=${lottoHash.substring(0, 16)}...`);
+  console.log(`🔒 New seed is HIDDEN until ${today} ends (secure)`);
   
-  return newDailySeed;
+  // 🛡️ SECURITY FIX: Return new seed with hidden values
+  return getSecureSeedResponse(newDailySeed);
+}
+
+// 🛡️ SECURITY FIX: Hide actual seeds until day is over
+function getSecureSeedResponse(seed: any) {
+  if (seed.is_revealed) {
+    // Day is over - return full data
+    console.log(`🔓 Returning REVEALED seed data for ${seed.date}`);
+    return seed;
+  } else {
+    // Day is active - hide actual values, only show hashes
+    console.log(`🔒 Returning HIDDEN seed data for ${seed.date} (only hashes visible)`);
+    return {
+      ...seed,
+      server_seed: '[HIDDEN_UNTIL_DAY_ENDS]', // Hide actual seed
+      lotto: '[HIDDEN_UNTIL_DAY_ENDS]',      // Hide actual lotto
+      // Keep hashes visible for verification
+      server_seed_hash: seed.server_seed_hash,
+      lotto_hash: seed.lotto_hash
+    };
+  }
 }
 
 async function revealDailySeed(supabase: any, date: string) {
@@ -1161,9 +1208,13 @@ async function revealDailySeed(supabase: any, date: string) {
 async function revealExpiredDailySeeds(supabase: any) {
   console.log('🔓 Auto-revealing expired daily seeds for transparency');
   
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  // 🛡️ SECURITY FIX: Use UTC date consistently for global operation
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+  const yesterdayStr = yesterday.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+  
+  console.log(`🗓️ Current UTC date: ${now.toISOString().split('T')[0]}`);
+  console.log(`🗓️ Revealing seeds from ${yesterdayStr} and earlier`);
   
   // Reveal all seeds from yesterday and earlier that aren't revealed yet
   const { data: expiredSeeds, error } = await supabase
@@ -1174,7 +1225,7 @@ async function revealExpiredDailySeeds(supabase: any) {
     })
     .lte('date', yesterdayStr)
     .eq('is_revealed', false)
-    .select('date, server_seed');
+    .select('date, server_seed_hash, lotto_hash');
 
   if (error) {
     console.error('❌ Error auto-revealing expired seeds:', error);
@@ -1182,12 +1233,20 @@ async function revealExpiredDailySeeds(supabase: any) {
   }
 
   const revealedCount = expiredSeeds?.length || 0;
-  console.log(`✅ Auto-revealed ${revealedCount} expired daily seeds`);
+  if (revealedCount > 0) {
+    console.log(`✅ Auto-revealed ${revealedCount} expired daily seeds:`);
+    expiredSeeds?.forEach(seed => {
+      console.log(`   📅 ${seed.date} - Hash: ${seed.server_seed_hash.substring(0, 16)}...`);
+    });
+  } else {
+    console.log('📅 No expired seeds to reveal');
+  }
   
   return {
     success: true,
     revealed_count: revealedCount,
-    revealed_dates: expiredSeeds?.map(seed => seed.date) || []
+    revealed_dates: expiredSeeds?.map(seed => seed.date) || [],
+    revelation_threshold: yesterdayStr
   };
 }
 
@@ -1319,25 +1378,55 @@ async function verifyRound(supabase: any, roundId: string, clientSeed?: string) 
 }
 
 async function verifyAdvancedRound(round: any, dailySeed: any) {
-  // For ongoing rounds, show basic info but no server seed
+  console.log(`🔍 Verifying advanced round ${round.id}, daily seed revealed: ${dailySeed.is_revealed}`);
+  
+  // 🛡️ SECURITY FIX: Handle hidden seeds properly based on revelation status
   if (round.status !== 'completed') {
+    // For ongoing rounds, show only hashes - never reveal actual seeds
+    console.log(`🔒 Round ${round.id} is ongoing - showing only hash data`);
     return {
       round_id: round.id,
       round_number: round.round_number,
-      server_seed: null, // Hidden until round completes
+      daily_date: dailySeed.date,
+      server_seed: '[HIDDEN_UNTIL_ROUND_COMPLETES]',
       server_seed_hash: dailySeed.server_seed_hash,
-      lotto: null, // Hidden until round completes
+      lotto: '[HIDDEN_UNTIL_ROUND_COMPLETES]',
       lotto_hash: dailySeed.lotto_hash,
       nonce_id: round.nonce_id,
       result_slot: round.result_slot,
       result_color: round.result_color,
       status: round.status,
       is_completed: false,
-      daily_date: dailySeed.date
+      is_revealed: false,
+      verification_message: '🔒 Seeds are hidden until the round completes and the day ends for security'
     };
   }
 
-  // For completed rounds, show full advanced verification
+  // For completed rounds - check if daily seed is revealed
+  if (!dailySeed.is_revealed) {
+    // Round is complete but daily seed not yet revealed (same day)
+    console.log(`🔒 Round ${round.id} complete but daily seed for ${dailySeed.date} not yet revealed`);
+    return {
+      round_id: round.id,
+      round_number: round.round_number,
+      daily_date: dailySeed.date,
+      server_seed: '[HIDDEN_UNTIL_DAY_ENDS]',
+      server_seed_hash: dailySeed.server_seed_hash,
+      lotto: '[HIDDEN_UNTIL_DAY_ENDS]',
+      lotto_hash: dailySeed.lotto_hash,
+      nonce_id: round.nonce_id,
+      result_slot: round.result_slot,
+      result_color: round.result_color,
+      status: round.status,
+      is_completed: true,
+      is_revealed: false,
+      verification_message: `🕐 Round complete! Seeds will be revealed automatically after ${dailySeed.date} ends (UTC)`
+    };
+  }
+
+  // Round is complete AND daily seed is revealed - show full verification
+  console.log(`🔓 Round ${round.id} complete and daily seed revealed - showing full verification`);
+  
   const hashInput = `${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}`;
   
   let hashResult = '';
@@ -1359,24 +1448,26 @@ async function verifyAdvancedRound(round: any, dailySeed: any) {
   return {
     round_id: round.id,
     round_number: round.round_number,
-    server_seed: dailySeed.server_seed,
+    daily_date: dailySeed.date,
+    server_seed: dailySeed.server_seed,      // NOW REVEALED
     server_seed_hash: dailySeed.server_seed_hash,
-    lotto: dailySeed.lotto,
+    lotto: dailySeed.lotto,                  // NOW REVEALED
     lotto_hash: dailySeed.lotto_hash,
     nonce_id: round.nonce_id,
     result_slot: round.result_slot,
     result_color: round.result_color,
     status: round.status,
-    daily_date: dailySeed.date,
     is_completed: true,
-    // Advanced Verification calculation
+    is_revealed: true,
+    // Full verification calculation
     hash_input: hashInput,
     hash_result: hashResult,
     hash_number: hashNumber,
     calculated_slot: calculatedSlot,
     actual_calculated_slot: actualCalculatedSlot,
     verification_result: actualCalculatedSlot === round.result_slot ? 'VALID' : 'INVALID',
-    provably_fair_formula: `hash("sha256", "${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}")`
+    provably_fair_formula: `hash("sha256", "${dailySeed.server_seed}-${dailySeed.lotto}-${round.nonce_id}")`,
+    verification_message: '✅ Full verification available - all seeds revealed!'
   };
 }
 

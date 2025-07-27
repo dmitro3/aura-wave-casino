@@ -324,8 +324,11 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                       <Input 
                         value={verificationData.server_seed || 'Not revealed yet'} 
                         readOnly 
-                        className="font-mono text-xs" 
+                        className={`font-mono text-xs ${verificationData.server_seed?.includes('[HIDDEN') ? 'text-yellow-600 bg-yellow-50' : ''}`}
                       />
+                      {verificationData.server_seed?.includes('[HIDDEN') && (
+                        <p className="text-xs text-yellow-600 mt-1">🔒 Hidden for security until day ends</p>
+                      )}
                     </div>
                     <div>
                       <Label>Lotto Hash</Label>
@@ -336,8 +339,11 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                       <Input 
                         value={verificationData.lotto || 'Not available (Legacy round)'} 
                         readOnly 
-                        className="font-mono text-xs" 
+                        className={`font-mono text-xs ${verificationData.lotto?.includes('[HIDDEN') ? 'text-yellow-600 bg-yellow-50' : ''}`}
                       />
+                      {verificationData.lotto?.includes('[HIDDEN') && (
+                        <p className="text-xs text-yellow-600 mt-1">🔒 Hidden for security until day ends</p>
+                      )}
                     </div>
                     <div>
                       <Label>Round ID (Nonce)</Label>
@@ -348,6 +354,13 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                       <Input value={verificationData.daily_date || 'Not available (Legacy round)'} readOnly className="font-mono text-xs" />
                     </div>
                   </div>
+
+                  {/* Security Status Message */}
+                  {verificationData.verification_message && (
+                    <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                      <p className="text-sm text-blue-800">{verificationData.verification_message}</p>
+                    </div>
+                  )}
 
                   {verificationData.is_completed && !verificationData.verification_result && (
                     <Button onClick={verifyFairness} disabled={isVerifying} className="w-full">
