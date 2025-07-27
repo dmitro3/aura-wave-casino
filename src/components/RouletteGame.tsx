@@ -1398,15 +1398,25 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                         <div className="font-medium text-xs text-primary truncate">
                                           {bet.username}
                                         </div>
-                                        <div className="text-xs text-muted-foreground">
-                                          ${bet.bet_amount.toFixed(0)}
-                                        </div>
+                                        {bet.result !== 'pending' && (
+                                          <div className="text-xs text-muted-foreground">
+                                            Round completed
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                      <div className={`font-bold text-xs ${bet.result === 'win' ? 'text-emerald-400' : bet.result === 'loss' ? 'text-red-400' : 'text-yellow-400'}`}>
-                                        {bet.result === 'win' ? '+' : bet.result === 'loss' ? '-' : '~'}${Math.abs(bet.profit || 0).toFixed(0)}
-                                      </div>
+                                      {bet.result === 'pending' ? (
+                                        // Show bet amount for pending bets
+                                        <div className="font-bold text-xs text-primary">
+                                          ${bet.bet_amount.toFixed(0)}
+                                        </div>
+                                      ) : (
+                                        // Show profit/loss for completed bets
+                                        <div className={`font-bold text-xs ${bet.result === 'win' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                          {bet.result === 'win' ? '+' : '-'}${Math.abs(bet.profit || 0).toFixed(0)}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
