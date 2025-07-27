@@ -231,25 +231,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
       console.log('🚀 STARTING SINGLE ANIMATION - New spinning phase detected');
       
-      // Mark that we've started animation for this phase - NEVER RESET DURING SPINNING
+      // IMMEDIATELY set all animation flags to prevent any interference
       hasStartedAnimation.current = true;
-      hasCompletedAnimation.current = false; // Reset completion flag
+      hasCompletedAnimation.current = false;
       currentSpinningPhase.current = spinningPhaseId;
-      isCurrentlyAnimating.current = true; // Set animation ref immediately
+      isCurrentlyAnimating.current = true; // CRITICAL: Set this BEFORE any state updates
       
       const target = calculateTargetPosition(winningSlot);
       setTargetPosition(target);
       
+      // Set animation state immediately
       setIsAnimating(true);
       setAnimationPhase('accelerating');
       setStartTime(Date.now());
       setShowWinningGlow(false);
       
+      console.log('✅ ANIMATION FLAGS SET - Protected from server sync');
+      
     } else if (!isSpinning && isAnimating && hasCompletedAnimation.current) {
       console.log('🛑 SPINNING PHASE ENDED - Animation completed successfully');
       setIsAnimating(false);
       setAnimationPhase('stopped');
-      isCurrentlyAnimating.current = false; // Clear animation ref
+      isCurrentlyAnimating.current = false;
       // DO NOT reset hasStartedAnimation here - keep it true until next round
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -259,9 +262,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Only reset animation flags when we're completely idle AND animation completed
       if (hasCompletedAnimation.current) {
         console.log('🔄 RESETTING ANIMATION FLAGS - Ready for next round');
-        hasStartedAnimation.current = false; // Reset for next phase
-        hasCompletedAnimation.current = false; // Reset completion flag
-        isCurrentlyAnimating.current = false; // Clear animation ref
+        hasStartedAnimation.current = false;
+        hasCompletedAnimation.current = false;
+        isCurrentlyAnimating.current = false;
       }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -281,31 +284,27 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [animationPhase, animate, isSpinning]);
 
-  // Server synchronization - PREVENT TELEPORTATION DURING ANIMATION
+  // Server synchronization - ULTRA STRICT BLOCKING DURING ANIMATION
   useEffect(() => {
-    // BLOCK ALL SERVER SYNC during any animation phase or if animation was completed
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // ULTRA STRICT BLOCKING: Never sync during any animation-related state
-      if (isCurrentlyAnimating.current || isAnimating || animationPhase === 'accelerating' || hasStartedAnimation.current || isSpinning || animationRef.current) {
+      // COMPREHENSIVE BLOCKING: Block server sync during ANY animation-related state
+      const shouldBlockSync = 
+        isCurrentlyAnimating.current || 
+        isAnimating || 
+        animationPhase === 'accelerating' || 
+        hasStartedAnimation.current || 
+        isSpinning || 
+        animationRef.current ||
+        (isSpinning && winningSlot !== null) ||
+        (winningSlot !== null && hasStartedAnimation.current) ||
+        (isSpinning && isAnimating) ||
+        (hasStartedAnimation.current && !hasCompletedAnimation.current);
+      
+      if (shouldBlockSync) {
         console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress, keeping current position');
         return;
       } else if (hasCompletedAnimation.current) {
         console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
-        return;
-      } else if (isSpinning) {
-        console.log('🚫 BLOCKING SERVER SYNC - Still in spinning phase, keeping current position');
-        return;
-      } else if (winningSlot !== null && isSpinning) {
-        console.log('🚫 BLOCKING SERVER SYNC - Winning slot detected during spinning, keeping current position');
-        return;
-      } else if (winningSlot !== null) {
-        console.log('🚫 BLOCKING SERVER SYNC - Winning slot present, animation may be starting, keeping current position');
-        return;
-      } else if (hasStartedAnimation.current) {
-        console.log('🚫 BLOCKING SERVER SYNC - Animation has started for this phase, keeping current position');
-        return;
-      } else if (isSpinning && winningSlot !== null) {
-        console.log('🚫 BLOCKING SERVER SYNC - Spinning with winning slot, animation should be running, keeping current position');
         return;
       } else {
         console.log('🔄 Server sync:', synchronizedPosition);
