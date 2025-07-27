@@ -1046,6 +1046,12 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
     console.log('🎯 Claim achievement called:', achievement);
     console.log('🎯 isOwnProfile:', isOwnProfile);
     console.log('🎯 userId:', userId);
+    console.log('🎯 Achievement details:', {
+      id: achievement.id,
+      name: achievement.name,
+      reward_type: achievement.reward_type,
+      reward_amount: achievement.reward_amount
+    });
     
     if (!isOwnProfile) {
       console.log('❌ Not own profile, returning');
@@ -1062,7 +1068,11 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
     
     try {
       // Call the manual claim function
-      console.log('🎯 Calling manual claim function...');
+      console.log('🎯 Calling manual claim function with params:', {
+        p_user_id: userId,
+        p_achievement_id: achievement.id
+      });
+      
       const { data: claimResult, error: claimError } = await supabase.rpc('claim_achievement_manual', {
         p_user_id: userId,
         p_achievement_id: achievement.id
@@ -1070,6 +1080,11 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
 
       if (claimError) {
         console.error('❌ Error claiming achievement:', claimError);
+        console.error('❌ Error details:', {
+          message: claimError.message,
+          details: claimError.details,
+          hint: claimError.hint
+        });
         throw claimError;
       }
       console.log('✅ Achievement claimed successfully:', claimResult);
@@ -1096,6 +1111,34 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       // Refresh achievements data to update the UI
       console.log('🎯 Refreshing achievement data...');
       await fetchData();
+      
+      // Verify the achievement was removed from ready-to-claim
+      console.log('🎯 Verifying achievement was removed from ready-to-claim...');
+      const { data: remainingReadyToClaim } = await supabase
+        .from('ready_to_claim_achievements')
+        .select('achievement_id')
+        .eq('user_id', userId)
+        .eq('achievement_id', achievement.id);
+      
+      if (remainingReadyToClaim && remainingReadyToClaim.length > 0) {
+        console.error('❌ Achievement still in ready-to-claim after claiming!');
+      } else {
+        console.log('✅ Achievement successfully removed from ready-to-claim');
+      }
+      
+      // Verify the achievement was added to unlocked
+      console.log('🎯 Verifying achievement was added to unlocked...');
+      const { data: unlockedAchievement } = await supabase
+        .from('user_achievements')
+        .select('achievement_id, unlocked_at')
+        .eq('user_id', userId)
+        .eq('achievement_id', achievement.id);
+      
+      if (unlockedAchievement && unlockedAchievement.length > 0) {
+        console.log('✅ Achievement successfully added to unlocked');
+      } else {
+        console.error('❌ Achievement not found in unlocked achievements!');
+      }
       
       // Also refresh user profile data to update balance display
       if (achievement.reward_type === 'money') {
