@@ -204,6 +204,8 @@ export function useUserProfile() {
   const fetchUserProfile = async () => {
     if (!user) return
 
+    console.log('🔍 Fetching user profile for user ID:', user.id);
+
     try {
       // Fetch profile for basic info and balance
       const { data: profile, error: profileError } = await supabase
@@ -211,6 +213,8 @@ export function useUserProfile() {
         .select('*')
         .eq('id', user.id)
         .single()
+
+      console.log('📊 Profile fetch result:', { profile, profileError });
 
       if (profileError) {
         console.error('❌ Error fetching profile:', profileError);
@@ -223,6 +227,8 @@ export function useUserProfile() {
         .select('*')
         .eq('user_id', user.id)
         .single()
+
+      console.log('📈 Level stats fetch result:', { levelStats, levelStatsError });
 
       // If no level stats exist, create them
       if (levelStatsError && levelStatsError.code === 'PGRST116') {
