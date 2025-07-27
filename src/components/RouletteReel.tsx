@@ -29,7 +29,7 @@ const WHEEL_SLOTS = [
 
 // Fixed logical grid system - completely device-independent
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 35; // Fixed logical tile width (device-independent) - reduced from 40
+const LOGICAL_TILE_WIDTH = 30; // Fixed logical tile width (device-independent) - reduced from 35
 const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
@@ -355,7 +355,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   return (
     <div className="relative w-full max-w-7xl mx-auto">
       {/* Reel container */}
-      <div ref={containerRef} className="relative h-28 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
+      <div ref={containerRef} className="relative h-24 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
         {/* Center indicator line - positioned at container center */}
         <div 
@@ -422,7 +422,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   boxSizing: 'border-box !important'
                 }}
               >
-                <div className={`text-base font-bold drop-shadow-lg ${
+                <div className={`text-sm font-bold drop-shadow-lg ${
                   isWinningTile ? 'text-emerald-200 scale-125' : ''
                 }`}>
                   {tile.slot}
