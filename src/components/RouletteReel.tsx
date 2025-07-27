@@ -275,18 +275,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [animationPhase, animate]);
 
-  // Server synchronization - PREVENT TELEPORTATION AFTER SUCCESSFUL ANIMATION
+  // Server synchronization - PREVENT TELEPORTATION DURING ANIMATION
   useEffect(() => {
-    // Only sync if we haven't completed a successful animation
-    if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating && !hasCompletedAnimation.current) {
-      console.log('🔄 Server sync:', synchronizedPosition);
-      setTranslateX(synchronizedPosition);
-      // Save server position to localStorage
-      localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
-    } else if (synchronizedPosition !== null && synchronizedPosition !== undefined && hasCompletedAnimation.current) {
-      console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
+    // BLOCK ALL SERVER SYNC during any animation phase or if animation was completed
+    if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
+      if (isAnimating || animationPhase === 'accelerating' || hasStartedAnimation.current) {
+        console.log('🚫 BLOCKING SERVER SYNC - Animation in progress, keeping current position');
+        return;
+      } else if (hasCompletedAnimation.current) {
+        console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
+        return;
+      } else {
+        console.log('🔄 Server sync:', synchronizedPosition);
+        setTranslateX(synchronizedPosition);
+        // Save server position to localStorage
+        localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
+      }
     }
-  }, [synchronizedPosition, isAnimating]);
+  }, [synchronizedPosition, isAnimating, animationPhase]);
 
   // Ensure position is saved whenever it changes (except during animation)
   useEffect(() => {
