@@ -28,18 +28,43 @@ const WHEEL_SLOTS = [
 ];
 
 const TILE_WIDTH = 120; // Width of each tile in pixels
-const CONTAINER_WIDTH = 1200;
-const CENTER_OFFSET = CONTAINER_WIDTH / 2;
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [translateX, setTranslateX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [centerOffset, setCenterOffset] = useState(600); // Default fallback
   const animationRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastSpinningState = useRef<boolean>(false);
 
-  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating });
+  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating, centerOffset });
+
+  // Calculate responsive center offset based on actual container width
+  const updateCenterOffset = useCallback(() => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const newCenterOffset = containerWidth / 2;
+      setCenterOffset(newCenterOffset);
+      console.log('📱 Responsive center offset updated:', {
+        containerWidth,
+        newCenterOffset,
+        device: containerWidth < 768 ? 'mobile' : containerWidth < 1024 ? 'tablet' : 'desktop'
+      });
+    }
+  }, []);
+
+  // Update center offset on mount and resize
+  useEffect(() => {
+    updateCenterOffset();
+    
+    const handleResize = () => {
+      updateCenterOffset();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [updateCenterOffset]);
 
   // Calculate the target position for the winning slot to be centered
   const calculateTargetPosition = useCallback((slot: number) => {
@@ -55,7 +80,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const targetTileCenter = targetTileIndex * TILE_WIDTH + TILE_WIDTH / 2;
     
     // Calculate position so that the tile center aligns with the container center
-    const targetPosition = CENTER_OFFSET - targetTileCenter;
+    const targetPosition = centerOffset - targetTileCenter;
     
     console.log('🎯 Target position calculation for winning slot:', {
       winningSlot: slot,
@@ -63,7 +88,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       centerRepeat,
       targetTileIndex,
       targetTileCenter,
-      centerOffset: CENTER_OFFSET,
+      centerOffset,
       targetPosition,
       verification: `Slot ${slot} should be at position ${targetPosition} to be centered`
     });
@@ -74,11 +99,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       calculatedPosition: targetPosition,
       tileCenter: targetTileCenter,
       verification: verificationPosition,
-      shouldEqualCenter: verificationPosition === CENTER_OFFSET
+      shouldEqualCenter: verificationPosition === centerOffset
     });
     
     return targetPosition;
-  }, []);
+  }, [centerOffset]);
 
   // Simple spinning animation with infinite scrolling
   const animate = useCallback(() => {
@@ -232,7 +257,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
       const tileLeftEdge = finalPosition + (tileGlobalIndex * TILE_WIDTH);
       const tileCenterPosition = tileLeftEdge + (TILE_WIDTH / 2);
-      const distanceFromCenter = Math.abs(tileCenterPosition - CENTER_OFFSET);
+      const distanceFromCenter = Math.abs(tileCenterPosition - centerOffset);
       
       if (distanceFromCenter < closestDistance) {
         closestDistance = distanceFromCenter;
@@ -246,7 +271,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     console.log('🎯 PROVABLY FAIR VERIFICATION:', {
       winningSlot,
-      expectedCenter: CENTER_OFFSET,
+      expectedCenter: centerOffset,
       actualTileCenter: closestTileCenter,
       distanceOff: closestDistance.toFixed(2) + 'px',
       closestRepeat,
@@ -261,7 +286,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       // Auto-correct if off by more than 5px
       if (closestDistance > 5) {
-        const correction = CENTER_OFFSET - closestTileCenter;
+        const correction = centerOffset - closestTileCenter;
         console.log(`🔧 Auto-correcting position by ${correction.toFixed(2)}px`);
         setTranslateX(prev => prev + correction);
         
@@ -274,13 +299,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     } else {
       console.log(`🎉 Perfect! Slot ${winningSlot} landed exactly under the center line!`);
     }
-  }, [winningSlot]);
+  }, [winningSlot, centerOffset]);
 
   // Debug function to check current position
   const debugCurrentPosition = useCallback(() => {
     console.log('🔍 DEBUG: Current position analysis:', {
       currentTranslateX: translateX,
-      centerOffset: CENTER_OFFSET,
+      centerOffset,
       tileWidth: TILE_WIDTH,
       bufferMultiplier: BUFFER_MULTIPLIER,
       wheelSlotsLength: WHEEL_SLOTS.length
@@ -292,14 +317,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         const tileGlobalIndex = repeat * WHEEL_SLOTS.length + i;
         const tileLeftEdge = translateX + (tileGlobalIndex * TILE_WIDTH);
         const tileCenterPosition = tileLeftEdge + (TILE_WIDTH / 2);
-        const distanceFromCenter = Math.abs(tileCenterPosition - CENTER_OFFSET);
+        const distanceFromCenter = Math.abs(tileCenterPosition - centerOffset);
         
         if (distanceFromCenter < TILE_WIDTH / 2) {
           console.log(`📍 Currently at center: Slot ${WHEEL_SLOTS[i].slot} (repeat ${repeat}, index ${i}) at distance ${distanceFromCenter.toFixed(2)}px`);
         }
       }
     }
-  }, [translateX]);
+  }, [translateX, centerOffset]);
 
   // Get tile color styling
   const getTileColor = (color: string) => {
@@ -353,7 +378,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           {tiles.map((tile) => {
             // Calculate if this tile is near the center for highlighting
             const tileCenter = translateX + (tile.index * TILE_WIDTH + TILE_WIDTH / 2);
-            const distanceFromCenter = Math.abs(tileCenter - CENTER_OFFSET);
+            const distanceFromCenter = Math.abs(tileCenter - centerOffset);
             const isNearCenter = distanceFromCenter < TILE_WIDTH / 2;
             const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < TILE_WIDTH / 3;
 
