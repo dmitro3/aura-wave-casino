@@ -416,7 +416,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                     </div>
                   )}
 
-                  {verificationData.is_completed && !verificationData.verification_result && (
+                  {verificationData.is_completed && !verificationData.verification_result && verificationData.is_revealed && (
                     <Button onClick={verifyFairness} disabled={isVerifying} className="w-full">
                       {isVerifying ? 'Calculating...' : 'Calculate Provably Fair Verification'}
                     </Button>
