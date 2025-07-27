@@ -81,18 +81,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const centerRepeat = Math.floor(BUFFER_TILES / 2);
     const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
     
-    // Calculate position so that the tile center aligns with the center marker
+    // Calculate position so that the tile center aligns exactly with the viewport center
     const targetTileCenter = targetTileIndex * TILE_SIZE + TILE_SIZE / 2;
-    const targetPosition = (REEL_VIEWPORT_WIDTH / 2) - targetTileCenter;
+    const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
+    const targetPosition = viewportCenter - targetTileCenter;
 
-    console.log('🎯 TARGET CALCULATION:', {
+    console.log('🎯 PRECISE TARGET CALCULATION:', {
       slot,
       slotIndex,
       centerRepeat,
       targetTileIndex,
       targetTileCenter,
+      viewportCenter,
       targetPosition: Math.round(targetPosition),
-      viewportCenter: REEL_VIEWPORT_WIDTH / 2
+      verification: {
+        finalTileCenter: targetTileCenter + targetPosition,
+        shouldEqual: viewportCenter,
+        difference: Math.abs((targetTileCenter + targetPosition) - viewportCenter)
+      }
     });
 
     return Math.round(targetPosition);
@@ -117,7 +123,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     if (progress < 1) {
       animationRef.current = requestAnimationFrame(animateAcceleration);
     } else {
-      console.log('🌀 ACCELERATION COMPLETE');
+      console.log('🌀 ACCELERATION COMPLETE - Position:', currentPosition);
       setAnimationPhase('fullSpeed');
     }
   }, [animationPhase, startTime]);
@@ -138,7 +144,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     if (progress < 1) {
       animationRef.current = requestAnimationFrame(animateFullSpeed);
     } else {
-      console.log('🎯 FULL SPEED COMPLETE');
+      const fullSpeedEndPosition = accelerationDistance + fullSpeedDistance;
+      console.log('🎯 FULL SPEED COMPLETE - Position:', fullSpeedEndPosition);
       setAnimationPhase('decelerating');
       setDecelerationStartTime(Date.now());
     }
@@ -162,7 +169,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       easeProgress = 0.4 * (1 - finalProgress) * 0.1;
     }
     
-    // Move from full speed position to target position
+    // Calculate the exact path from full speed end to target position
     const fullSpeedEndPosition = -TILE_SIZE * 45; // End of full speed
     const remainingDistance = targetPosition - fullSpeedEndPosition;
     const currentPosition = fullSpeedEndPosition + (remainingDistance * easeProgress);
@@ -177,13 +184,33 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setAnimationPhase('stopped');
       setIsAnimating(false);
       
-      console.log('✅ ANIMATION COMPLETE - Winning tile centered');
+      console.log('✅ ANIMATION COMPLETE:', {
+        targetPosition,
+        finalPosition: targetPosition,
+        winningSlot,
+        viewportCenter: REEL_VIEWPORT_WIDTH / 2
+      });
+      
+      // Verify the winning tile is centered
+      const targetTileIndex = Math.floor(BUFFER_TILES / 2) * WHEEL_SLOTS.length + WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
+      const targetTileCenter = targetTileIndex * TILE_SIZE + TILE_SIZE / 2;
+      const actualCenter = targetPosition + targetTileCenter;
+      const centerOffset = Math.abs(actualCenter - (REEL_VIEWPORT_WIDTH / 2));
+      
+      console.log('🎯 WINNING TILE VERIFICATION:', {
+        targetTileIndex,
+        targetTileCenter,
+        actualCenter,
+        expectedCenter: REEL_VIEWPORT_WIDTH / 2,
+        centerOffset: centerOffset.toFixed(2),
+        isCentered: centerOffset < 1
+      });
       
       // Start winning glow
       setShowWinningGlow(true);
       setTimeout(() => setShowWinningGlow(false), WINNING_GLOW_DURATION);
     }
-  }, [animationPhase, decelerationStartTime, targetPosition]);
+  }, [animationPhase, decelerationStartTime, targetPosition, winningSlot]);
 
   // Main animation trigger
   useEffect(() => {
