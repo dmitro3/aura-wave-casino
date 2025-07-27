@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 
 interface RouletteReelProps {
   isSpinning: boolean;
@@ -27,69 +27,38 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// Device-independent configuration - FIXED VALUES that never change
+// Fixed configuration
+const REEL_HEIGHT = 120; // Fixed reel height in pixels
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 80; // Fixed logical tile width (device-independent) - significantly increased
-const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
-const VISIBLE_TILES_COUNT = 8; // Fixed number of visible tiles - reduced to accommodate larger tiles
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
-  const [logicalTranslateX, setLogicalTranslateX] = useState(0); // Logical position (device-independent)
+  const [translateX, setTranslateX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [scaleFactor, setScaleFactor] = useState(1); // Scale factor to convert logical to physical pixels
+  const [tileSize, setTileSize] = useState(REEL_HEIGHT); // Tile size equals reel height for perfect squares
   const animationRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastSpinningState = useRef<boolean>(false);
 
-  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, logicalTranslateX, synchronizedPosition, isAnimating, scaleFactor });
+  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating, tileSize });
 
-  // Calculate scale factor based on container width to maintain consistent logical positioning
-  const updateScaleFactor = useCallback(() => {
-    if (containerRef.current) {
-      const containerWidth = containerRef.current.offsetWidth;
-      const containerHeight = containerRef.current.offsetHeight;
-      
-      // Calculate scale factor based on height to make tiles fill the reel
-      const heightBasedScaleFactor = containerHeight / LOGICAL_TILE_WIDTH;
-      
-      // Calculate scale factor based on width for visible tiles
-      const visibleLogicalWidth = VISIBLE_TILES_COUNT * LOGICAL_TILE_WIDTH;
-      const widthBasedScaleFactor = containerWidth / visibleLogicalWidth;
-      
-      // Use the smaller scale factor to ensure tiles fit both dimensions
-      const newScaleFactor = Math.min(heightBasedScaleFactor, widthBasedScaleFactor);
-      
-      setScaleFactor(newScaleFactor);
-      
-      console.log('📱 Scale factor updated:', {
-        containerWidth,
-        containerHeight,
-        visibleLogicalWidth,
-        heightBasedScaleFactor,
-        widthBasedScaleFactor,
-        newScaleFactor,
-        logicalTileWidth: LOGICAL_TILE_WIDTH,
-        logicalCenter: LOGICAL_CENTER_POSITION,
-        visibleTilesCount: VISIBLE_TILES_COUNT,
-        device: containerWidth < 768 ? 'mobile' : containerWidth < 1024 ? 'tablet' : 'desktop'
+  // Generate tiles array with buffer for seamless looping
+  const tiles = useMemo(() => {
+    const tilesArray = [];
+    for (let i = 0; i < WHEEL_SLOTS.length * BUFFER_MULTIPLIER; i++) {
+      const slotIndex = i % WHEEL_SLOTS.length;
+      const slot = WHEEL_SLOTS[slotIndex];
+      tilesArray.push({
+        key: `tile-${i}`,
+        index: i,
+        slot: slot.slot,
+        color: slot.color
       });
     }
+    return tilesArray;
   }, []);
 
-  // Update scale factor on mount and resize
-  useEffect(() => {
-    updateScaleFactor();
-    
-    const handleResize = () => {
-      updateScaleFactor();
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [updateScaleFactor]);
-
-  // Calculate the target logical position for the winning slot to be centered
-  const calculateTargetLogicalPosition = useCallback((slot: number) => {
+  // Calculate target position for winning slot to be centered
+  const calculateTargetPosition = useCallback((slot: number) => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
       console.error('❌ Invalid slot:', slot);
@@ -99,72 +68,56 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // Find the center instance of the winning slot in the buffer
     const centerRepeat = Math.floor(BUFFER_MULTIPLIER / 2);
     const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
-    const targetTileLogicalCenter = targetTileIndex * LOGICAL_TILE_WIDTH + LOGICAL_TILE_WIDTH / 2;
+    const targetTileCenter = targetTileIndex * tileSize + tileSize / 2;
     
-    // Calculate logical position so that the tile center aligns with the logical center
-    const targetLogicalPosition = LOGICAL_CENTER_POSITION - targetTileLogicalCenter;
+    // Calculate position so that the tile center aligns with the container center
+    const containerCenter = (containerRef.current?.offsetWidth || 0) / 2;
+    const targetPosition = containerCenter - targetTileCenter;
     
-    console.log('🎯 Target logical position calculation for winning slot:', {
+    console.log('🎯 Target position calculation:', {
       winningSlot: slot,
       slotIndex,
       centerRepeat,
       targetTileIndex,
-      targetTileLogicalCenter,
-      logicalCenter: LOGICAL_CENTER_POSITION,
-      logicalTileWidth: LOGICAL_TILE_WIDTH,
-      targetLogicalPosition,
-      verification: `Slot ${slot} should be at logical position ${targetLogicalPosition} to be centered`
+      targetTileCenter,
+      containerCenter,
+      targetPosition,
+      tileSize
     });
     
-    // Verify the calculation is correct
-    const verificationPosition = targetLogicalPosition + targetTileLogicalCenter;
-    console.log('🔍 Verification check:', {
-      calculatedLogicalPosition: targetLogicalPosition,
-      tileLogicalCenter: targetTileLogicalCenter,
-      verification: verificationPosition,
-      logicalCenter: LOGICAL_CENTER_POSITION,
-      shouldEqualLogicalCenter: Math.abs(verificationPosition - LOGICAL_CENTER_POSITION) < 1
-    });
-    
-    return targetLogicalPosition;
-  }, []);
+    return targetPosition;
+  }, [tileSize]);
 
-  // Simple spinning animation with infinite scrolling using logical positioning
+  // Simple spinning animation
   const animate = useCallback(() => {
     if (isSpinning) {
-      // Move the reel to the left (simulating spinning) using logical units
-      setLogicalTranslateX(prev => {
-        const newLogicalPosition = prev - (LOGICAL_TILE_WIDTH * 0.125); // Fixed logical speed
+      // Move the reel to the left (simulating spinning)
+      setTranslateX(prev => {
+        const newPosition = prev - (tileSize * 0.125); // Fixed speed based on tile size
         
         // Reset position when we've moved too far left to maintain infinite scrolling
-        const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_WIDTH * BUFFER_MULTIPLIER;
-        if (Math.abs(newLogicalPosition) > totalLogicalWidth / 2) {
-          return newLogicalPosition + totalLogicalWidth / 2;
+        const totalWidth = WHEEL_SLOTS.length * tileSize * BUFFER_MULTIPLIER;
+        if (Math.abs(newPosition) > totalWidth / 2) {
+          return newPosition + totalWidth / 2;
         }
         
-        return newLogicalPosition;
+        return newPosition;
       });
       
       animationRef.current = requestAnimationFrame(animate);
     } else if (winningSlot !== null) {
-      // PRIORITY: Ensure the winning slot lands under the center line
+      // Ensure the winning slot lands under the center line
       console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Winning slot:', winningSlot);
       
-      const startLogicalPosition = logicalTranslateX;
+      const startPosition = translateX;
+      const targetPosition = calculateTargetPosition(winningSlot);
       
-      // Calculate the EXACT target logical position for the winning slot to be centered
-      const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
-      
-      console.log('🎲 Starting precise deceleration animation:', {
+      console.log('🎲 Starting deceleration animation:', {
         winningSlot,
-        startLogicalPosition,
-        targetLogicalPosition,
-        distance: Math.abs(targetLogicalPosition - startLogicalPosition),
-        goal: `Move reel to logical position ${targetLogicalPosition} so slot ${winningSlot} is centered`
+        startPosition,
+        targetPosition,
+        distance: Math.abs(targetPosition - startPosition)
       });
-      
-      // Debug current position before animation
-      debugCurrentLogicalPosition();
       
       const duration = 2500; // 2.5 seconds for smooth deceleration
       const startTime = Date.now();
@@ -190,195 +143,64 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           easeProgress = 0.9 + smoothEaseOut * 0.1; // 90% to 100% distance
         }
         
-        const newLogicalPosition = startLogicalPosition + (targetLogicalPosition - startLogicalPosition) * easeProgress;
-        setLogicalTranslateX(newLogicalPosition);
+        const newPosition = startPosition + (targetPosition - startPosition) * easeProgress;
+        setTranslateX(newPosition);
         
         if (progress < 1) {
           animationRef.current = requestAnimationFrame(animateToResult);
         } else {
           setIsAnimating(false);
-          
-          // Verify the result landed correctly
-          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final logical position:', newLogicalPosition);
-          verifyWinningTileLogicalPosition(newLogicalPosition);
-          debugCurrentLogicalPosition();
+          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final position:', newPosition);
         }
       };
       
       animateToResult();
     }
-  }, [isSpinning, winningSlot, synchronizedPosition, logicalTranslateX, calculateTargetLogicalPosition]);
+  }, [isSpinning, winningSlot, synchronizedPosition, translateX, calculateTargetPosition, tileSize]);
 
-  // Start/stop animation based on spinning state
+  // Handle spinning state changes
   useEffect(() => {
-    if (isSpinning && !lastSpinningState.current) {
-      console.log('🚀 Starting roulette spin');
-      setIsAnimating(true);
-      lastSpinningState.current = true;
+    if (isSpinning !== lastSpinningState.current) {
+      lastSpinningState.current = isSpinning;
       
-      // Reset position to center if it's too far off
-      const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_WIDTH * BUFFER_MULTIPLIER;
-      if (Math.abs(logicalTranslateX) > totalLogicalWidth / 4) {
-        setLogicalTranslateX(0);
-      }
-      
-      animationRef.current = requestAnimationFrame(animate);
-    } else if (!isSpinning && lastSpinningState.current) {
-      console.log('🛑 Stopping roulette spin');
-      lastSpinningState.current = false;
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    }
-  }, [isSpinning, animate, logicalTranslateX]);
-
-  // Create a repeating loop of tiles with buffer for seamless looping
-  const tiles = [];
-  for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
-    for (let i = 0; i < WHEEL_SLOTS.length; i++) {
-      tiles.push({
-        ...WHEEL_SLOTS[i],
-        key: `${repeat}-${i}`,
-        index: repeat * WHEEL_SLOTS.length + i
-      });
-    }
-  }
-
-  // Clean up animation when component unmounts
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, []);
-
-  // Reset position when winning slot changes (new round)
-  useEffect(() => {
-    if (winningSlot !== null && !isSpinning) {
-      // Reset to center position for new round
-      setLogicalTranslateX(0);
-    }
-  }, [winningSlot, isSpinning]);
-
-  // Verify that the winning tile is centered when animation stops
-  const verifyWinningTileLogicalPosition = useCallback((finalLogicalPosition: number) => {
-    if (winningSlot === null) return;
-    
-    const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
-    if (slotIndex === -1) {
-      console.error('❌ Invalid winning slot for verification:', winningSlot);
-      return;
-    }
-    
-    // Find the closest instance of the winning slot to the center
-    let closestDistance = Infinity;
-    let closestTileLogicalCenter = 0;
-    let closestRepeat = 0;
-    let closestTileIndex = 0;
-    
-    for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
-      const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
-      const tileLeftEdge = finalLogicalPosition + (tileGlobalIndex * LOGICAL_TILE_WIDTH);
-      const tileLogicalCenterPosition = tileLeftEdge + (LOGICAL_TILE_WIDTH / 2);
-      const distanceFromCenter = Math.abs(tileLogicalCenterPosition - LOGICAL_CENTER_POSITION);
-      
-      if (distanceFromCenter < closestDistance) {
-        closestDistance = distanceFromCenter;
-        closestTileLogicalCenter = tileLogicalCenterPosition;
-        closestRepeat = repeat;
-        closestTileIndex = tileGlobalIndex;
-      }
-    }
-    
-    const isAccurate = closestDistance < 3; // 3px tolerance for precision
-    
-    console.log('🎯 PROVABLY FAIR VERIFICATION:', {
-      winningSlot,
-      expectedCenter: LOGICAL_CENTER_POSITION,
-      actualTileCenter: closestTileLogicalCenter,
-      distanceOff: closestDistance.toFixed(2) + 'px',
-      closestRepeat,
-      closestTileIndex,
-      finalLogicalPosition,
-      result: isAccurate ? '✅ PERFECT LANDING' : '❌ POSITION ERROR',
-      tolerance: '3px'
-    });
-    
-    if (!isAccurate) {
-      console.warn(`⚠️ Position adjustment needed: Slot ${winningSlot} is ${closestDistance.toFixed(2)}px off center`);
-      
-      // Auto-correct if off by more than 5px
-      if (closestDistance > 5) {
-        const correction = LOGICAL_CENTER_POSITION - closestTileLogicalCenter;
-        console.log(`🔧 Auto-correcting position by ${correction.toFixed(2)}px`);
-        setLogicalTranslateX(prev => prev + correction);
-        
-        // Verify the correction worked
-        setTimeout(() => {
-          const correctedPosition = finalLogicalPosition + correction;
-          console.log(`🔍 Verification after correction: Position ${correctedPosition.toFixed(2)}`);
-        }, 100);
-      }
-    } else {
-      console.log(`🎉 Perfect! Slot ${winningSlot} landed exactly under the center line!`);
-    }
-  }, [winningSlot]);
-
-  // Debug function to check current position
-  const debugCurrentLogicalPosition = useCallback(() => {
-    console.log('🔍 DEBUG: Current logical position analysis:', {
-      currentLogicalTranslateX: logicalTranslateX,
-      logicalCenter: LOGICAL_CENTER_POSITION,
-      logicalTileWidth: LOGICAL_TILE_WIDTH,
-      bufferMultiplier: BUFFER_MULTIPLIER,
-      wheelSlotsLength: WHEEL_SLOTS.length
-    });
-    
-    // Check what's currently at the center
-    for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
-      for (let i = 0; i < WHEEL_SLOTS.length; i++) {
-        const tileGlobalIndex = repeat * WHEEL_SLOTS.length + i;
-        const tileLeftEdge = logicalTranslateX + (tileGlobalIndex * LOGICAL_TILE_WIDTH);
-        const tileLogicalCenterPosition = tileLeftEdge + (LOGICAL_TILE_WIDTH / 2);
-        const distanceFromCenter = Math.abs(tileLogicalCenterPosition - LOGICAL_CENTER_POSITION);
-        
-        if (distanceFromCenter < LOGICAL_TILE_WIDTH / 2) {
-          console.log(`📍 Currently at center: Slot ${WHEEL_SLOTS[i].slot} (repeat ${repeat}, index ${i}) at distance ${distanceFromCenter.toFixed(2)}px`);
+      if (isSpinning) {
+        setIsAnimating(true);
+        animate();
+      } else {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
         }
       }
     }
-  }, [logicalTranslateX]);
+  }, [isSpinning, animate]);
 
-  // Get tile color styling
+  // Reset position when round changes
+  useEffect(() => {
+    if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
+      setTranslateX(synchronizedPosition);
+    }
+  }, [synchronizedPosition]);
+
+  // Get tile color class
   const getTileColor = (color: string) => {
     switch (color) {
-      case 'green':
-        return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 text-white';
-      case 'red':
-        return 'bg-gradient-to-br from-red-400 to-red-600 border-red-300 text-white';
-      case 'black':
-        return 'bg-gradient-to-br from-gray-700 to-gray-900 border-gray-600 text-white';
-      default:
-        return 'bg-gray-500 text-white';
+      case 'green': return 'bg-gradient-to-br from-green-500 to-green-600 border-green-400 text-white';
+      case 'red': return 'bg-gradient-to-br from-red-500 to-red-600 border-red-400 text-white';
+      case 'black': return 'bg-gradient-to-br from-gray-700 to-gray-800 border-gray-500 text-white';
+      default: return 'bg-gray-500 border-gray-400 text-white';
     }
   };
 
-
-
   return (
     <div className="relative w-full max-w-7xl mx-auto">
-      {/* Reel container */}
-      <div ref={containerRef} className="relative h-32 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
-        
-        {/* Center indicator line - positioned at container center */}
-        <div 
-          className="absolute inset-y-0 w-1 z-30 pointer-events-none"
-          style={{ 
-            left: '50%',
-            transform: 'translateX(-50%)'
-          }}
-        >
+      {/* Reel container with fixed height */}
+      <div 
+        ref={containerRef}
+        className="relative overflow-hidden rounded-xl shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800"
+        style={{ height: `${REEL_HEIGHT}px` }}
+      >
+        {/* Center indicator line - static and centered */}
+        <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
           {/* Top arrow */}
           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-emerald-400"></div>
           
@@ -396,17 +218,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         <div 
           className="flex h-full items-center"
           style={{
-            transform: `translateX(${logicalTranslateX * scaleFactor}px)`,
+            transform: `translateX(${translateX}px)`,
             transition: 'none', // No CSS transitions, we control animation with JS
             willChange: 'transform'
           }}
         >
           {tiles.map((tile) => {
-            // Calculate if this tile is near the center for highlighting
-            const tileLogicalCenter = logicalTranslateX + (tile.index * LOGICAL_TILE_WIDTH + LOGICAL_TILE_WIDTH / 2);
-            const distanceFromCenter = Math.abs(tileLogicalCenter - LOGICAL_CENTER_POSITION);
-            const isNearCenter = distanceFromCenter < LOGICAL_TILE_WIDTH / 2;
-            const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < LOGICAL_TILE_WIDTH / 3;
+            const tileCenter = translateX + (tile.index * tileSize + tileSize / 2);
+            const containerCenter = (containerRef.current?.offsetWidth || 0) / 2;
+            const distanceFromCenter = Math.abs(tileCenter - containerCenter);
+            const isNearCenter = distanceFromCenter < tileSize / 2;
+            const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < tileSize / 3;
 
             return (
               <div
@@ -419,20 +241,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   ${isNearCenter && isAnimating ? 'scale-105 z-10' : ''}
                 `}
                 style={{ 
-                  width: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
-                  height: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
-                  minWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
-                  maxWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
-                  minHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
-                  maxHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
-                  aspectRatio: '1 / 1 !important',
-                  flexShrink: '0 !important',
-                  flexGrow: '0 !important',
-                  flexBasis: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
-                  boxSizing: 'border-box !important'
+                  width: `${tileSize}px`,
+                  height: `${tileSize}px`,
+                  minWidth: `${tileSize}px`,
+                  maxWidth: `${tileSize}px`,
+                  minHeight: `${tileSize}px`,
+                  maxHeight: `${tileSize}px`
                 }}
               >
-                <div className={`text-base font-bold drop-shadow-lg ${
+                <div className={`text-lg font-bold drop-shadow-lg ${
                   isWinningTile ? 'text-emerald-200 scale-125' : ''
                 }`}>
                   {tile.slot}
