@@ -1092,6 +1092,11 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       // Check if the claim was successful
       if (claimResult && claimResult.success) {
         console.log('✅ Claim was successful:', claimResult);
+      } else if (claimResult && claimResult.error === 'Achievement already unlocked') {
+        console.log('ℹ️ Achievement already unlocked, refreshing data...');
+        // Just refresh the data to update the UI
+        await fetchData();
+        return; // Don't throw error, just return
       } else {
         console.error('❌ Claim was not successful:', claimResult);
         throw new Error('Claim was not successful: ' + JSON.stringify(claimResult));
