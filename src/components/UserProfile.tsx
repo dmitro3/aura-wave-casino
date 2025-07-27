@@ -807,9 +807,18 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       case 'tower_perfect_games': currentValue = userStats.tower_perfect_games || 0; break;
       case 'coinflip_wins': currentValue = userStats.coinflip_wins || 0; break;
       case 'total_cases_opened': currentValue = userStats.total_cases_opened || 0; break;
+      case 'account_created': currentValue = userStats.account_created ? 1 : 0; break;
+      case 'chat_messages': currentValue = userStats.chat_messages_count || 0; break;
+      case 'login_days': currentValue = userStats.login_days_count || 0; break;
+      case 'win_streak': currentValue = userStats.best_win_streak || 0; break;
+      case 'biggest_single_bet': currentValue = userStats.biggest_single_bet || 0; break;
       default: currentValue = 0;
     }
 
+    // Prevent division by zero and handle edge cases
+    if (targetValue === 0) return 0;
+    if (currentValue >= targetValue) return 100;
+    
     return Math.min(100, (currentValue / targetValue) * 100);
   };
 
