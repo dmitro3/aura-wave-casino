@@ -4,6 +4,7 @@
 -- =====================================================
 -- Fix test_service_role_access function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.test_service_role_access();
 CREATE OR REPLACE FUNCTION public.test_service_role_access()
 RETURNS void
 LANGUAGE plpgsql
@@ -19,6 +20,7 @@ $$;
 -- =====================================================
 -- Fix check_rate_limit function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.check_rate_limit(UUID, TEXT, INTEGER, INTERVAL);
 CREATE OR REPLACE FUNCTION public.check_rate_limit(
   p_user_id UUID,
   p_action TEXT,
@@ -47,6 +49,7 @@ $$;
 -- =====================================================
 -- Fix cleanup_old_security_data function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.cleanup_old_security_data();
 CREATE OR REPLACE FUNCTION public.cleanup_old_security_data()
 RETURNS void
 LANGUAGE plpgsql
@@ -63,6 +66,7 @@ $$;
 -- =====================================================
 -- Fix check_and_award_achievements function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.check_and_award_achievements(UUID);
 CREATE OR REPLACE FUNCTION public.check_and_award_achievements(p_user_id UUID)
 RETURNS void
 LANGUAGE plpgsql
@@ -93,6 +97,7 @@ $$;
 -- =====================================================
 -- Fix get_user_bet_stats function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.get_user_bet_stats(UUID);
 CREATE OR REPLACE FUNCTION public.get_user_bet_stats(p_user_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -118,6 +123,7 @@ $$;
 -- =====================================================
 -- Fix validate_bet_limits function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.validate_bet_limits(UUID, NUMERIC, TEXT);
 CREATE OR REPLACE FUNCTION public.validate_bet_limits(
   p_user_id UUID,
   p_amount NUMERIC,
@@ -143,6 +149,7 @@ $$;
 -- =====================================================
 -- Fix rollback_bet_balance function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.rollback_bet_balance(UUID, NUMERIC);
 CREATE OR REPLACE FUNCTION public.rollback_bet_balance(
   p_user_id UUID,
   p_amount NUMERIC
@@ -163,6 +170,7 @@ $$;
 -- =====================================================
 -- Fix track_daily_login function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.track_daily_login(UUID);
 CREATE OR REPLACE FUNCTION public.track_daily_login(p_user_id UUID)
 RETURNS void
 LANGUAGE plpgsql
@@ -180,6 +188,7 @@ $$;
 -- =====================================================
 -- Fix track_chat_message function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.track_chat_message(UUID);
 CREATE OR REPLACE FUNCTION public.track_chat_message(p_user_id UUID)
 RETURNS void
 LANGUAGE plpgsql
@@ -197,6 +206,7 @@ $$;
 -- =====================================================
 -- Fix track_bet_amount function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.track_bet_amount(UUID, NUMERIC);
 CREATE OR REPLACE FUNCTION public.track_bet_amount(
   p_user_id UUID,
   p_amount NUMERIC
@@ -217,6 +227,7 @@ $$;
 -- =====================================================
 -- Fix track_game_result function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.track_game_result(UUID, TEXT, NUMERIC, TEXT, NUMERIC);
 CREATE OR REPLACE FUNCTION public.track_game_result(
   p_user_id UUID,
   p_game_type TEXT,
@@ -245,6 +256,7 @@ $$;
 -- =====================================================
 -- Fix trigger_track_chat_message function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.trigger_track_chat_message();
 CREATE OR REPLACE FUNCTION public.trigger_track_chat_message()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -261,6 +273,7 @@ $$;
 -- =====================================================
 -- Fix award_achievement_reward function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.award_achievement_reward(UUID, UUID);
 CREATE OR REPLACE FUNCTION public.award_achievement_reward(
   p_user_id UUID,
   p_achievement_id UUID
@@ -283,6 +296,7 @@ $$;
 -- =====================================================
 -- Fix atomic_bet_balance_check function
 -- =====================================================
+DROP FUNCTION IF EXISTS public.atomic_bet_balance_check(UUID, NUMERIC);
 CREATE OR REPLACE FUNCTION public.atomic_bet_balance_check(
   p_user_id UUID,
   p_amount NUMERIC
