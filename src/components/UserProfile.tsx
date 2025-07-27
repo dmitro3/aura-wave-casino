@@ -847,7 +847,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       
       try {
         // Fetch only essential data for faster loading
-        const [achievementsResult, userStatsResult] = await Promise.all([
+        const [achievementsResult, userStatsResult, readyToClaimResult] = await Promise.all([
           // Fetch all achievements (lightweight)
           supabase
             .from('achievements')
@@ -880,7 +880,13 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
               current_level
             `)
             .eq('user_id', userId)
-            .single()
+            .single(),
+          
+          // Fetch ready-to-claim achievements
+          supabase
+            .from('ready_to_claim_achievements')
+            .select('achievement_id, ready_at')
+            .eq('user_id', userId)
         ]);
 
         // Handle achievements
@@ -909,15 +915,17 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
           const unlockedAchievements = userAchievements || [];
           setUserAchievements(unlockedAchievements);
 
-          // Check for claimable achievements (requirements met but not claimed)
-          if (isOwnProfile && userStatsResult.data) {
-            const claimable = (achievementsResult.data || []).filter(achievement => {
-              const isAlreadyUnlocked = unlockedAchievements.some(ua => ua.achievement_id === achievement.id);
-              if (isAlreadyUnlocked) return false;
-              
-              const progress = calculateProgressForAchievement(achievement, userStatsResult.data);
-              return progress >= 100;
-            });
+          // Get ready-to-claim achievements from the database
+          if (readyToClaimResult.error) {
+            console.error('Error fetching ready-to-claim achievements:', readyToClaimResult.error);
+          } else {
+            const readyToClaimIds = (readyToClaimResult.data || []).map(rta => rta.achievement_id);
+            
+            // Get full achievement details for ready-to-claim achievements
+            const claimable = (achievementsResult.data || []).filter(achievement => 
+              readyToClaimIds.includes(achievement.id)
+            );
+
             setClaimableAchievements(claimable);
           }
         }
@@ -1053,65 +1061,21 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
     console.log('🎯 Starting claim process for achievement:', achievement.name);
     
     try {
-      // Insert the achievement as unlocked
-      console.log('🎯 Inserting achievement into user_achievements...');
-      const { error: insertError } = await supabase
-        .from('user_achievements')
-        .insert({
-          user_id: userId,
-          achievement_id: achievement.id,
-          unlocked_at: new Date().toISOString()
-        });
+      // Call the manual claim function
+      console.log('🎯 Calling manual claim function...');
+      const { data: claimResult, error: claimError } = await supabase.rpc('claim_achievement_manual', {
+        p_user_id: userId,
+        p_achievement_id: achievement.id
+      });
 
-      if (insertError) {
-        console.error('❌ Error inserting achievement:', insertError);
-        throw insertError;
+      if (claimError) {
+        console.error('❌ Error claiming achievement:', claimError);
+        throw claimError;
       }
-      console.log('✅ Achievement inserted successfully');
+      console.log('✅ Achievement claimed successfully:', claimResult);
 
-      // Award the reward
-      console.log('🎯 Awarding reward:', achievement.reward_type, achievement.reward_amount);
-      if (achievement.reward_type === 'money') {
-        const { error: balanceError } = await supabase
-          .from('profiles')
-          .update({ 
-            balance: supabase.sql`balance + ${achievement.reward_amount}` 
-          })
-          .eq('id', userId);
-
-        if (balanceError) {
-          console.error('❌ Error updating balance:', balanceError);
-          throw balanceError;
-        }
-        console.log('✅ Balance updated successfully');
-      } else if (achievement.reward_type === 'xp') {
-        const { error: xpError } = await supabase
-          .from('user_level_stats')
-          .update({ 
-            lifetime_xp: supabase.sql`lifetime_xp + ${achievement.reward_amount}`,
-            current_level_xp: supabase.sql`current_level_xp + ${achievement.reward_amount}`
-          })
-          .eq('user_id', userId);
-
-        if (xpError) {
-          console.error('❌ Error updating XP:', xpError);
-          throw xpError;
-        }
-        console.log('✅ XP updated successfully');
-      } else if (achievement.reward_type === 'cases') {
-        const { error: casesError } = await supabase
-          .from('user_level_stats')
-          .update({ 
-            available_cases: supabase.sql`available_cases + ${achievement.reward_amount}` 
-          })
-          .eq('user_id', userId);
-
-        if (casesError) {
-          console.error('❌ Error updating cases:', casesError);
-          throw casesError;
-        }
-        console.log('✅ Cases updated successfully');
-      }
+      // Reward is automatically awarded by the database function
+      console.log('🎯 Reward automatically awarded by database function');
 
       // Show success notification
       console.log(`🎉 Achievement unlocked: ${achievement.name}! Reward: ${achievement.reward_type === 'money' ? '$' : ''}${achievement.reward_amount}${achievement.reward_type === 'cases' ? ' cases' : achievement.reward_type === 'xp' ? ' XP' : ''}`);
