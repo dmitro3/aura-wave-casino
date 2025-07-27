@@ -173,16 +173,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Animation configuration
   const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
-  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.2; // Full speed velocity
+  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.15; // Reduced for smoother animation
   const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
   const DECELERATION_DISTANCE = LOGICAL_TILE_SIZE * 50; // Distance to decelerate over
 
-  // Full speed spinning animation
+  // Full speed spinning animation with proper frame timing
   const animateFullSpeed = useCallback(() => {
     if (animationPhase !== 'fullSpeed') return;
     
+    const currentTime = Date.now();
+    const deltaTime = currentTime - (animateFullSpeed.lastTime || currentTime);
+    animateFullSpeed.lastTime = currentTime;
+    
+    // Ensure minimum delta time to prevent jumps
+    const clampedDeltaTime = Math.min(deltaTime, 50); // Max 50ms between frames
+    
     setLogicalTranslateX(prev => {
-      const newPosition = prev - FULL_SPEED_VELOCITY;
+      const velocity = FULL_SPEED_VELOCITY * (clampedDeltaTime / 16.67); // Normalize to 60fps
+      const newPosition = prev - velocity;
       
       // Improved infinite scrolling logic to prevent disappearing
       const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
@@ -285,15 +293,22 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           setDecelerationStartPosition(logicalTranslateX);
           
           const animateAcceleration = () => {
-            const elapsed = Date.now() - spinStartTime;
+            const currentTime = Date.now();
+            const elapsed = currentTime - spinStartTime;
             const progress = Math.min(elapsed / ACCELERATION_DURATION, 1);
             
             // Smooth acceleration curve (ease-in)
             const accelerationProgress = 1 - Math.pow(1 - progress, 2);
             const currentVelocity = FULL_SPEED_VELOCITY * accelerationProgress;
             
+            // Use frame timing for smooth movement
+            const deltaTime = currentTime - (animateAcceleration.lastTime || currentTime);
+            animateAcceleration.lastTime = currentTime;
+            const clampedDeltaTime = Math.min(deltaTime, 50); // Max 50ms between frames
+            
             setLogicalTranslateX(prev => {
-              const newPosition = prev - currentVelocity;
+              const velocity = currentVelocity * (clampedDeltaTime / 16.67); // Normalize to 60fps
+              const newPosition = prev - velocity;
               
               // Improved infinite scrolling logic to prevent disappearing
               const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
