@@ -27,10 +27,11 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// Fixed logical grid system - completely device-independent
+// Device-independent configuration - FIXED VALUES that never change
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 25; // Fixed logical tile width (device-independent) - reduced from 30
+const LOGICAL_TILE_WIDTH = 25; // Fixed logical tile width (device-independent)
 const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
+const VISIBLE_TILES_COUNT = 14; // Fixed number of visible tiles
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [logicalTranslateX, setLogicalTranslateX] = useState(0); // Logical position (device-independent)
@@ -46,7 +47,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const updateScaleFactor = useCallback(() => {
     if (containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
-      const visibleLogicalWidth = 14 * LOGICAL_TILE_WIDTH; // 14 tiles visible (increased from 12)
+      const visibleLogicalWidth = VISIBLE_TILES_COUNT * LOGICAL_TILE_WIDTH; // Fixed logical width
       const newScaleFactor = containerWidth / visibleLogicalWidth;
       
       setScaleFactor(newScaleFactor);
@@ -57,6 +58,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         newScaleFactor,
         logicalTileWidth: LOGICAL_TILE_WIDTH,
         logicalCenter: LOGICAL_CENTER_POSITION,
+        visibleTilesCount: VISIBLE_TILES_COUNT,
         device: containerWidth < 768 ? 'mobile' : containerWidth < 1024 ? 'tablet' : 'desktop'
       });
     }
