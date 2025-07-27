@@ -457,45 +457,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
           })}
         </div>
 
-        {/* 🎮 DEBUG INFO - Development only */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="absolute top-2 left-2 text-xs text-white bg-black bg-opacity-70 p-2 rounded-md z-40 font-mono">
-            <div>Position: {Math.round(currentPosition)}px</div>
-            <div>Animating: {isAnimating ? 'YES' : 'NO'}</div>
-            <div>Spinning: {isSpinning ? 'YES' : 'NO'}</div>
-            {winningSlot !== null && <div>Winning Slot: {winningSlot}</div>}
-            <div>Full Rotations: {Math.round(Math.abs(currentPosition) / (WHEEL_SLOTS.length * TILE_SIZE_PX))}</div>
-            {serverReelPosition !== null && serverReelPosition !== undefined && (
-              <div>Server Pos: {Math.round(serverReelPosition)}px</div>
-            )}
-            <div>Sync: {serverReelPosition !== null && serverReelPosition !== undefined ? 'SERVER' : 'CLIENT'}</div>
-            <div className="border-t border-gray-600 mt-1 pt-1">
-              <div>Tile Safety: {currentPosition >= MIN_SAFE_POSITION && currentPosition <= MAX_SAFE_POSITION ? '✅ SAFE' : '⚠️ NORMALIZING'}</div>
-              <div>Bounds: [{MIN_SAFE_POSITION}, {MAX_SAFE_POSITION}]</div>
-              <div>Total Tiles: {TOTAL_TILES} ({TILE_REPEATS} repeats)</div>
-            </div>
-          </div>
-        )}
-
-        {/* 📊 STATUS INDICATOR */}
-        <div className="absolute top-2 right-2 z-40">
-          {isSpinning && isAnimating && (
-            <div className="bg-red-500/20 border border-red-400 text-red-400 px-3 py-1 rounded-md text-sm font-bold animate-pulse">
-              SPINNING...
-            </div>
-          )}
-          {!isSpinning && !isAnimating && (
-            <div className="bg-green-500/20 border border-green-400 text-green-400 px-3 py-1 rounded-md text-sm font-bold">
-              READY
-            </div>
-          )}
-          {/* Synchronization indicator */}
-          {isSpinning && serverReelPosition !== null && serverReelPosition !== undefined && (
-            <div className="bg-blue-500/20 border border-blue-400 text-blue-400 px-2 py-1 rounded-md text-xs mt-1">
-              SYNCED
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
