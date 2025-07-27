@@ -424,45 +424,93 @@ export default function Index({ initialGame }: IndexProps) {
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 pb-8">
         {/* Left Sidebar - Games Navigation */}
         <div className="lg:col-span-1 space-y-4">
-          <Card className="glass border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gamepad2 className="w-5 h-5 text-primary" />
+          <Card className="glass border-0 bg-gradient-to-br from-card/50 to-card/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20">
+                  <Gamepad2 className="w-4 h-4 text-primary" />
+                </div>
                 Games
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               <Button
                 onClick={() => handleGameChange('coinflip')}
-                variant={currentGame === 'coinflip' ? 'default' : 'outline'}
-                className="w-full justify-start glass border-0"
+                variant={currentGame === 'coinflip' ? 'default' : 'ghost'}
+                className={`w-full justify-start p-3 h-auto transition-all duration-200 hover:scale-[1.02] ${
+                  currentGame === 'coinflip' 
+                    ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:shadow-xl' 
+                    : 'hover:bg-primary/10 hover:text-primary border-0'
+                }`}
               >
-                <Gamepad2 className="w-4 h-4 mr-2" />
-                Coinflip
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    currentGame === 'coinflip' 
+                      ? 'bg-white/20' 
+                      : 'bg-primary/10'
+                  }`}>
+                    <Gamepad2 className="w-4 h-4" />
+                  </div>
+                  <span className="font-medium">Coinflip</span>
+                </div>
               </Button>
+              
               <Button
                 onClick={() => handleGameChange('roulette')}
-                variant={currentGame === 'roulette' ? 'default' : 'outline'}
-                className="w-full justify-start glass border-0"
+                variant={currentGame === 'roulette' ? 'default' : 'ghost'}
+                className={`w-full justify-start p-3 h-auto transition-all duration-200 hover:scale-[1.02] ${
+                  currentGame === 'roulette' 
+                    ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:shadow-xl' 
+                    : 'hover:bg-primary/10 hover:text-primary border-0'
+                }`}
               >
-                <Target className="w-4 h-4 mr-2" />
-                Roulette
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    currentGame === 'roulette' 
+                      ? 'bg-white/20' 
+                      : 'bg-primary/10'
+                  }`}>
+                    <Target className="w-4 h-4" />
+                  </div>
+                  <span className="font-medium">Roulette</span>
+                </div>
               </Button>
+              
               <Button
                 onClick={() => handleGameChange('tower')}
-                variant={currentGame === 'tower' ? 'default' : 'outline'}
-                className="w-full justify-start glass border-0"
+                variant={currentGame === 'tower' ? 'default' : 'ghost'}
+                className={`w-full justify-start p-3 h-auto transition-all duration-200 hover:scale-[1.02] ${
+                  currentGame === 'tower' 
+                    ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:shadow-xl' 
+                    : 'hover:bg-primary/10 hover:text-primary border-0'
+                }`}
               >
-                <Building className="w-4 h-4 mr-2" />
-                Tower
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    currentGame === 'tower' 
+                      ? 'bg-white/20' 
+                      : 'bg-primary/10'
+                  }`}>
+                    <Building className="w-4 h-4" />
+                  </div>
+                  <span className="font-medium">Tower</span>
+                </div>
               </Button>
+              
               <Button
                 disabled
-                variant="outline"
-                className="w-full justify-start glass border-0 opacity-50"
+                variant="ghost"
+                className="w-full justify-start p-3 h-auto opacity-50 cursor-not-allowed hover:bg-muted/10 border-0"
               >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Crash (Coming Soon)
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-muted/20">
+                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-muted-foreground">Crash</div>
+                    <div className="text-xs text-muted-foreground/70">Coming Soon</div>
+                  </div>
+                </div>
               </Button>
             </CardContent>
           </Card>
