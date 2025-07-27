@@ -69,6 +69,6 @@ SELECT 'TOWER_GAMES_DATA' as section, id, user_id, difficulty, bet_amount, statu
 
 SELECT 'LIVE_BET_FEED_DATA' as section, id, username, game_type, bet_amount, result, created_at FROM public.live_bet_feed ORDER BY created_at DESC LIMIT 5;
 
-SELECT 'ROULETTE_ROUNDS_DATA' as section, id, status, winning_number, created_at FROM public.roulette_rounds ORDER BY created_at DESC LIMIT 3;
+SELECT 'ROULETTE_ROUNDS_DATA' as section, * FROM public.roulette_rounds ORDER BY created_at DESC LIMIT 3;
 
 SELECT 'CHAT_MESSAGES_DATA' as section, id, username, LEFT(message, 50) as message_preview, created_at FROM public.chat_messages ORDER BY created_at DESC LIMIT 3;
