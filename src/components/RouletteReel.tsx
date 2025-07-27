@@ -55,8 +55,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const currentSpinningPhase = useRef<string>('');
   const hasCompletedAnimation = useRef<boolean>(false);
 
-  // Animation configuration - SIMPLIFIED FOR SMOOTHNESS
-  const ANIMATION_DURATION = 4000; // 4 seconds total
+  // Animation configuration - MATCHES SPINNING PHASE DURATION
+  const SPINNING_PHASE_DURATION = 5000; // 5 seconds (matches server SPINNING_DURATION)
+  const ACCELERATION_DURATION = 1000; // 1 second acceleration
+  const FAST_SPIN_DURATION = 2500; // 2.5 seconds fast spin
+  const DECELERATION_DURATION = 1500; // 1.5 seconds deceleration
   const WINNING_GLOW_DURATION = 2000; // 2 seconds
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, isAnimating, animationPhase });
@@ -112,25 +115,55 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return Math.round(targetPosition);
   }, []);
 
-  // SINGLE SMOOTH ANIMATION FUNCTION
+  // SMOOTH THREE-PHASE ANIMATION FUNCTION
   const animate = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
-    const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+    const totalElapsed = elapsed;
     
-    // Smooth easing curve: start fast, slow down at the end
-    const easeProgress = 1 - Math.pow(1 - progress, 3);
+    let currentPosition = translateX;
     
-    // Calculate the total distance to travel from current position to target
-    const totalDistance = targetPosition - translateX;
-    
-    // Apply easing to the distance
-    const currentPosition = translateX + (easeProgress * totalDistance);
+    if (totalElapsed < ACCELERATION_DURATION) {
+      // ACCELERATION PHASE (0-1000ms)
+      const accelerationProgress = totalElapsed / ACCELERATION_DURATION;
+      const easeProgress = 1 - Math.pow(1 - accelerationProgress, 3); // Smooth ease-in
+      
+      // Move from current position to fast spin position
+      const accelerationDistance = -TILE_SIZE * 15; // Move 15 tiles left during acceleration
+      currentPosition = translateX + (easeProgress * accelerationDistance);
+      
+    } else if (totalElapsed < ACCELERATION_DURATION + FAST_SPIN_DURATION) {
+      // FAST SPIN PHASE (1000-3500ms)
+      const fastSpinElapsed = totalElapsed - ACCELERATION_DURATION;
+      const fastSpinProgress = fastSpinElapsed / FAST_SPIN_DURATION;
+      
+      // Linear movement during fast spin
+      const accelerationDistance = -TILE_SIZE * 15;
+      const fastSpinDistance = -TILE_SIZE * 40; // Move 40 more tiles left during fast spin
+      currentPosition = translateX + accelerationDistance + (fastSpinProgress * fastSpinDistance);
+      
+    } else if (totalElapsed < SPINNING_PHASE_DURATION) {
+      // DECELERATION PHASE (3500-5000ms)
+      const decelerationElapsed = totalElapsed - ACCELERATION_DURATION - FAST_SPIN_DURATION;
+      const decelerationProgress = decelerationElapsed / DECELERATION_DURATION;
+      
+      // Smooth ease-out deceleration
+      const easeProgress = 1 - Math.pow(decelerationProgress, 3);
+      
+      // Move from fast spin end to target position
+      const fastSpinEndPosition = translateX - TILE_SIZE * 55; // End of fast spin
+      const remainingDistance = targetPosition - fastSpinEndPosition;
+      currentPosition = fastSpinEndPosition + (remainingDistance * easeProgress);
+      
+    } else {
+      // Animation complete - set exact target position
+      currentPosition = targetPosition;
+    }
     
     setTranslateX(currentPosition);
 
-    if (progress < 1) {
+    if (totalElapsed < SPINNING_PHASE_DURATION) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
       // Animation complete - set exact target position
@@ -146,6 +179,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         targetPosition,
         finalPosition: targetPosition,
         winningSlot,
+        totalDuration: totalElapsed,
         savedToStorage: true
       });
       
