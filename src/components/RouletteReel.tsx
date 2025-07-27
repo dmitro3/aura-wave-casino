@@ -120,29 +120,29 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       });
 
       // Enhanced animation timing with smoother slowdown
-      const duration = 4000; // 4 seconds for smoother experience
+      const duration = 5000; // 5 seconds for even smoother experience
       const startTime = Date.now();
 
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
-        // Enhanced easing function for ultra-smooth slowdown
+        // Enhanced easing function for ultra-smooth slowdown with better physics
         let easeProgress;
-        if (progress < 0.1) {
-          // Phase 1: Quick start (first 10% of time) - quadratic ease-in
-          const phaseProgress = progress / 0.1;
-          easeProgress = phaseProgress * phaseProgress * 0.3; // 0% to 30% distance
-        } else if (progress < 0.4) {
-          // Phase 2: Fast movement (10%-40% of time) - linear
-          const phaseProgress = (progress - 0.1) / 0.3;
-          easeProgress = 0.3 + phaseProgress * 0.5; // 30% to 80% distance
+        if (progress < 0.15) {
+          // Phase 1: Quick start (first 15% of time) - cubic ease-in
+          const phaseProgress = progress / 0.15;
+          easeProgress = Math.pow(phaseProgress, 3) * 0.25; // 0% to 25% distance
+        } else if (progress < 0.5) {
+          // Phase 2: Fast movement (15%-50% of time) - linear with slight acceleration
+          const phaseProgress = (progress - 0.15) / 0.35;
+          easeProgress = 0.25 + phaseProgress * 0.6; // 25% to 85% distance
         } else {
-          // Phase 3: Ultra-smooth slowdown (40%-100% of time) - quartic ease-out
-          const phaseProgress = (progress - 0.4) / 0.6;
-          // Quartic ease-out for ultra-smooth deceleration: 1 - (1-t)^4
-          const smoothEaseOut = 1 - Math.pow(1 - phaseProgress, 4);
-          easeProgress = 0.8 + smoothEaseOut * 0.2; // 80% to 100% distance
+          // Phase 3: Ultra-smooth slowdown (50%-100% of time) - exponential ease-out
+          const phaseProgress = (progress - 0.5) / 0.5;
+          // Exponential ease-out for realistic deceleration: 1 - e^(-3t)
+          const smoothEaseOut = 1 - Math.exp(-3 * phaseProgress);
+          easeProgress = 0.85 + smoothEaseOut * 0.15; // 85% to 100% distance
         }
         
         const currentPosition = startPosition + (exactTargetPosition - startPosition) * easeProgress;
@@ -238,22 +238,36 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
         {/* Center indicator line */}
-        <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
+        <div className={`absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none transition-all duration-300 ${
+          isAnimating ? 'w-2' : 'w-1'
+        }`}>
           {/* Top arrow */}
           <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-emerald-400"></div>
+            <div className={`w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent transition-colors duration-300 ${
+              isAnimating ? 'border-b-yellow-400' : 'border-b-emerald-400'
+            }`}></div>
           </div>
           
           {/* Bottom arrow */}
           <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-emerald-400"></div>
+            <div className={`w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent transition-colors duration-300 ${
+              isAnimating ? 'border-t-yellow-400' : 'border-t-emerald-400'
+            }`}></div>
           </div>
           
           {/* Center line */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-300 via-emerald-400 to-emerald-300 shadow-lg"></div>
+          <div className={`absolute inset-0 shadow-lg transition-all duration-300 ${
+            isAnimating 
+              ? 'bg-gradient-to-b from-yellow-300 via-yellow-400 to-yellow-300' 
+              : 'bg-gradient-to-b from-emerald-300 via-emerald-400 to-emerald-300'
+          }`}></div>
           
           {/* Glow effect */}
-          <div className="absolute inset-0 bg-emerald-400 shadow-emerald-400/50 shadow-2xl blur-sm animate-pulse"></div>
+          <div className={`absolute inset-0 shadow-2xl blur-sm transition-all duration-300 ${
+            isAnimating 
+              ? 'bg-yellow-400 shadow-yellow-400/50 animate-pulse' 
+              : 'bg-emerald-400 shadow-emerald-400/50'
+          }`}></div>
         </div>
 
         {/* Horizontal scrolling tiles */}
@@ -271,6 +285,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             const distanceFromCenter = Math.abs(tileCenter - actualCenterOffset);
             const isNearCenter = distanceFromCenter < TILE_WIDTH / 2;
             const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < TILE_WIDTH / 3;
+            const isSpinningTile = isAnimating && distanceFromCenter < TILE_WIDTH / 2;
 
             return (
               <div
@@ -280,6 +295,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   border-2 shadow-lg transition-all duration-200
                   ${getTileColor(tile.color)}
                   ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : ''}
+                  ${isSpinningTile ? 'scale-105 ring-2 ring-yellow-400 shadow-xl shadow-yellow-400/30 z-10 animate-pulse' : ''}
                   ${isNearCenter && isAnimating ? 'scale-105 z-10' : ''}
                 `}
                 style={{ width: `${TILE_WIDTH}px` }}
