@@ -156,7 +156,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     setTranslateX(currentPosition);
 
-    if (progress < 1) {
+    // Continue animation until we reach the full duration
+    if (elapsed < SPINNING_PHASE_DURATION) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
       // Animation complete - set exact target position
@@ -202,7 +203,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [animationPhase, startTime, targetPosition, translateX, SPINNING_PHASE_DURATION, winningSlot]);
 
-  // Main animation trigger - FIXED TO PREVENT DOUBLE ANIMATION
+  // Main animation trigger - PREVENT DOUBLE ANIMATION
   useEffect(() => {
     // Create a unique identifier for this spinning phase
     const spinningPhaseId = `${isSpinning}-${winningSlot}`;
@@ -227,14 +228,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log('🛑 STOPPING ANIMATION - Spinning phase ended');
       setIsAnimating(false);
       setAnimationPhase('stopped');
-      hasStartedAnimation.current = false; // Reset for next phase
+      // Don't reset hasStartedAnimation here - keep it true until next round
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     } else if (!isSpinning && !isAnimating) {
       setAnimationPhase('idle');
-      hasStartedAnimation.current = false; // Reset for next phase
-      hasCompletedAnimation.current = false; // Reset completion flag
+      // Only reset animation flags when we're completely idle
+      if (hasCompletedAnimation.current) {
+        hasStartedAnimation.current = false; // Reset for next phase
+        hasCompletedAnimation.current = false; // Reset completion flag
+      }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
