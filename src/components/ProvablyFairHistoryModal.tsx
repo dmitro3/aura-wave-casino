@@ -5,9 +5,10 @@ import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Calendar, Shield, Eye, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Shield, Eye, X, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
 import { ProvablyFairModal } from './ProvablyFairModal';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 interface ProvablyFairHistoryModalProps {
   isOpen: boolean;
@@ -425,7 +426,16 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
               )}
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between pt-4 border-t border-white/10">
+              <Link 
+                to="/provably-fair" 
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-emerald-400 transition-colors"
+                onClick={() => onClose()}
+              >
+                <HelpCircle className="w-4 h-4" />
+                How does Provably Fair work?
+              </Link>
+              
               <Button onClick={onClose} variant="outline" className="glass">
                 <X className="w-4 h-4 mr-1" />
                 Close

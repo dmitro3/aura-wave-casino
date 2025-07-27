@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Shield, Eye, Calculator, Dice6 } from 'lucide-react';
+import { Shield, Eye, Calculator, Dice6, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface RoundData {
   id: string;
@@ -455,6 +456,18 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                 </CardContent>
               </Card>
             )}
+            
+            {/* How it works link */}
+            <div className="flex justify-center pt-3 border-t border-border/40">
+              <Link 
+                to="/provably-fair" 
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-emerald-400 transition-colors"
+                onClick={() => onClose()}
+              >
+                <HelpCircle className="w-4 h-4" />
+                How does Provably Fair work?
+              </Link>
+            </div>
           </div>
         )}
       </DialogContent>
