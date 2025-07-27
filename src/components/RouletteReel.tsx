@@ -55,11 +55,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const currentSpinningPhase = useRef<string>('');
   const hasCompletedAnimation = useRef<boolean>(false);
 
-  // Animation configuration - MATCHES SPINNING PHASE DURATION
+  // Animation configuration - SIMPLE SMOOTH ANIMATION
   const SPINNING_PHASE_DURATION = 5000; // 5 seconds (matches server SPINNING_DURATION)
-  const ACCELERATION_DURATION = 1000; // 1 second acceleration
-  const FAST_SPIN_DURATION = 2500; // 2.5 seconds fast spin
-  const DECELERATION_DURATION = 1500; // 1.5 seconds deceleration
   const WINNING_GLOW_DURATION = 2000; // 2 seconds
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, isAnimating, animationPhase });
@@ -77,7 +74,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     });
   }
 
-  // SIMPLIFIED AND PRECISE target position calculation
+  // SIMPLE target position calculation - allows landing anywhere on the winning tile
   const calculateTargetPosition = useCallback((slot: number) => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
@@ -89,81 +86,53 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const centerRepeat = Math.floor(BUFFER_TILES / 2);
     const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
     
-    // Calculate the exact position where the winning tile center aligns with viewport center
+    // Calculate the position where the winning tile is under the vertical line
     const targetTileLeft = targetTileIndex * TILE_SIZE;
-    const targetTileCenter = targetTileLeft + TILE_SIZE / 2;
     const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
     
-    // The target position is the offset needed to move the tile center to viewport center
-    const targetPosition = viewportCenter - targetTileCenter;
+    // Allow the winning tile to land anywhere under the vertical line (not necessarily centered)
+    // Add some randomness to make it more exciting (like CSGORoll)
+    const randomOffset = (Math.random() - 0.5) * TILE_SIZE * 0.6; // ±30% of tile width
+    const targetPosition = viewportCenter - targetTileLeft - randomOffset;
 
-    console.log('🎯 PRECISE TARGET CALCULATION:', {
+    console.log('🎯 TARGET CALCULATION:', {
       slot,
       slotIndex,
       targetTileIndex,
       targetTileLeft,
-      targetTileCenter,
       viewportCenter,
+      randomOffset: Math.round(randomOffset),
       targetPosition: Math.round(targetPosition),
-      verification: {
-        finalTileCenter: targetTileCenter + targetPosition,
-        shouldEqual: viewportCenter,
-        difference: Math.abs((targetTileCenter + targetPosition) - viewportCenter)
+      landingPosition: {
+        tileLeft: targetTileLeft + targetPosition,
+        tileRight: targetTileLeft + targetPosition + TILE_SIZE,
+        viewportCenter,
+        isUnderLine: (targetTileLeft + targetPosition) <= viewportCenter && (targetTileLeft + targetPosition + TILE_SIZE) >= viewportCenter
       }
     });
 
     return Math.round(targetPosition);
   }, []);
 
-  // SMOOTH THREE-PHASE ANIMATION FUNCTION
+  // SIMPLE SMOOTH ANIMATION FUNCTION
   const animate = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
-    const totalElapsed = elapsed;
+    const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
-    let currentPosition = translateX;
+    // Smooth easing curve: start fast, slow down at the end
+    const easeProgress = 1 - Math.pow(1 - progress, 3);
     
-    if (totalElapsed < ACCELERATION_DURATION) {
-      // ACCELERATION PHASE (0-1000ms)
-      const accelerationProgress = totalElapsed / ACCELERATION_DURATION;
-      const easeProgress = 1 - Math.pow(1 - accelerationProgress, 3); // Smooth ease-in
-      
-      // Move from current position to fast spin position
-      const accelerationDistance = -TILE_SIZE * 15; // Move 15 tiles left during acceleration
-      currentPosition = translateX + (easeProgress * accelerationDistance);
-      
-    } else if (totalElapsed < ACCELERATION_DURATION + FAST_SPIN_DURATION) {
-      // FAST SPIN PHASE (1000-3500ms)
-      const fastSpinElapsed = totalElapsed - ACCELERATION_DURATION;
-      const fastSpinProgress = fastSpinElapsed / FAST_SPIN_DURATION;
-      
-      // Linear movement during fast spin
-      const accelerationDistance = -TILE_SIZE * 15;
-      const fastSpinDistance = -TILE_SIZE * 40; // Move 40 more tiles left during fast spin
-      currentPosition = translateX + accelerationDistance + (fastSpinProgress * fastSpinDistance);
-      
-    } else if (totalElapsed < SPINNING_PHASE_DURATION) {
-      // DECELERATION PHASE (3500-5000ms)
-      const decelerationElapsed = totalElapsed - ACCELERATION_DURATION - FAST_SPIN_DURATION;
-      const decelerationProgress = decelerationElapsed / DECELERATION_DURATION;
-      
-      // Smooth ease-out deceleration
-      const easeProgress = 1 - Math.pow(decelerationProgress, 3);
-      
-      // Move from fast spin end to target position
-      const fastSpinEndPosition = translateX - TILE_SIZE * 55; // End of fast spin
-      const remainingDistance = targetPosition - fastSpinEndPosition;
-      currentPosition = fastSpinEndPosition + (remainingDistance * easeProgress);
-      
-    } else {
-      // Animation complete - set exact target position
-      currentPosition = targetPosition;
-    }
+    // Calculate the total distance to travel from current position to target
+    const totalDistance = targetPosition - translateX;
+    
+    // Apply easing to the distance
+    const currentPosition = translateX + (easeProgress * totalDistance);
     
     setTranslateX(currentPosition);
 
-    if (totalElapsed < SPINNING_PHASE_DURATION) {
+    if (progress < 1) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
       // Animation complete - set exact target position
@@ -179,33 +148,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         targetPosition,
         finalPosition: targetPosition,
         winningSlot,
-        totalDuration: totalElapsed,
+        totalDuration: elapsed,
         savedToStorage: true
-      });
-      
-      // Verify the winning tile is centered
-      const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
-      const centerRepeat = Math.floor(BUFFER_TILES / 2);
-      const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
-      const targetTileLeft = targetTileIndex * TILE_SIZE;
-      const targetTileCenter = targetTileLeft + TILE_SIZE / 2;
-      const actualCenter = targetPosition + targetTileCenter;
-      const centerOffset = Math.abs(actualCenter - (REEL_VIEWPORT_WIDTH / 2));
-      
-      console.log('🎯 WINNING TILE VERIFICATION:', {
-        targetTileIndex,
-        targetTileCenter,
-        actualCenter,
-        expectedCenter: REEL_VIEWPORT_WIDTH / 2,
-        centerOffset: centerOffset.toFixed(2),
-        isCentered: centerOffset < 1
       });
       
       // Start winning glow
       setShowWinningGlow(true);
       setTimeout(() => setShowWinningGlow(false), WINNING_GLOW_DURATION);
     }
-  }, [animationPhase, startTime, targetPosition, winningSlot, translateX]);
+  }, [animationPhase, startTime, targetPosition, translateX, SPINNING_PHASE_DURATION]);
 
   // Main animation trigger - FIXED TO PREVENT DOUBLE ANIMATION
   useEffect(() => {
