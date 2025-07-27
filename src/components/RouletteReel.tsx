@@ -285,8 +285,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
     // When spinning stops, clean up flags for next round
     else if (!isSpinning && hasStartedAnimation.current) {
-      console.log('🛑 Spinning phase ended - POSITION LOCKED, ready for next round');
-      // Clean reset for next round but NEVER touch position
+      console.log('🛑 Spinning phase ended - position will be maintained');
+      // Clean reset for next round but maintain position
       hasStartedAnimation.current = false;
     }
     // Ensure idle state when not spinning
@@ -297,14 +297,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [isSpinning, winningSlot]); // REMOVED problematic dependencies
 
-  // 🚫 DISABLED Server synchronization to prevent position resets
-  // The reel position is now PERMANENTLY maintained between rounds
-  // Server sync is completely disabled to prevent any interference
+  // 🔄 Server synchronization - ONLY when completely idle and not spinning
   useEffect(() => {
-    // COMPLETELY DISABLED - No server sync that could reset position
-    // Position is now 100% controlled by local animation only
-    console.log('🔒 Server sync DISABLED - Position permanently locked after each round');
-  }, [synchronizedPosition]); // Keep dependency but do nothing
+    if (synchronizedPosition !== null && 
+        synchronizedPosition !== undefined && 
+        !isSpinning && 
+        !isAnimating && 
+        (animationPhase === 'idle' || animationPhase === 'completed') &&
+        !hasStartedAnimation.current) {
+      
+      console.log('🔄 Server sync (betting phase only):', synchronizedPosition);
+      setTranslateX(synchronizedPosition);
+      localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
+    }
+  }, [synchronizedPosition, isSpinning, isAnimating, animationPhase]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -431,9 +437,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             <div className={`font-bold ${!isSpinning && !isAnimating ? 'text-green-400' : 'text-yellow-400'}`}>
               Status: {!isSpinning && !isAnimating ? 'MOTIONLESS' : 'MOVING'}
             </div>
-            <div className="text-blue-400 font-bold">
-              Position: NEVER RESETS
-            </div>
           </div>
         )}
 
@@ -447,11 +450,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           {isSpinning && isAnimating && (
             <div className="bg-yellow-500/20 border border-yellow-400 text-yellow-400 px-2 py-1 rounded text-xs font-bold animate-pulse">
               SPINNING - SINGLE ANIMATION
-            </div>
-          )}
-          {animationPhase === 'completed' && !isSpinning && (
-            <div className="bg-blue-500/20 border border-blue-400 text-blue-400 px-2 py-1 rounded text-xs font-bold">
-              ROUND COMPLETE - POSITION PERMANENT
             </div>
           )}
         </div>
