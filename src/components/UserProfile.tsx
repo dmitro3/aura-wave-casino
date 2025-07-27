@@ -736,6 +736,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
   const [claimableAchievements, setClaimableAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
+  const [userStats, setUserStats] = useState<any>(null);
 
   // Debug: Log the stats being passed
   useEffect(() => {
@@ -743,6 +744,90 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
     console.log('🔍 AchievementsSection isOwnProfile:', isOwnProfile);
     console.log('🔍 AchievementsSection userId:', userId);
   }, [stats, isOwnProfile, userId]);
+
+  // Fetch user stats for achievement progress calculation
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!userId) return;
+
+      try {
+        console.log('🔍 Fetching user stats for achievement progress:', userId);
+        
+        const { data, error } = await supabase
+          .from('user_level_stats')
+          .select(`
+            id,
+            user_id,
+            current_level,
+            lifetime_xp,
+            current_level_xp,
+            xp_to_next_level,
+            border_tier,
+            border_unlocked_at,
+            available_cases,
+            total_cases_opened,
+            total_case_value,
+            coinflip_games,
+            coinflip_wins,
+            coinflip_wagered,
+            coinflip_profit,
+            crash_games,
+            crash_wins,
+            crash_wagered,
+            crash_profit,
+            roulette_games,
+            roulette_wins,
+            roulette_wagered,
+            roulette_profit,
+            roulette_green_wins,
+            roulette_highest_win,
+            roulette_biggest_bet,
+            roulette_best_streak,
+            roulette_favorite_color,
+            tower_games,
+            tower_wins,
+            tower_wagered,
+            tower_profit,
+            tower_highest_level,
+            tower_perfect_games,
+            total_games,
+            total_wins,
+            total_wagered,
+            total_profit,
+            best_coinflip_streak,
+            current_coinflip_streak,
+            best_win_streak,
+            biggest_win,
+            biggest_loss,
+            biggest_single_bet,
+            chat_messages_count,
+            login_days_count,
+            account_created,
+            created_at,
+            updated_at
+          `)
+          .eq('user_id', userId)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('❌ Error fetching user stats for achievements:', error);
+          return;
+        }
+
+        if (data) {
+          console.log('✅ Successfully fetched user stats for achievements:', data);
+          setUserStats(data);
+        } else {
+          console.log('⚠️ No user stats found for user:', userId);
+          setUserStats(null);
+        }
+      } catch (error) {
+        console.error('❌ Error in fetchUserStats:', error);
+      }
+    };
+
+    fetchUserStats();
+  }, [userId]);
 
   useEffect(() => {
     fetchAchievements();
@@ -774,12 +859,12 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       setUserAchievements(unlockedAchievements || []);
 
       // Check for claimable achievements (requirements met but not claimed)
-      if (isOwnProfile && stats) {
+      if (isOwnProfile && userStats) {
         const claimable = (allAchievements || []).filter(achievement => {
           const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
           if (isAlreadyUnlocked) return false;
           
-          const progress = calculateProgressForAchievement(achievement, stats);
+          const progress = calculateProgressForAchievement(achievement, userStats);
           return progress >= 100;
         });
         setClaimableAchievements(claimable);
@@ -845,7 +930,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
   };
 
   const calculateProgress = (achievement: any): number => {
-    return calculateProgressForAchievement(achievement, stats);
+    return calculateProgressForAchievement(achievement, userStats);
   };
 
   const claimAchievement = async (achievement: any) => {
