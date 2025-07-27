@@ -737,6 +737,13 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
 
+  // Debug: Log the stats being passed
+  useEffect(() => {
+    console.log('🔍 AchievementsSection received stats:', stats);
+    console.log('🔍 AchievementsSection isOwnProfile:', isOwnProfile);
+    console.log('🔍 AchievementsSection userId:', userId);
+  }, [stats, isOwnProfile, userId]);
+
   useEffect(() => {
     fetchAchievements();
   }, [userId]);
@@ -785,11 +792,20 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
   };
 
   const calculateProgressForAchievement = (achievement: any, userStats: any): number => {
-    if (!userStats) return 0;
+    if (!userStats) {
+      console.log('❌ No userStats provided for achievement:', achievement.name);
+      return 0;
+    }
     
     const criteria = achievement.unlock_criteria;
     const criteriaType = criteria?.type;
     const targetValue = criteria?.value || 0;
+
+    console.log(`🔍 Calculating progress for "${achievement.name}" (${criteriaType}):`, {
+      criteria,
+      userStats,
+      targetValue
+    });
 
     let currentValue = 0;
     
@@ -813,8 +829,13 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       case 'win_streak': currentValue = userStats.best_win_streak || 0; break;
       case 'biggest_single_bet': currentValue = userStats.biggest_single_bet || 0; break;
       case 'user_level': currentValue = userStats.current_level || 0; break;
-      default: currentValue = 0;
+      default: 
+        console.log(`⚠️ Unknown criteria type: ${criteriaType}`);
+        currentValue = 0; 
+        break;
     }
+
+    console.log(`📊 Progress calculation: ${currentValue}/${targetValue} = ${((currentValue / targetValue) * 100).toFixed(1)}%`);
 
     // Prevent division by zero and handle edge cases
     if (targetValue === 0) return 0;
