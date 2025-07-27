@@ -14,6 +14,11 @@ AND trigger_schema = 'public';
 DROP TRIGGER IF EXISTS check_achievements_trigger ON public.user_level_stats;
 DROP TRIGGER IF EXISTS check_ready_achievements_trigger ON public.user_level_stats;
 
+-- Drop the functions first before recreating them
+DROP FUNCTION IF EXISTS public.check_and_award_achievements(uuid);
+DROP FUNCTION IF EXISTS public.check_ready_achievements(uuid);
+DROP FUNCTION IF EXISTS public.trigger_check_ready_achievements();
+
 -- Completely disable the main auto-awarding function
 CREATE OR REPLACE FUNCTION public.check_and_award_achievements(
   p_user_id UUID
