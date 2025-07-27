@@ -651,11 +651,20 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
 
               {/* Achievements Tab */}
               <TabsContent value="achievements" className="space-y-6">
-                <AchievementsSection 
-                  isOwnProfile={isOwnProfile}
-                  userId={userData.id}
-                  stats={stats}
-                />
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">Loading achievements...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <AchievementsSection 
+                    isOwnProfile={isOwnProfile}
+                    userId={userData.id}
+                    stats={stats}
+                  />
+                )}
               </TabsContent>
 
               {/* Statistics Tab */}
@@ -831,66 +840,38 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       setLoading(true);
       
       try {
-        // Fetch both achievements and user stats in parallel
+        // Fetch only essential data for faster loading
         const [achievementsResult, userStatsResult] = await Promise.all([
-          // Fetch all achievements
+          // Fetch all achievements (lightweight)
           supabase
             .from('achievements')
-            .select('*'),
+            .select('id, name, description, category, icon, rarity, difficulty, reward_amount, reward_type, criteria')
+            .order('rarity', { ascending: true })
+            .order('difficulty', { ascending: true }),
           
-          // Fetch user stats
+          // Fetch user stats (only essential fields for achievements)
           supabase
             .from('user_level_stats')
             .select(`
-              id,
-              user_id,
-              current_level,
-              lifetime_xp,
-              current_level_xp,
-              xp_to_next_level,
-              border_tier,
-              border_unlocked_at,
-              available_cases,
-              total_cases_opened,
-              total_case_value,
-              coinflip_games,
-              coinflip_wins,
-              coinflip_wagered,
-              coinflip_profit,
-              crash_games,
-              crash_wins,
-              crash_wagered,
-              crash_profit,
-              roulette_games,
-              roulette_wins,
-              roulette_wagered,
-              roulette_profit,
-              roulette_green_wins,
-              roulette_highest_win,
-              roulette_biggest_bet,
-              roulette_best_streak,
-              roulette_favorite_color,
-              tower_games,
-              tower_wins,
-              tower_wagered,
-              tower_profit,
-              tower_highest_level,
-              tower_perfect_games,
               total_games,
               total_wins,
-              total_wagered,
               total_profit,
-              best_coinflip_streak,
-              current_coinflip_streak,
-              best_win_streak,
-              biggest_win,
-              biggest_loss,
-              biggest_single_bet,
+              total_wagered,
+              roulette_games,
+              roulette_wins,
+              roulette_green_wins,
+              roulette_highest_win,
+              tower_games,
+              tower_highest_level,
+              tower_perfect_games,
+              coinflip_wins,
+              total_cases_opened,
               chat_messages_count,
               login_days_count,
               account_created,
-              created_at,
-              updated_at
+              best_win_streak,
+              biggest_single_bet,
+              current_level
             `)
             .eq('user_id', userId)
             .single()
@@ -910,13 +891,10 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
           setUserStats(userStatsResult.data);
         }
 
-        // Fetch user's unlocked achievements
+        // Fetch user's unlocked achievements (lightweight)
         const { data: userAchievements, error: userError } = await supabase
           .from('user_achievements')
-          .select(`
-            *,
-            achievements (*)
-          `)
+          .select('achievement_id, unlocked_at')
           .eq('user_id', userId);
 
         if (userError) {
@@ -1029,7 +1007,25 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
   };
 
   const calculateProgress = (achievement: any): number => {
-    return calculateProgressForAchievement(achievement, userStats);
+    // Memoize the calculation for better performance
+    const cacheKey = `${achievement.id}-${JSON.stringify(userStats)}`;
+    if (!calculateProgress.cache) {
+      calculateProgress.cache = new Map();
+    }
+    
+    if (calculateProgress.cache.has(cacheKey)) {
+      return calculateProgress.cache.get(cacheKey);
+    }
+    
+    const result = calculateProgressForAchievement(achievement, userStats);
+    calculateProgress.cache.set(cacheKey, result);
+    
+    // Clear cache if it gets too large
+    if (calculateProgress.cache.size > 100) {
+      calculateProgress.cache.clear();
+    }
+    
+    return result;
   };
 
   const claimAchievement = async (achievement: any) => {
