@@ -242,8 +242,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setStartTime(Date.now());
       setShowWinningGlow(false);
       
-    } else if (!isSpinning && isAnimating) {
-      console.log('🛑 SPINNING PHASE ENDED - Animation should be complete');
+    } else if (!isSpinning && isAnimating && hasCompletedAnimation.current) {
+      console.log('🛑 SPINNING PHASE ENDED - Animation completed successfully');
       setIsAnimating(false);
       setAnimationPhase('stopped');
       // DO NOT reset hasStartedAnimation here - keep it true until next round
@@ -269,11 +269,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     if (animationPhase === 'accelerating') {
       animate();
     } else if (animationPhase === 'idle' || animationPhase === 'stopped') {
-      if (animationRef.current) {
+      // Only cancel animation if we're not in a spinning phase
+      if (animationRef.current && !isSpinning) {
         cancelAnimationFrame(animationRef.current);
       }
     }
-  }, [animationPhase, animate]);
+  }, [animationPhase, animate, isSpinning]);
 
   // Server synchronization - PREVENT TELEPORTATION DURING ANIMATION
   useEffect(() => {
@@ -286,6 +287,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       } else if (hasCompletedAnimation.current) {
         console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
         return;
+      } else if (animationRef.current) {
+        console.log('🚫 BLOCKING SERVER SYNC - Animation frame active, keeping current position');
+        return;
       } else {
         console.log('🔄 Server sync:', synchronizedPosition);
         setTranslateX(synchronizedPosition);
@@ -297,10 +301,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Ensure position is saved whenever it changes (except during animation)
   useEffect(() => {
-    if (!isAnimating && animationPhase !== 'accelerating') {
+    if (!isAnimating && animationPhase !== 'accelerating' && !isSpinning) {
       localStorage.setItem('rouletteReelPosition', translateX.toString());
     }
-  }, [translateX, isAnimating, animationPhase]);
+  }, [translateX, isAnimating, animationPhase, isSpinning]);
 
   // Get tile color class
   const getTileColor = (color: string) => {
