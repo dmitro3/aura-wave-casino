@@ -377,9 +377,11 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                         {verificationData.verification_result === 'VALID' ? '✅' : '❌'} Result: Slot {verificationData.result_slot} ({verificationData.result_color}) - {verificationData.verification_result}
                       </p>
                       <div className="mt-3 text-xs text-muted-foreground">
-                        <p>🛡️ Advanced provably fair cryptographic verification</p>
-                        <p>📅 Daily seed and lotto are generated every 24 hours</p>
+                        <p>🛡️ Enhanced provably fair cryptographic verification system</p>
+                        <p>📅 Daily seeds are generated every 24 hours and auto-revealed for transparency</p>
                         <p>🔒 Results are predetermined and cannot be manipulated</p>
+                        <p>🚫 Client seeds cannot be changed during active rounds for security</p>
+                        <p>⚡ Legacy fallback systems disabled - only secure verification allowed</p>
                       </div>
                     </div>
                   )}

@@ -77,3 +77,29 @@ $$;
 
 COMMENT ON TABLE public.daily_seeds IS 'Daily server seeds and lotto numbers for PLG.BET style provably fair system';
 COMMENT ON FUNCTION get_or_create_daily_seed() IS 'Gets existing or creates new daily seed for provably fair system';
+
+-- 🛡️ SECURITY FIX: Automatic daily seed revelation for transparency
+CREATE OR REPLACE FUNCTION auto_reveal_expired_daily_seeds()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Auto-reveal seeds from yesterday and earlier
+    UPDATE public.daily_seeds 
+    SET 
+        is_revealed = true,
+        revealed_at = NOW()
+    WHERE 
+        date < CURRENT_DATE 
+        AND is_revealed = false;
+        
+    -- Log the revelation
+    RAISE NOTICE 'Auto-revealed expired daily seeds for transparency';
+END;
+$$;
+
+COMMENT ON FUNCTION auto_reveal_expired_daily_seeds() IS 'Automatically reveals daily seeds from previous days for transparency';
+
+-- Create a function to be called daily (if using pg_cron extension)
+-- SELECT cron.schedule('auto-reveal-seeds', '0 1 * * *', 'SELECT auto_reveal_expired_daily_seeds();');

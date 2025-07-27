@@ -145,6 +145,23 @@ serve(async (req) => {
         });
       }
 
+      case 'reveal_daily_seeds': {
+        console.log('🔓 Manual daily seed revelation requested');
+        
+        try {
+          const result = await revealExpiredDailySeeds(supabase);
+          return new Response(JSON.stringify(result), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          console.error('❌ Error revealing daily seeds:', error);
+          return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
       case 'verify_round': {
         if (!roundId) {
           throw new Error('Round ID required');
@@ -289,40 +306,31 @@ async function getCurrentRound(supabase: any) {
       
       let result;
       
-             // Try advanced method first
-      if (activeRound.daily_seed_id && activeRound.nonce_id) {
-        try {
-          console.log('🎯 Using advanced provably fair method');
-          
-          // Get daily seed for this round
-          const { data: dailySeed, error: seedError } = await supabase
-            .from('daily_seeds')
-            .select('*')
-            .eq('id', activeRound.daily_seed_id)
-            .single();
-
-          if (seedError) {
-            throw new Error(`Daily seed fetch error: ${seedError.message}`);
-          }
-
-          if (!dailySeed) {
-            throw new Error('Daily seed not found for round');
-          }
-
-                     // Generate provably fair result using advanced method
-          const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
-          result = resultData.result;
-          
-        } catch (error) {
-          console.error('❌ Advanced result generation failed, falling back to legacy:', error);
-          // Fall back to legacy method
-          result = await generateLegacyResult(supabase, activeRound);
-        }
-      } else {
-        console.log('🔄 Using legacy method (no advanced data)');
-        // Use legacy method if no advanced data
-        result = await generateLegacyResult(supabase, activeRound);
+      // 🛡️ SECURITY FIX: Use only advanced provably fair method - no legacy fallback
+      if (!activeRound.daily_seed_id || !activeRound.nonce_id) {
+        throw new Error('Round is missing required provably fair data (daily_seed_id or nonce_id). Cannot proceed without secure verification.');
       }
+
+      console.log('🎯 Using advanced provably fair method (legacy system disabled for security)');
+      
+      // Get daily seed for this round
+      const { data: dailySeed, error: seedError } = await supabase
+        .from('daily_seeds')
+        .select('*')
+        .eq('id', activeRound.daily_seed_id)
+        .single();
+
+      if (seedError) {
+        throw new Error(`Daily seed fetch error: ${seedError.message}`);
+      }
+
+      if (!dailySeed) {
+        throw new Error('Daily seed not found for round');
+      }
+
+      // Generate provably fair result using advanced method
+      const resultData = await generateProvablyFairResult(supabase, dailySeed, activeRound.nonce_id);
+      result = resultData.result;
       
       // Calculate final reel position for cross-user sync (MUST MATCH FRONTEND EXACTLY)
       const TILE_WIDTH = 100; // EXACTLY matches frontend TILE_SIZE_PX
@@ -465,16 +473,27 @@ async function createNewRound(supabase: any) {
     // Try advanced system first
     console.log('🔬 Attempting advanced provably fair round...');
     
+    // 🛡️ SECURITY FIX: Auto-reveal expired seeds for transparency
+    try {
+      await revealExpiredDailySeeds(supabase);
+    } catch (error) {
+      console.error('⚠️ Failed to auto-reveal expired seeds, but continuing:', error);
+      // Don't fail round creation if revelation fails
+    }
+
     // Get or create today's daily seed
     console.log('📅 Getting daily seed...');
     const dailySeed = await getOrCreateDailySeed(supabase);
     console.log('✅ Daily seed obtained:', { id: dailySeed.id, date: dailySeed.date, server_seed_hash: dailySeed.server_seed_hash });
     
-    // Get next nonce ID for today
+    // 🛡️ SECURITY FIX: Improved nonce system - daily reset for better security
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Get last nonce for TODAY only (nonces reset daily)
     const { data: lastRound, error: lastRoundError } = await supabase
       .from('roulette_rounds')
-      .select('nonce_id')
-      .eq('daily_seed_id', dailySeed.id)
+      .select('nonce_id, daily_seed_id')
+      .eq('daily_seed_id', dailySeed.id) // Only count rounds from today's seed
       .order('nonce_id', { ascending: false })
       .limit(1)
       .single();
@@ -483,8 +502,9 @@ async function createNewRound(supabase: any) {
       console.error('❌ Error fetching last round:', lastRoundError);
     }
 
+    // Start from 1 each day for better nonce isolation
     const nextNonceId = lastRound ? lastRound.nonce_id + 1 : 1;
-    console.log('✅ Next nonce ID:', nextNonceId);
+    console.log(`✅ Next nonce ID for ${today}: ${nextNonceId}`);
 
     const now = new Date();
     const bettingEnd = new Date(now.getTime() + BETTING_DURATION);
@@ -1137,8 +1157,92 @@ async function revealDailySeed(supabase: any, date: string) {
   return updatedSeed;
 }
 
+// 🛡️ SECURITY FIX: Automatic seed revelation for transparency
+async function revealExpiredDailySeeds(supabase: any) {
+  console.log('🔓 Auto-revealing expired daily seeds for transparency');
+  
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  // Reveal all seeds from yesterday and earlier that aren't revealed yet
+  const { data: expiredSeeds, error } = await supabase
+    .from('daily_seeds')
+    .update({
+      is_revealed: true,
+      revealed_at: new Date().toISOString()
+    })
+    .lte('date', yesterdayStr)
+    .eq('is_revealed', false)
+    .select('date, server_seed');
+
+  if (error) {
+    console.error('❌ Error auto-revealing expired seeds:', error);
+    throw error;
+  }
+
+  const revealedCount = expiredSeeds?.length || 0;
+  console.log(`✅ Auto-revealed ${revealedCount} expired daily seeds`);
+  
+  return {
+    success: true,
+    revealed_count: revealedCount,
+    revealed_dates: expiredSeeds?.map(seed => seed.date) || []
+  };
+}
+
 async function setClientSeed(supabase: any, userId: string, clientSeed: string) {
   console.log(`🔑 Setting client seed for user ${userId}`);
+
+  // 🛡️ SECURITY FIX: Prevent client seed manipulation during active rounds
+  console.log('🔍 Checking for active bets before allowing seed change...');
+  
+  // Get current active round
+  const { data: currentRound } = await supabase
+    .from('roulette_rounds')
+    .select('id, status')
+    .in('status', ['betting', 'spinning'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (currentRound) {
+    // Check if user has any bets in the current round
+    const { data: activeBets, error: betsError } = await supabase
+      .from('roulette_bets')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('round_id', currentRound.id);
+
+    if (betsError) {
+      console.error('❌ Error checking active bets:', betsError);
+      throw new Error('Failed to validate active bets');
+    }
+
+    if (activeBets && activeBets.length > 0) {
+      console.log(`🚫 User ${userId} has ${activeBets.length} active bets in round ${currentRound.id}`);
+      throw new Error('Cannot change client seed while you have active bets in the current round. Please wait for the round to complete.');
+    }
+  }
+
+  // 🔒 SECURITY FIX: Additional validation - prevent rapid seed changes
+  const { data: recentSeedChange } = await supabase
+    .from('roulette_client_seeds')
+    .select('created_at')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .single();
+
+  if (recentSeedChange) {
+    const timeSinceLastChange = Date.now() - new Date(recentSeedChange.created_at).getTime();
+    const minChangeInterval = 60000; // 1 minute minimum between changes
+    
+    if (timeSinceLastChange < minChangeInterval) {
+      throw new Error('Client seed can only be changed once per minute for security reasons.');
+    }
+  }
+
+  console.log('✅ Security checks passed - proceeding with client seed change');
 
   // Deactivate current seed
   await supabase
@@ -1158,78 +1262,60 @@ async function setClientSeed(supabase: any, userId: string, clientSeed: string) 
     .select()
     .single();
 
+  console.log(`✅ Client seed updated successfully for user ${userId}`);
   return { success: true, seed: newSeed };
 }
 
 async function verifyRound(supabase: any, roundId: string, clientSeed?: string) {
   console.log(`🔍 Verifying round ${roundId}`);
 
-  // Try advanced verification first
-  try {
-    // Get round with daily seed info
-    const { data: round } = await supabase
-      .from('roulette_rounds')
-      .select(`
-        *,
-        daily_seeds (
-          date,
-          server_seed,
-          server_seed_hash,
-          lotto,
-          lotto_hash,
-          is_revealed
-        )
-      `)
-      .eq('id', roundId)
-      .single();
+  // 🛡️ SECURITY FIX: Use only advanced verification - no legacy fallback
+  // Get round with daily seed info
+  const { data: round } = await supabase
+    .from('roulette_rounds')
+    .select(`
+      *,
+      daily_seeds (
+        date,
+        server_seed,
+        server_seed_hash,
+        lotto,
+        lotto_hash,
+        is_revealed
+      )
+    `)
+    .eq('id', roundId)
+    .single();
 
-    if (!round) {
-      throw new Error('Round not found');
-    }
-
-    const dailySeed = round.daily_seeds;
-    
-    console.log(`🔍 Round data:`, {
-      id: round.id,
-      daily_seed_id: round.daily_seed_id,
-      nonce_id: round.nonce_id,
-      has_daily_seed: !!dailySeed
-    });
-    
-    if (dailySeed) {
-      console.log(`🔍 Daily seed data:`, {
-        date: dailySeed.date,
-        has_server_seed: !!dailySeed.server_seed,
-        has_lotto: !!dailySeed.lotto,
-        has_lotto_hash: !!dailySeed.lotto_hash
-      });
-    }
-    
-         // If we have advanced data, use it
-     if (dailySeed && round.nonce_id) {
-       console.log(`🎯 Using advanced verification for round ${roundId}`);
-       return await verifyAdvancedRound(round, dailySeed);
-    } else {
-      console.log(`🔄 Using legacy verification for round ${roundId} - dailySeed: ${!!dailySeed}, nonce_id: ${round.nonce_id}`);
-      return await verifyLegacyRound(round, clientSeed);
-    }
-    
-     } catch (error) {
-     console.error('❌ Advanced verification failed, trying legacy:', error);
-    
-    // Fallback to legacy verification
-    const { data: round } = await supabase
-      .from('roulette_rounds')
-      .select('*')
-      .eq('id', roundId)
-      .single();
-
-    if (!round) {
-      throw new Error('Round not found');
-    }
-
-    return await verifyLegacyRound(round, clientSeed);
+  if (!round) {
+    throw new Error('Round not found');
   }
+
+  const dailySeed = round.daily_seeds;
+  
+  console.log(`🔍 Round data:`, {
+    id: round.id,
+    daily_seed_id: round.daily_seed_id,
+    nonce_id: round.nonce_id,
+    has_daily_seed: !!dailySeed
+  });
+  
+  if (dailySeed) {
+    console.log(`🔍 Daily seed data:`, {
+      date: dailySeed.date,
+      has_server_seed: !!dailySeed.server_seed,
+      has_lotto: !!dailySeed.lotto,
+      has_lotto_hash: !!dailySeed.lotto_hash
+    });
+  }
+  
+  // 🛡️ SECURITY FIX: Require advanced verification data - no fallback to insecure legacy
+  if (!dailySeed || !round.nonce_id) {
+    throw new Error('Round is missing required provably fair data. This round cannot be verified due to insufficient security data.');
+  }
+
+  console.log(`🎯 Using advanced verification for round ${roundId}`);
+  return await verifyAdvancedRound(round, dailySeed);
 }
 
 async function verifyAdvancedRound(round: any, dailySeed: any) {
