@@ -92,7 +92,7 @@ export const LevelUpNotification = ({ newLevel, bonusEarned, onClose }: LevelUpN
           {/* Action Button */}
           <Button
             onClick={handleClose}
-            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-bold"
+            className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black font-bold hover:shadow-lg hover:shadow-yellow-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
           >
             Continue Playing
           </Button>
