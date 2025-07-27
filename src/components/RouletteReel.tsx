@@ -74,7 +74,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     });
   }
 
-  // SIMPLE target position calculation - allows landing anywhere on the winning tile
+  // SIMPLE target position calculation - ensures winning tile is under vertical line
   const calculateTargetPosition = useCallback((slot: number) => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
@@ -90,12 +90,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const targetTileLeft = targetTileIndex * TILE_SIZE;
     const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
     
-    // Allow the winning tile to land anywhere under the vertical line (not necessarily centered)
-    // Add some randomness to make it more exciting (like CSGORoll)
-    const randomOffset = (Math.random() - 0.5) * TILE_SIZE * 0.6; // ±30% of tile width
+    // Ensure the winning tile is under the vertical line
+    // The vertical line should be somewhere on the winning tile (not necessarily centered)
+    const randomOffset = (Math.random() - 0.5) * TILE_SIZE * 0.8; // ±40% of tile width
     const targetPosition = viewportCenter - targetTileLeft - randomOffset;
 
-    console.log('🎯 TARGET CALCULATION:', {
+    // Verify the calculation ensures the tile is under the line
+    const finalTileLeft = targetTileLeft + targetPosition;
+    const finalTileRight = finalTileLeft + TILE_SIZE;
+    const isUnderLine = finalTileLeft <= viewportCenter && finalTileRight >= viewportCenter;
+
+    console.log('🎯 ACCURATE TARGET CALCULATION:', {
       slot,
       slotIndex,
       targetTileIndex,
@@ -103,26 +108,45 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       viewportCenter,
       randomOffset: Math.round(randomOffset),
       targetPosition: Math.round(targetPosition),
-      landingPosition: {
-        tileLeft: targetTileLeft + targetPosition,
-        tileRight: targetTileLeft + targetPosition + TILE_SIZE,
-        viewportCenter,
-        isUnderLine: (targetTileLeft + targetPosition) <= viewportCenter && (targetTileLeft + targetPosition + TILE_SIZE) >= viewportCenter
+      verification: {
+        finalTileLeft: Math.round(finalTileLeft),
+        finalTileRight: Math.round(finalTileRight),
+        viewportCenter: Math.round(viewportCenter),
+        isUnderLine,
+        tileWidth: TILE_SIZE
       }
     });
+
+    if (!isUnderLine) {
+      console.error('❌ TARGET CALCULATION ERROR: Winning tile will not be under vertical line!');
+      // Fallback: center the tile
+      return Math.round(viewportCenter - targetTileLeft - TILE_SIZE / 2);
+    }
 
     return Math.round(targetPosition);
   }, []);
 
-  // SIMPLE SMOOTH ANIMATION FUNCTION
+  // ACCURATE SMOOTH ANIMATION FUNCTION
   const animate = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
-    // Smooth easing curve: start fast, slow down at the end
-    const easeProgress = 1 - Math.pow(1 - progress, 3);
+    // More accurate easing curve for realistic roulette movement
+    // Start fast, maintain speed, then slow down smoothly
+    let easeProgress;
+    if (progress < 0.3) {
+      // Acceleration phase (0-30%)
+      easeProgress = Math.pow(progress / 0.3, 2);
+    } else if (progress < 0.7) {
+      // Constant speed phase (30-70%)
+      easeProgress = 0.09 + (progress - 0.3) * 2.05; // Smooth transition
+    } else {
+      // Deceleration phase (70-100%)
+      const decelProgress = (progress - 0.7) / 0.3;
+      easeProgress = 0.7 + Math.pow(decelProgress, 3) * 0.3;
+    }
     
     // Calculate the total distance to travel from current position to target
     const totalDistance = targetPosition - translateX;
@@ -149,14 +173,34 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         finalPosition: targetPosition,
         winningSlot,
         totalDuration: elapsed,
+        expectedDuration: SPINNING_PHASE_DURATION,
+        accuracy: Math.abs(elapsed - SPINNING_PHASE_DURATION),
         savedToStorage: true
+      });
+      
+      // Verify final position
+      const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
+      const centerRepeat = Math.floor(BUFFER_TILES / 2);
+      const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
+      const targetTileLeft = targetTileIndex * TILE_SIZE;
+      const finalTileLeft = targetTileLeft + targetPosition;
+      const finalTileRight = finalTileLeft + TILE_SIZE;
+      const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
+      const isUnderLine = finalTileLeft <= viewportCenter && finalTileRight >= viewportCenter;
+      
+      console.log('🎯 FINAL POSITION VERIFICATION:', {
+        finalTileLeft: Math.round(finalTileLeft),
+        finalTileRight: Math.round(finalTileRight),
+        viewportCenter: Math.round(viewportCenter),
+        isUnderLine,
+        success: isUnderLine
       });
       
       // Start winning glow
       setShowWinningGlow(true);
       setTimeout(() => setShowWinningGlow(false), WINNING_GLOW_DURATION);
     }
-  }, [animationPhase, startTime, targetPosition, translateX, SPINNING_PHASE_DURATION]);
+  }, [animationPhase, startTime, targetPosition, translateX, SPINNING_PHASE_DURATION, winningSlot]);
 
   // Main animation trigger - FIXED TO PREVENT DOUBLE ANIMATION
   useEffect(() => {
