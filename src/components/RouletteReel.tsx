@@ -136,25 +136,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
-    // THREE-PHASE ANIMATION: Acceleration, Fast Roll, Deceleration
-    // Use progress-based approach to ensure full duration
-    let easeProgress;
+    // DEBUG: Log animation progress
+    console.log('🎰 ANIMATION PROGRESS:', {
+      elapsed,
+      progress: progress.toFixed(3),
+      expectedDuration: SPINNING_PHASE_DURATION,
+      remaining: SPINNING_PHASE_DURATION - elapsed
+    });
     
-    if (progress < 0.2) {
-      // ACCELERATION PHASE (0-20% of total time = 0-800ms)
-      const accelProgress = progress / 0.2;
-      easeProgress = Math.pow(accelProgress, 2) * 0.2; // Smooth acceleration to 20%
-      
-    } else if (progress < 0.7) {
-      // FAST ROLL PHASE (20-70% of total time = 800-2800ms)
-      const fastRollProgress = (progress - 0.2) / 0.5;
-      easeProgress = 0.2 + (fastRollProgress * 0.5); // Linear from 20% to 70%
-      
-    } else {
-      // DECELERATION PHASE (70-100% of total time = 2800-4000ms)
-      const decelProgress = (progress - 0.7) / 0.3;
-      easeProgress = 0.7 + Math.pow(decelProgress, 3) * 0.3; // Smooth deceleration to 100%
+    // SIMPLE LINEAR ANIMATION - GUARANTEED TO LAST FULL DURATION
+    // Use linear progress to ensure animation lasts exactly 4 seconds
+    let easeProgress = progress;
+    
+    // Apply minimal smoothing that doesn't affect duration
+    if (progress < 0.1) {
+      // Very gentle acceleration (0-10%)
+      easeProgress = Math.pow(progress / 0.1, 1.5) * 0.1;
+    } else if (progress > 0.9) {
+      // Very gentle deceleration (90-100%)
+      const decelProgress = (progress - 0.9) / 0.1;
+      easeProgress = 0.9 + Math.pow(decelProgress, 2) * 0.1;
     }
+    // Middle 80% stays completely linear
     
     // Calculate the total distance to travel from current position to target
     const totalDistance = targetPosition - translateX;
@@ -178,7 +181,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Save the final position to localStorage for persistence
       localStorage.setItem('rouletteReelPosition', targetPosition.toString());
       
-      console.log('✅ ANIMATION COMPLETE - 4-SECOND DURATION:', {
+      console.log('✅ ANIMATION COMPLETE - FULL 4-SECOND DURATION:', {
         targetPosition,
         finalPosition: targetPosition,
         winningSlot,
@@ -186,9 +189,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         expectedDuration: SPINNING_PHASE_DURATION,
         accuracy: Math.abs(elapsed - SPINNING_PHASE_DURATION),
         phases: {
-          acceleration: '0-800ms (0-20%)',
-          fastRoll: '800-2800ms (20-70%)',
-          deceleration: '2800-4000ms (70-100%)'
+          acceleration: '0-400ms (0-10%)',
+          linear: '400-3600ms (10-90%)',
+          deceleration: '3600-4000ms (90-100%)'
         },
         savedToStorage: true
       });
