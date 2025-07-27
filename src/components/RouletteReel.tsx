@@ -75,6 +75,30 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return () => window.removeEventListener('resize', handleResize);
   }, [updateScaleFactor]);
 
+  // Safety check to ensure reel is always visible
+  useEffect(() => {
+    if (containerRef.current && tiles.length > 0) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const visibleTilesWidth = VISIBLE_LOGICAL_TILES * LOGICAL_TILE_SIZE * scaleFactor;
+      
+      console.log('🔍 Reel visibility check:', {
+        containerWidth,
+        visibleTilesWidth,
+        logicalTranslateX,
+        scaleFactor,
+        tilesCount: tiles.length,
+        isVisible: visibleTilesWidth > 0 && Math.abs(logicalTranslateX) < 10000
+      });
+      
+      // If reel is not visible, reset to center
+      if (visibleTilesWidth === 0 || Math.abs(logicalTranslateX) > 10000) {
+        console.warn('⚠️ Reel not visible, resetting to center');
+        setLogicalTranslateX(0);
+        setAnimationPhase('idle');
+      }
+    }
+  }, [logicalTranslateX, scaleFactor, tiles.length]);
+
   // Generate tiles array with buffer for seamless looping
   const tiles = useMemo(() => {
     const tilesArray = [];
@@ -88,6 +112,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         color: slot.color
       });
     }
+    
+    console.log('🎰 Tiles generated:', {
+      tilesCount: tilesArray.length,
+      bufferMultiplier: BUFFER_MULTIPLIER,
+      wheelSlotsLength: WHEEL_SLOTS.length,
+      totalLogicalWidth: WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER
+    });
+    
     return tilesArray;
   }, []);
 
@@ -145,6 +177,30 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
   const DECELERATION_DISTANCE = LOGICAL_TILE_SIZE * 50; // Distance to decelerate over
 
+  // Full speed spinning animation
+  const animateFullSpeed = useCallback(() => {
+    if (animationPhase !== 'fullSpeed') return;
+    
+    setLogicalTranslateX(prev => {
+      const newPosition = prev - FULL_SPEED_VELOCITY;
+      
+      // Improved infinite scrolling logic to prevent disappearing
+      const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+      const halfWidth = totalLogicalWidth / 2;
+      
+      // Reset position when we've moved too far in either direction
+      if (newPosition < -halfWidth) {
+        return newPosition + totalLogicalWidth;
+      } else if (newPosition > halfWidth) {
+        return newPosition - totalLogicalWidth;
+      }
+      
+      return newPosition;
+    });
+    
+    animationRef.current = requestAnimationFrame(animateFullSpeed);
+  }, [animationPhase]);
+
   // Simple spinning animation using logical positioning
   const animate = useCallback(() => {
     if (isSpinning && animationPhase === 'idle') {
@@ -165,10 +221,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         setLogicalTranslateX(prev => {
           const newPosition = prev - currentVelocity;
           
-          // Reset position when we've moved too far left to maintain infinite scrolling
+          // Improved infinite scrolling logic to prevent disappearing
           const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
-          if (Math.abs(newPosition) > totalLogicalWidth / 2) {
-            return newPosition + totalLogicalWidth / 2;
+          const halfWidth = totalLogicalWidth / 2;
+          
+          // Reset position when we've moved too far in either direction
+          if (newPosition < -halfWidth) {
+            return newPosition + totalLogicalWidth;
+          } else if (newPosition > halfWidth) {
+            return newPosition - totalLogicalWidth;
           }
           
           return newPosition;
@@ -224,7 +285,19 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         }
         
         const newLogicalPosition = decelerationStartPosition + (targetLogicalPosition - decelerationStartPosition) * decelerationProgress;
-        setLogicalTranslateX(newLogicalPosition);
+        
+        // Ensure position stays within bounds during deceleration
+        const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+        const halfWidth = totalLogicalWidth / 2;
+        
+        let finalPosition = newLogicalPosition;
+        if (finalPosition < -halfWidth) {
+          finalPosition += totalLogicalWidth;
+        } else if (finalPosition > halfWidth) {
+          finalPosition -= totalLogicalWidth;
+        }
+        
+        setLogicalTranslateX(finalPosition);
         
         if (progress < 1) {
           animationRef.current = requestAnimationFrame(animateDeceleration);
@@ -232,39 +305,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           // Animation complete
           console.log('✅ DECELERATION COMPLETE:', {
             serverWinningSlot: winningSlot,
-            finalLogicalPosition: newLogicalPosition,
+            finalLogicalPosition: finalPosition,
             targetLogicalPosition,
-            accuracy: Math.abs(newLogicalPosition - targetLogicalPosition)
+            accuracy: Math.abs(finalPosition - targetLogicalPosition)
           });
           
           setAnimationPhase('stopped');
           setIsAnimating(false);
-          verifyWinningTilePosition(newLogicalPosition);
+          verifyWinningTilePosition(finalPosition);
         }
       };
       
       animateDeceleration();
     }
-  }, [isSpinning, winningSlot, animationPhase, logicalTranslateX, calculateTargetLogicalPosition, decelerationStartPosition]);
-
-  // Full speed spinning animation
-  const animateFullSpeed = useCallback(() => {
-    if (animationPhase !== 'fullSpeed') return;
-    
-    setLogicalTranslateX(prev => {
-      const newPosition = prev - FULL_SPEED_VELOCITY;
-      
-      // Reset position when we've moved too far left to maintain infinite scrolling
-      const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
-      if (Math.abs(newPosition) > totalLogicalWidth / 2) {
-        return newPosition + totalLogicalWidth / 2;
-      }
-      
-      return newPosition;
-    });
-    
-    animationRef.current = requestAnimationFrame(animateFullSpeed);
-  }, [animationPhase]);
+  }, [isSpinning, winningSlot, animationPhase, logicalTranslateX, calculateTargetLogicalPosition, decelerationStartPosition, animateFullSpeed]);
 
   // Verify that the winning tile is centered when animation stops
   const verifyWinningTilePosition = useCallback((finalLogicalPosition: number) => {
