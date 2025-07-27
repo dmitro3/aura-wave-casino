@@ -4,8 +4,9 @@
 -- Drop the existing view
 DROP VIEW IF EXISTS public.user_data_view;
 
--- Recreate the view with SECURITY INVOKER (default, safer)
-CREATE OR REPLACE VIEW public.user_data_view AS
+-- Recreate the view with SECURITY INVOKER explicitly specified
+CREATE OR REPLACE VIEW public.user_data_view 
+WITH (security_invoker = true) AS
 SELECT 
   p.id,
   p.username,
