@@ -201,12 +201,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         console.log('🎯 TARGET CALCULATED:', { winningSlot, target });
       }
       
-      // Start animation immediately
-      setTimeout(() => {
-        console.log('🚀 Starting acceleration animation immediately');
-        animateAcceleration();
-      }, 10);
-      
     } else if (!isSpinning && isAnimating) {
       console.log('🛑 STOPPING ANIMATION - Round left spinning phase');
       setIsAnimating(false);
@@ -215,7 +209,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         cancelAnimationFrame(animationRef.current);
       }
     }
-  }, [isSpinning, winningSlot, isAnimating, calculateTargetLogicalPosition, animateAcceleration]);
+  }, [isSpinning, winningSlot, isAnimating, calculateTargetLogicalPosition]);
 
   // Handle deceleration when winning slot is received during spinning
   useEffect(() => {
