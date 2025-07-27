@@ -323,4 +323,13 @@
   .animate-balance-increase {
     animation: balance-pulse 1s ease-out;
   }
+
+  /* Chat Bubble Text Wrapping */
+  .word-wrap {
+    word-wrap: break-word;
+  }
+
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
 }

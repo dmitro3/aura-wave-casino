@@ -192,7 +192,7 @@ export const RealtimeChat = () => {
                       </Avatar>
                     </ProfileBorder>
                     
-                     <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} min-w-0`}>
+                     <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} min-w-0 max-w-full`}>
                         <div className={`flex items-center gap-1 mb-1 ${isOwnMessage ? 'justify-end' : ''} flex-wrap`}>
                           <ClickableUsername 
                             username={msg.username}
@@ -210,7 +210,7 @@ export const RealtimeChat = () => {
                          )}
                        </div>
                       
-                      <div className={`p-2 rounded-lg text-xs break-words max-w-xs inline-block ${
+                      <div className={`p-2 rounded-lg text-xs break-words word-wrap overflow-wrap-anywhere max-w-[calc(100%-3rem)] ${
                         isOwnMessage 
                           ? 'bg-primary/20 border border-primary/30' 
                           : 'bg-card/50 border'
