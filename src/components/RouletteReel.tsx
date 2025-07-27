@@ -230,14 +230,25 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     let closestDistance = Infinity;
     
     for (const tile of tiles) {
-      const tileLogicalCenter = position + (tile.index * LOGICAL_TILE_SIZE + LOGICAL_TILE_SIZE / 2);
-      const distanceFromCenter = Math.abs(tileLogicalCenter - 0);
+      // Calculate the logical position of this tile's center
+      const tileLogicalLeft = position + (tile.index * LOGICAL_TILE_SIZE);
+      const tileLogicalCenter = tileLogicalLeft + (LOGICAL_TILE_SIZE / 2);
       
-      if (distanceFromCenter < closestDistance) {
-        closestDistance = distanceFromCenter;
+      // Calculate distance from the vertical line (logical position 0)
+      const distanceFromCenterLine = Math.abs(tileLogicalCenter - 0);
+      
+      if (distanceFromCenterLine < closestDistance) {
+        closestDistance = distanceFromCenterLine;
         closestTile = tile;
       }
     }
+    
+    console.log('🎯 CENTER TILE CALCULATION:', {
+      position: position.toFixed(2),
+      closestTileSlot: closestTile?.slot,
+      closestDistance: closestDistance.toFixed(2),
+      isUnderCenterLine: closestDistance < (LOGICAL_TILE_SIZE / 4)
+    });
     
     return closestTile?.slot || null;
   }, [tiles]);
@@ -596,11 +607,30 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           }}
         >
           {tiles.map((tile) => {
-            const tileLogicalCenter = logicalTranslateX + (tile.index * LOGICAL_TILE_SIZE + LOGICAL_TILE_SIZE / 2);
-            const distanceFromCenter = Math.abs(tileLogicalCenter - 0); // Logical center is always 0
-            const isUnderCenterLine = distanceFromCenter < LOGICAL_TILE_SIZE / 3; // More precise center detection
+            // Calculate the logical position of this tile's center
+            const tileLogicalLeft = logicalTranslateX + (tile.index * LOGICAL_TILE_SIZE);
+            const tileLogicalCenter = tileLogicalLeft + (LOGICAL_TILE_SIZE / 2);
+            
+            // The vertical line is at logical position 0, so calculate distance from center
+            const distanceFromCenterLine = Math.abs(tileLogicalCenter - 0);
+            
+            // A tile is "under the center line" if its center is within 1/4 of a tile width from the center
+            const isUnderCenterLine = distanceFromCenterLine < (LOGICAL_TILE_SIZE / 4);
+            
+            // Check if this is the winning tile that should show the glow effect
             const isWinningTile = tile.slot === winningSlot && isUnderCenterLine && !isAnimating;
             const isWinningGlow = isWinningTile && showWinningGlow;
+
+            // Debug logging for center tile detection
+            if (isUnderCenterLine) {
+              console.log('🎯 TILE UNDER CENTER LINE:', {
+                tileSlot: tile.slot,
+                tileLogicalCenter: tileLogicalCenter.toFixed(2),
+                distanceFromCenter: distanceFromCenterLine.toFixed(2),
+                isWinningTile,
+                isAnimating
+              });
+            }
 
             return (
               <div
@@ -609,8 +639,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   flex-shrink-0 flex items-center justify-center relative
                   border-2 shadow-lg transition-all duration-200
                   ${getTileColor(tile.color)}
-                  ${isUnderCenterLine && isAnimating ? 'scale-110 z-10' : ''}
-                  ${isWinningTile ? 'scale-110 z-20' : ''}
+                  ${isUnderCenterLine ? 'scale-110 z-10' : ''}
+                  ${isWinningTile ? 'z-20' : ''}
                   ${isWinningGlow ? 'ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 animate-pulse' : ''}
                 `}
                 style={{ 
@@ -625,7 +655,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                 <div className={`text-lg font-bold drop-shadow-lg transition-all duration-200 ${
                   isWinningGlow ? 'text-emerald-200 scale-125' : 
                   isWinningTile ? 'text-emerald-200 scale-110' : 
-                  isUnderCenterLine && isAnimating ? 'scale-110' : ''
+                  isUnderCenterLine ? 'scale-110' : ''
                 }`}>
                   {tile.slot}
                 </div>
