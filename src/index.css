@@ -284,12 +284,17 @@
       scale: 1;
     }
     70% {
-      transform: translateX(-50%) translateY(-50px);
+      transform: translateX(-50%) translateY(-30px);
+      opacity: 1;
+      scale: 1;
+    }
+    85% {
+      transform: translateX(-50%) translateY(-30px);
       opacity: 1;
       scale: 1;
     }
     100% {
-      transform: translateX(-50%) translateY(-60px);
+      transform: translateX(-50%) translateY(-30px);
       opacity: 0;
       scale: 0.9;
     }
