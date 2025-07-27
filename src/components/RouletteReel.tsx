@@ -35,18 +35,42 @@ const REEL_HEIGHT_PX = 120;                            // Fixed height
 const CENTER_MARKER_PX = REEL_WIDTH_PX / 2;            // 750px - fixed center marker
 
 // 🔄 INFINITE LOOPING SYSTEM - Duplicated sequences for seamless scrolling
-const TILE_REPEATS = 100;                              // Generate 100 copies of the 15-slot sequence
-const TOTAL_TILES = WHEEL_SLOTS.length * TILE_REPEATS; // 1500 total tiles
-const TOTAL_REEL_WIDTH_PX = TOTAL_TILES * TILE_SIZE_PX; // 150,000px total width
+const TILE_REPEATS = 200;                              // Generate 200 copies (was 100) - more safety margin
+const TOTAL_TILES = WHEEL_SLOTS.length * TILE_REPEATS; // 3000 total tiles  
+const TOTAL_REEL_WIDTH_PX = TOTAL_TILES * TILE_SIZE_PX; // 300,000px total width
+
+// 🛡️ TILE SAFETY BOUNDS - Prevent disappearing tiles
+const WHEEL_CYCLE_PX = WHEEL_SLOTS.length * TILE_SIZE_PX; // 1500px per full wheel cycle
+const SAFE_ZONE_CYCLES = 20; // Keep position within 20 cycles of center for extra safety
+const MIN_SAFE_POSITION = -SAFE_ZONE_CYCLES * WHEEL_CYCLE_PX; // -30,000px
+const MAX_SAFE_POSITION = SAFE_ZONE_CYCLES * WHEEL_CYCLE_PX;  // +30,000px
+
+// 🔄 POSITION NORMALIZATION - Keep reel within safe bounds while maintaining alignment
+const normalizePosition = (position: number): number => {
+  // Use modular arithmetic to keep position within one wheel cycle
+  // This maintains perfect alignment while preventing tile disappearance
+  let normalized = position % WHEEL_CYCLE_PX;
+  
+  // Ensure we stay within our safe tile generation bounds
+  while (normalized < MIN_SAFE_POSITION) {
+    normalized += WHEEL_CYCLE_PX;
+  }
+  while (normalized > MAX_SAFE_POSITION) {
+    normalized -= WHEEL_CYCLE_PX;
+  }
+  
+  return normalized;
+};
 
 // ⏱️ ANIMATION CONFIGURATION - Exactly 4 seconds
 const SPIN_DURATION_MS = 4000;
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extendedWinAnimation, serverReelPosition }: RouletteReelProps) {
-  // 🎲 Reel position state - starts from localStorage or 0
+  // 🎲 Reel position state - starts from localStorage or 0, always normalized
   const [currentPosition, setCurrentPosition] = useState(() => {
     const saved = localStorage.getItem('rouletteReelPosition');
-    return saved ? parseFloat(saved) : 0;
+    const position = saved ? parseFloat(saved) : 0;
+    return normalizePosition(position); // Always start with normalized position
   });
   
   const [isAnimating, setIsAnimating] = useState(false);
@@ -231,12 +255,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       
       // Complete animation after exactly 4 seconds
       animationTimeoutRef.current = setTimeout(() => {
-        setCurrentPosition(targetPosition);
+        // 🛡️ NORMALIZE POSITION - Prevent tiles from disappearing over time
+        const normalizedPosition = normalizePosition(targetPosition);
+        
+        // Update reel position to normalized value to prevent visual jumps
+        if (reelRef.current) {
+          reelRef.current.style.transform = `translateX(${normalizedPosition}px)`;
+        }
+        
+        setCurrentPosition(normalizedPosition);
         setIsAnimating(false);
         setShowWinGlow(true);
         
-        // Save final position for next round
-        localStorage.setItem('rouletteReelPosition', targetPosition.toString());
+        // Save normalized position for next round
+        localStorage.setItem('rouletteReelPosition', normalizedPosition.toString());
         
         // Remove transition for instant updates
         if (reelRef.current) {
@@ -244,9 +276,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         }
         
         console.log('✅ Animation Complete:', {
-          finalPosition: Math.round(targetPosition),
+          originalPosition: Math.round(targetPosition),
+          normalizedPosition: Math.round(normalizedPosition),
           winningSlot,
-          duration: `${SPIN_DURATION_MS}ms`
+          duration: `${SPIN_DURATION_MS}ms`,
+          tileSafety: 'Position normalized to prevent disappearing tiles'
         });
         
         // Hide win glow after 2 seconds
@@ -265,18 +299,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
   }, []);
 
   // 🎲 Generate all tiles (duplicated sequences for infinite scrolling)
+  // Center tiles around 0 for coverage in both positive and negative directions
   const allTiles = [];
+  const centerOffset = Math.floor(TILE_REPEATS / 2); // Center the tile generation
+  
   for (let repeat = 0; repeat < TILE_REPEATS; repeat++) {
     for (let slotIndex = 0; slotIndex < WHEEL_SLOTS.length; slotIndex++) {
       const slot = WHEEL_SLOTS[slotIndex];
       const globalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
+      
+      // Center tiles around 0 by subtracting the center offset
+      const centeredPosition = (globalIndex - centerOffset * WHEEL_SLOTS.length) * TILE_SIZE_PX;
       
       allTiles.push({
         id: `tile-${globalIndex}`,
         slot: slot.slot,
         color: slot.color,
         index: globalIndex,
-        leftPosition: globalIndex * TILE_SIZE_PX
+        leftPosition: centeredPosition
       });
     }
   }
@@ -383,6 +423,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
               <div>Server Pos: {Math.round(serverReelPosition)}px</div>
             )}
             <div>Sync: {serverReelPosition !== null && serverReelPosition !== undefined ? 'SERVER' : 'CLIENT'}</div>
+            <div className="border-t border-gray-600 mt-1 pt-1">
+              <div>Tile Safety: {currentPosition >= MIN_SAFE_POSITION && currentPosition <= MAX_SAFE_POSITION ? '✅ SAFE' : '⚠️ NORMALIZING'}</div>
+              <div>Bounds: [{MIN_SAFE_POSITION}, {MAX_SAFE_POSITION}]</div>
+              <div>Total Tiles: {TOTAL_TILES} ({TILE_REPEATS} repeats)</div>
+            </div>
           </div>
         )}
 
