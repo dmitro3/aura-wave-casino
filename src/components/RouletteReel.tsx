@@ -29,7 +29,7 @@ const WHEEL_SLOTS = [
 
 // Fixed logical grid system - completely device-independent
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 30; // Fixed logical tile width (device-independent) - reduced from 35
+const LOGICAL_TILE_WIDTH = 25; // Fixed logical tile width (device-independent) - reduced from 30
 const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
@@ -46,7 +46,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const updateScaleFactor = useCallback(() => {
     if (containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
-      const visibleLogicalWidth = 12 * LOGICAL_TILE_WIDTH; // 12 tiles visible (increased from 10)
+      const visibleLogicalWidth = 14 * LOGICAL_TILE_WIDTH; // 14 tiles visible (increased from 12)
       const newScaleFactor = containerWidth / visibleLogicalWidth;
       
       setScaleFactor(newScaleFactor);
