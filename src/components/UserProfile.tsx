@@ -1035,11 +1035,26 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
   };
 
   const claimAchievement = async (achievement: any) => {
-    if (!isOwnProfile) return;
+    console.log('🎯 Claim achievement called:', achievement);
+    console.log('🎯 isOwnProfile:', isOwnProfile);
+    console.log('🎯 userId:', userId);
+    
+    if (!isOwnProfile) {
+      console.log('❌ Not own profile, returning');
+      return;
+    }
+    
+    if (!userId) {
+      console.log('❌ No userId, returning');
+      return;
+    }
     
     setClaiming(achievement.id);
+    console.log('🎯 Starting claim process for achievement:', achievement.name);
+    
     try {
       // Insert the achievement as unlocked
+      console.log('🎯 Inserting achievement into user_achievements...');
       const { error: insertError } = await supabase
         .from('user_achievements')
         .insert({
@@ -1048,9 +1063,14 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
           unlocked_at: new Date().toISOString()
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('❌ Error inserting achievement:', insertError);
+        throw insertError;
+      }
+      console.log('✅ Achievement inserted successfully');
 
       // Award the reward
+      console.log('🎯 Awarding reward:', achievement.reward_type, achievement.reward_amount);
       if (achievement.reward_type === 'money') {
         const { error: balanceError } = await supabase
           .from('profiles')
@@ -1059,7 +1079,11 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
           })
           .eq('id', userId);
 
-        if (balanceError) throw balanceError;
+        if (balanceError) {
+          console.error('❌ Error updating balance:', balanceError);
+          throw balanceError;
+        }
+        console.log('✅ Balance updated successfully');
       } else if (achievement.reward_type === 'xp') {
         const { error: xpError } = await supabase
           .from('user_level_stats')
@@ -1069,7 +1093,11 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
           })
           .eq('user_id', userId);
 
-        if (xpError) throw xpError;
+        if (xpError) {
+          console.error('❌ Error updating XP:', xpError);
+          throw xpError;
+        }
+        console.log('✅ XP updated successfully');
       } else if (achievement.reward_type === 'cases') {
         const { error: casesError } = await supabase
           .from('user_level_stats')
@@ -1078,7 +1106,11 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
           })
           .eq('user_id', userId);
 
-        if (casesError) throw casesError;
+        if (casesError) {
+          console.error('❌ Error updating cases:', casesError);
+          throw casesError;
+        }
+        console.log('✅ Cases updated successfully');
       }
 
       // Show success notification
@@ -1098,6 +1130,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       setNewlyClaimed(prev => [...prev, achievement.id]);
 
       // Refresh achievements data to update the UI
+      console.log('🎯 Refreshing achievement data...');
       await fetchData();
       
       // Also refresh user profile data to update balance display
@@ -1126,9 +1159,10 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       }, 2000);
       
     } catch (error) {
-      console.error('Error claiming achievement:', error);
+      console.error('❌ Error claiming achievement:', error);
     } finally {
       setClaiming(null);
+      console.log('🎯 Claim process completed');
     }
   };
 
@@ -1226,7 +1260,10 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
                       </div>
                       
                       <Button
-                        onClick={() => claimAchievement(achievement)}
+                        onClick={() => {
+                          console.log('🎯 Claim button clicked for:', achievement.name);
+                          claimAchievement(achievement);
+                        }}
                         disabled={claiming === achievement.id}
                         className="w-full h-7 text-xs bg-green-500 hover:bg-green-400 text-white border-0 transition-all duration-300 hover:scale-105"
                       >
