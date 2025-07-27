@@ -176,26 +176,31 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        // Enhanced deceleration with smooth slowdown in second half
+        // Ultra-smooth deceleration with gradual slowdown for perfect roulette feel
         let easeProgress;
-        if (progress < 0.3) {
-          // First 30%: Still moving at good speed (linear)
-          easeProgress = progress / 0.3 * 0.4; // 0% to 40% distance
-        } else if (progress < 0.6) {
-          // 30%-60%: Starting to slow down (ease-out)
-          const phaseProgress = (progress - 0.3) / 0.3;
-          const easeOut = 1 - Math.pow(1 - phaseProgress, 2); // Quadratic ease-out
-          easeProgress = 0.4 + easeOut * 0.3; // 40% to 70% distance
-        } else if (progress < 0.85) {
-          // 60%-85%: Significant slowdown (cubic ease-out)
-          const phaseProgress = (progress - 0.6) / 0.25;
+        if (progress < 0.25) {
+          // First 25%: Still moving at good speed (linear)
+          easeProgress = progress / 0.25 * 0.3; // 0% to 30% distance
+        } else if (progress < 0.5) {
+          // 25%-50%: Starting to slow down gently (ease-out)
+          const phaseProgress = (progress - 0.25) / 0.25;
+          const easeOut = 1 - Math.pow(1 - phaseProgress, 1.5); // Gentle ease-out
+          easeProgress = 0.3 + easeOut * 0.25; // 30% to 55% distance
+        } else if (progress < 0.75) {
+          // 50%-75%: More noticeable slowdown (cubic ease-out)
+          const phaseProgress = (progress - 0.5) / 0.25;
           const cubicEaseOut = 1 - Math.pow(1 - phaseProgress, 3); // Cubic ease-out
-          easeProgress = 0.7 + cubicEaseOut * 0.2; // 70% to 90% distance
+          easeProgress = 0.55 + cubicEaseOut * 0.25; // 55% to 80% distance
+        } else if (progress < 0.9) {
+          // 75%-90%: Significant slowdown (quintic ease-out)
+          const phaseProgress = (progress - 0.75) / 0.15;
+          const quinticEaseOut = 1 - Math.pow(1 - phaseProgress, 5); // Quintic ease-out
+          easeProgress = 0.8 + quinticEaseOut * 0.15; // 80% to 95% distance
         } else {
-          // Last 15%: Very slow final approach for precision (quintic ease-out)
-          const phaseProgress = (progress - 0.85) / 0.15;
-          const quinticEaseOut = 1 - Math.pow(1 - phaseProgress, 5); // Quintic ease-out for precision
-          easeProgress = 0.9 + quinticEaseOut * 0.1; // 90% to 100% distance
+          // Last 10%: Very slow final approach for precision (septic ease-out)
+          const phaseProgress = (progress - 0.9) / 0.1;
+          const septicEaseOut = 1 - Math.pow(1 - phaseProgress, 7); // Septic ease-out for ultra-smooth finish
+          easeProgress = 0.95 + septicEaseOut * 0.05; // 95% to 100% distance
         }
         
         const newLogicalPosition = startLogicalPosition + (targetLogicalPosition - startLogicalPosition) * easeProgress;
