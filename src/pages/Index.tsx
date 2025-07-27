@@ -20,6 +20,7 @@ import { Footer } from '@/components/Footer';
 import { TowerGame } from '@/components/TowerGame';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
+import { ProfileBorder } from '@/components/ProfileBorder';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useBalanceAnimation } from '@/hooks/useBalanceAnimation';
@@ -352,35 +353,53 @@ export default function Index({ initialGame }: IndexProps) {
 
               {/* Enhanced Level Display - Only show for authenticated users */}
               {user && userData && (
-                <UserLevelDisplay 
-                  username={userData.username}
-                  showXP={true}
-                  size="md"
-                  className="hidden md:flex"
-                />
+                <>
+                  {/* Desktop Version */}
+                  <UserLevelDisplay 
+                    username={userData.username}
+                    showXP={true}
+                    size="md"
+                    className="hidden md:flex"
+                    clickable={true}
+                    onClick={() => setShowProfile(true)}
+                  />
+                  
+                  {/* Mobile Version */}
+                  <div 
+                    className="flex md:hidden items-center gap-2 cursor-pointer hover:bg-primary/10 rounded-lg p-2 -m-2 transition-all duration-200 hover:scale-[1.02]"
+                    onClick={() => setShowProfile(true)}
+                  >
+                    <div className="relative">
+                      <ProfileBorder level={levelStats?.current_level || 1} size="sm">
+                        <div className="w-8 h-8 rounded-full overflow-hidden relative">
+                          <img 
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
+                            alt={`${userData.username} avatar`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-1 py-0.5">
+                            <span className="text-white text-xs font-bold block text-center leading-none">
+                              {(levelStats?.current_level || 1) >= 100 ? '👑' : (levelStats?.current_level || 1)}
+                            </span>
+                          </div>
+                        </div>
+                      </ProfileBorder>
+                    </div>
+                    <span className="font-semibold text-sm">{userData.username}</span>
+                  </div>
+                </>
               )}
 
               {/* User Menu or Sign In Button */}
               {user && userData ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowProfile(true)}
-                    className="glass border-0 hover:glow-primary transition-smooth"
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    {userData.username}
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="glass border-0 hover:text-destructive"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="glass border-0 hover:text-destructive"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
               ) : (
                 <Button
                   onClick={() => setShowAuthModal(true)}

@@ -8,9 +8,11 @@ interface UserLevelDisplayProps {
   showXP?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  onClick?: () => void;
+  clickable?: boolean;
 }
 
-export function UserLevelDisplay({ username, showXP = false, size = 'sm', className = '' }: UserLevelDisplayProps) {
+export function UserLevelDisplay({ username, showXP = false, size = 'sm', className = '', onClick, clickable = false }: UserLevelDisplayProps) {
   const { levelStats, loading } = useLevelSync();
 
   if (loading || !levelStats) {
@@ -35,7 +37,10 @@ export function UserLevelDisplay({ username, showXP = false, size = 'sm', classN
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div 
+      className={`flex items-center gap-2 ${className} ${clickable ? 'cursor-pointer hover:bg-primary/10 rounded-lg p-2 -m-2 transition-all duration-200 hover:scale-[1.02]' : ''}`}
+      onClick={clickable ? onClick : undefined}
+    >
       <div className="relative">
         <ProfileBorder level={levelStats.current_level} size={size}>
           <div className={`${sizeClasses[size]} rounded-full overflow-hidden relative`}>
