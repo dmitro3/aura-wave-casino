@@ -200,7 +200,11 @@ export function UserProgressSection() {
             <GameStatsRow title="Crash" icon="🚀" stats={getGameStats('crash')} />
             
             {/* Roulette Stats */}
-            <GameStatsRow title="Roulette" icon="🎰" stats={getGameStats('roulette')} />
+            <GameStatsRow title="Roulette" icon={
+              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-red-500 via-green-500 to-gray-800 border border-primary/20 flex items-center justify-center">
+                <div className="w-1 h-1 rounded-full bg-white"></div>
+              </div>
+            } stats={getGameStats('roulette')} />
             
             {/* Tower Stats */}
             <GameStatsRow title="Tower" icon="🗼" stats={getGameStats('tower')} />
@@ -213,7 +217,7 @@ export function UserProgressSection() {
 
 interface GameStatsRowProps {
   title: string;
-  icon: string;
+  icon: string | React.ReactNode;
   stats: {
     games: number;
     wins: number;
@@ -229,7 +233,7 @@ function GameStatsRow({ title, icon, stats, extraInfo }: GameStatsRowProps) {
     return (
       <div className="p-3 bg-card/20 rounded-lg">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">{icon}</span>
+          <span className="text-lg flex items-center">{icon}</span>
           <span className="font-semibold">{title}</span>
           <Badge variant="outline" className="text-xs">No games played</Badge>
         </div>
@@ -240,7 +244,7 @@ function GameStatsRow({ title, icon, stats, extraInfo }: GameStatsRowProps) {
   return (
     <div className="p-3 bg-card/30 rounded-lg">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">{icon}</span>
+        <span className="text-lg flex items-center">{icon}</span>
         <span className="font-semibold">{title}</span>
         <Badge 
           variant={stats.winRate >= 50 ? "default" : "destructive"} 

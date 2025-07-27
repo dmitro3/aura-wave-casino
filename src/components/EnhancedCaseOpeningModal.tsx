@@ -468,8 +468,13 @@ export const EnhancedCaseOpeningModal = ({
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-bold mb-2">
-                  {animationStage === 'fast' && '🎰 SPINNING FAST...'}
+                <h3 className="text-2xl font-bold mb-2 flex items-center gap-2 justify-center">
+                  {animationStage === 'fast' && (
+                    <>
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                      SPINNING FAST...
+                    </>
+                  )}
                   {animationStage === 'slowing' && '⏳ SLOWING DOWN...'}
                   {animationStage === 'locked' && '🎯 LOCKING IN...'}
                 </h3>

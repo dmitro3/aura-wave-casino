@@ -49,7 +49,7 @@ export default function RewardsPanel({ userData, onUpdateUser }: RewardsPanelPro
     const bonusMessages = [
       "You've earned your coffee bonus! ☕",
       "Digital coins rain from the sky! 🌧️",
-      "The arcade machine pays out! 🎰",
+      "The casino vault opens up! 💰",
       "Your patience has been rewarded! ⏰",
       "Lucky you! Free credits incoming! 🍀"
     ];

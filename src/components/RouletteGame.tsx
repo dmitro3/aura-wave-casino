@@ -1059,7 +1059,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         <CardHeader className="pb-4">
           <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span className="flex items-center gap-2">
-              🎰 Roulette
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-500 via-green-500 to-black border-2 border-primary/20 flex items-center justify-center">
+                <div className="w-2 h-2 rounded-full bg-white shadow-sm"></div>
+              </div>
+              Roulette
               <Badge variant="outline">Round #{currentRound.round_number}</Badge>
             </span>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
@@ -1379,7 +1382,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <ScrollArea className="h-32">
                           {(color === 'green' ? greenBets : color === 'red' ? redBets : blackBets).length === 0 ? (
                             <div className="text-center py-6 text-muted-foreground">
-                              <div className="w-6 h-6 mx-auto mb-2 opacity-50 text-lg">🎰</div>
+                              <div className="w-8 h-8 mx-auto mb-2 opacity-60 flex items-center justify-center">
+                                <div className="relative">
+                                  <div className="w-6 h-1.5 bg-primary/30 rounded-full"></div>
+                                  <div className="w-5 h-1.5 bg-primary/40 rounded-full absolute top-0.5 left-0.5"></div>
+                                  <div className="w-4 h-1.5 bg-primary/50 rounded-full absolute top-1 left-1"></div>
+                                </div>
+                              </div>
                               <p className="text-xs">No bets yet</p>
                             </div>
                           ) : (
