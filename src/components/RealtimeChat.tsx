@@ -212,7 +212,7 @@ export const RealtimeChat = () => {
                          )}
                        </div>
                       
-                      <div className={`p-2 rounded-lg text-xs break-words word-wrap overflow-wrap-anywhere max-w-[calc(100%-3rem)] ${
+                      <div className={`p-2 rounded-lg text-xs break-words max-w-[calc(100%-3rem)] ${
                         isOwnMessage 
                           ? 'bg-primary/20 border border-primary/30' 
                           : 'bg-card/50 border'
