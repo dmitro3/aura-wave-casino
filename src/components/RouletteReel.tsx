@@ -29,9 +29,9 @@ const WHEEL_SLOTS = [
 
 // Device-independent configuration - FIXED VALUES that never change
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 50; // Fixed logical tile width (device-independent) - increased to fill reel height
+const LOGICAL_TILE_WIDTH = 80; // Fixed logical tile width (device-independent) - significantly increased
 const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
-const VISIBLE_TILES_COUNT = 10; // Fixed number of visible tiles - reduced to accommodate larger tiles
+const VISIBLE_TILES_COUNT = 8; // Fixed number of visible tiles - reduced to accommodate larger tiles
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [logicalTranslateX, setLogicalTranslateX] = useState(0); // Logical position (device-independent)
