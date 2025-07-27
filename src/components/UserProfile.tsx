@@ -839,103 +839,103 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
   }, [userId]);
 
   // Fetch achievements and user stats in parallel
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!userId) return;
+  const fetchData = async () => {
+    if (!userId) return;
 
-      setLoading(true);
-      
-      try {
-        // Fetch only essential data for faster loading
-        const [achievementsResult, userStatsResult, readyToClaimResult] = await Promise.all([
-          // Fetch all achievements (lightweight)
-          supabase
-            .from('achievements')
-            .select('id, name, description, category, icon, rarity, difficulty, reward_amount, reward_type, criteria')
-            .order('rarity', { ascending: true })
-            .order('difficulty', { ascending: true }),
-          
-          // Fetch user stats (only essential fields for achievements)
-          supabase
-            .from('user_level_stats')
-            .select(`
-              total_games,
-              total_wins,
-              total_profit,
-              total_wagered,
-              roulette_games,
-              roulette_wins,
-              roulette_green_wins,
-              roulette_highest_win,
-              tower_games,
-              tower_highest_level,
-              tower_perfect_games,
-              coinflip_wins,
-              total_cases_opened,
-              chat_messages_count,
-              login_days_count,
-              account_created,
-              best_win_streak,
-              biggest_single_bet,
-              current_level
-            `)
-            .eq('user_id', userId)
-            .single(),
-          
-          // Fetch ready-to-claim achievements
-          supabase
-            .from('ready_to_claim_achievements')
-            .select('achievement_id, ready_at')
-            .eq('user_id', userId)
-        ]);
+    setLoading(true);
+    
+    try {
+      // Fetch only essential data for faster loading
+      const [achievementsResult, userStatsResult, readyToClaimResult] = await Promise.all([
+        // Fetch all achievements (lightweight)
+        supabase
+          .from('achievements')
+          .select('id, name, description, category, icon, rarity, difficulty, reward_amount, reward_type, criteria')
+          .order('rarity', { ascending: true })
+          .order('difficulty', { ascending: true }),
+        
+        // Fetch user stats (only essential fields for achievements)
+        supabase
+          .from('user_level_stats')
+          .select(`
+            total_games,
+            total_wins,
+            total_profit,
+            total_wagered,
+            roulette_games,
+            roulette_wins,
+            roulette_green_wins,
+            roulette_highest_win,
+            tower_games,
+            tower_highest_level,
+            tower_perfect_games,
+            coinflip_wins,
+            total_cases_opened,
+            chat_messages_count,
+            login_days_count,
+            account_created,
+            best_win_streak,
+            biggest_single_bet,
+            current_level
+          `)
+          .eq('user_id', userId)
+          .single(),
+        
+        // Fetch ready-to-claim achievements
+        supabase
+          .from('ready_to_claim_achievements')
+          .select('achievement_id, ready_at')
+          .eq('user_id', userId)
+      ]);
 
-        // Handle achievements
-        if (achievementsResult.error) {
-          console.error('Error fetching achievements:', achievementsResult.error);
-        } else {
-          setAchievements(achievementsResult.data || []);
-        }
-
-        // Handle user stats
-        if (userStatsResult.error && userStatsResult.error.code !== 'PGRST116') {
-          console.error('Error fetching user stats:', userStatsResult.error);
-        } else {
-          setUserStats(userStatsResult.data);
-        }
-
-        // Fetch user's unlocked achievements (lightweight)
-        const { data: userAchievements, error: userError } = await supabase
-          .from('user_achievements')
-          .select('achievement_id, unlocked_at')
-          .eq('user_id', userId);
-
-        if (userError) {
-          console.error('Error fetching user achievements:', userError);
-        } else {
-          const unlockedAchievements = userAchievements || [];
-          setUserAchievements(unlockedAchievements);
-
-          // Get ready-to-claim achievements from the database
-          if (readyToClaimResult.error) {
-            console.error('Error fetching ready-to-claim achievements:', readyToClaimResult.error);
-          } else {
-            const readyToClaimIds = (readyToClaimResult.data || []).map(rta => rta.achievement_id);
-            
-            // Get full achievement details for ready-to-claim achievements
-            const claimable = (achievementsResult.data || []).filter(achievement => 
-              readyToClaimIds.includes(achievement.id)
-            );
-
-            setClaimableAchievements(claimable);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching achievement data:', error);
-      } finally {
-        setLoading(false);
+      // Handle achievements
+      if (achievementsResult.error) {
+        console.error('Error fetching achievements:', achievementsResult.error);
+      } else {
+        setAchievements(achievementsResult.data || []);
       }
-    };
 
+      // Handle user stats
+      if (userStatsResult.error && userStatsResult.error.code !== 'PGRST116') {
+        console.error('Error fetching user stats:', userStatsResult.error);
+      } else {
+        setUserStats(userStatsResult.data);
+      }
+
+      // Fetch user's unlocked achievements (lightweight)
+      const { data: userAchievements, error: userError } = await supabase
+        .from('user_achievements')
+        .select('achievement_id, unlocked_at')
+        .eq('user_id', userId);
+
+      if (userError) {
+        console.error('Error fetching user achievements:', userError);
+      } else {
+        const unlockedAchievements = userAchievements || [];
+        setUserAchievements(unlockedAchievements);
+
+        // Get ready-to-claim achievements from the database
+        if (readyToClaimResult.error) {
+          console.error('Error fetching ready-to-claim achievements:', readyToClaimResult.error);
+        } else {
+          const readyToClaimIds = (readyToClaimResult.data || []).map(rta => rta.achievement_id);
+          
+          // Get full achievement details for ready-to-claim achievements
+          const claimable = (achievementsResult.data || []).filter(achievement => 
+            readyToClaimIds.includes(achievement.id)
+          );
+
+          setClaimableAchievements(claimable);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching achievement data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [userId, isOwnProfile]);
 
