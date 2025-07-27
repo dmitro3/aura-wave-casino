@@ -30,7 +30,7 @@ const WHEEL_SLOTS = [
 const TILE_WIDTH = 120; // Width of each tile in pixels
 const CONTAINER_WIDTH = 1200;
 const CENTER_OFFSET = CONTAINER_WIDTH / 2;
-const BUFFER_MULTIPLIER = 5; // 5x buffer for seamless looping
+const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [translateX, setTranslateX] = useState(0);
@@ -41,11 +41,22 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating });
 
-  // Simple spinning animation
+  // Simple spinning animation with infinite scrolling
   const animate = useCallback(() => {
     if (isSpinning) {
       // Move the reel to the left (simulating spinning)
-      setTranslateX(prev => prev - 15); // 15px per frame for smooth movement
+      setTranslateX(prev => {
+        const newPosition = prev - 15; // 15px per frame for smooth movement
+        
+        // Reset position when we've moved too far left to maintain infinite scrolling
+        const totalTilesWidth = WHEEL_SLOTS.length * TILE_WIDTH * BUFFER_MULTIPLIER;
+        if (Math.abs(newPosition) > totalTilesWidth / 2) {
+          return newPosition + totalTilesWidth / 2;
+        }
+        
+        return newPosition;
+      });
+      
       animationRef.current = requestAnimationFrame(animate);
     } else if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
       // Animate to the final position when we have the result
@@ -81,6 +92,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log('🚀 Starting roulette spin');
       setIsAnimating(true);
       lastSpinningState.current = true;
+      
+      // Reset position to center if it's too far off
+      const totalTilesWidth = WHEEL_SLOTS.length * TILE_WIDTH * BUFFER_MULTIPLIER;
+      if (Math.abs(translateX) > totalTilesWidth / 4) {
+        setTranslateX(0);
+      }
+      
       animationRef.current = requestAnimationFrame(animate);
     } else if (!isSpinning && lastSpinningState.current) {
       console.log('🛑 Stopping roulette spin');
@@ -89,7 +107,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         cancelAnimationFrame(animationRef.current);
       }
     }
-  }, [isSpinning, animate]);
+  }, [isSpinning, animate, translateX]);
 
   // Create a repeating loop of tiles with buffer for seamless looping
   const tiles = [];
@@ -111,6 +129,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       }
     };
   }, []);
+
+  // Reset position when winning slot changes (new round)
+  useEffect(() => {
+    if (winningSlot !== null && !isSpinning) {
+      // Reset to center position for new round
+      setTranslateX(0);
+    }
+  }, [winningSlot, isSpinning]);
 
   // Get tile color styling
   const getTileColor = (color: string) => {
