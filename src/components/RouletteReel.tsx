@@ -130,26 +130,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       
       const startPosition = currentPosition;
       
-      // 🎯 USE SERVER POSITION FOR SYNCHRONIZATION if available
+      // 🎯 CALCULATE WINNING POSITION
       let targetPosition: number;
       
+      // Always calculate client-side first for safety
+      const clientCalculatedPosition = calculateWinningPosition(winningSlot, startPosition);
+      
       if (serverReelPosition !== null && serverReelPosition !== undefined) {
-        // Use the server-calculated position for perfect synchronization
-        targetPosition = serverReelPosition;
-        console.log('🌐 Using server-calculated position for synchronization:', targetPosition);
+        // Validate server position is reasonable and has proper spin distance
+        const serverDistance = Math.abs(serverReelPosition - startPosition);
+        const minSpinDistance = 3 * WHEEL_SLOTS.length * TILE_SIZE_PX; // At least 3 full rotations
+        const maxReasonableDistance = 100 * WHEEL_SLOTS.length * TILE_SIZE_PX; // Max 100 rotations
         
-        // Validate that server position is reasonable (not too extreme)
-        const distance = Math.abs(targetPosition - startPosition);
-        const maxReasonableDistance = 100 * WHEEL_SLOTS.length * TILE_SIZE_PX; // 100 full rotations max
-        
-        if (distance > maxReasonableDistance) {
-          console.warn('⚠️ Server position seems too extreme, using client calculation instead');
-          targetPosition = calculateWinningPosition(winningSlot, startPosition);
+        if (serverDistance >= minSpinDistance && serverDistance <= maxReasonableDistance) {
+          targetPosition = serverReelPosition;
+          console.log('🌐 Using validated server position:', Math.round(targetPosition));
+        } else {
+          targetPosition = clientCalculatedPosition;
+          console.log('🖥️ Server position invalid, using client calculation:', Math.round(targetPosition));
         }
       } else {
-        // Fallback to client-side calculation
-        targetPosition = calculateWinningPosition(winningSlot, startPosition);
-        console.log('🖥️ Using client-side calculation (server position not available)');
+        targetPosition = clientCalculatedPosition;
+        console.log('🖥️ No server position, using client calculation:', Math.round(targetPosition));
       }
       
       if (!reelRef.current) return;
@@ -163,38 +165,35 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         distance: Math.round(animationDistance),
         rotations: Math.round(rotations * 100) / 100,
         duration: SPIN_DURATION_MS,
-        isReasonable: rotations >= 3 && rotations <= 100
+        winningSlot
       });
       
-      // Ensure minimum spin distance for realistic effect
-      if (animationDistance < 3 * WHEEL_SLOTS.length * TILE_SIZE_PX) {
-        console.log('🔄 Adjusting for minimum spin distance');
-        targetPosition -= 5 * WHEEL_SLOTS.length * TILE_SIZE_PX; // Add 5 full rotations
-      }
-      
-      // Set animation state FIRST
+      // Set animation state
       setIsAnimating(true);
       setShowWinGlow(false);
       
-      // Apply smooth CSS transition with realistic easing
+      // Get reel element
       const reel = reelRef.current;
       
-      // Ensure we start from the current position
+      // ROBUST ANIMATION SEQUENCE
+      // Step 1: Ensure no transition and set starting position
       reel.style.transition = 'none';
       reel.style.transform = `translateX(${startPosition}px)`;
       
-      // Force a reflow to ensure the starting position is set
-      reel.offsetHeight;
+      // Step 2: Force reflow
+      void reel.offsetHeight;
       
-      // Now set the transition and animate to target position
+      // Step 3: Set transition
       reel.style.transition = `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
       
-      // Use requestAnimationFrame to ensure transition is applied before transform
+      // Step 4: Start animation after next frame
       requestAnimationFrame(() => {
-        if (reelRef.current) {
-          console.log('🎬 Starting transform animation to:', Math.round(targetPosition));
-          reelRef.current.style.transform = `translateX(${targetPosition}px)`;
-        }
+        requestAnimationFrame(() => {
+          if (reelRef.current) {
+            console.log('🎬 Animating from', Math.round(startPosition), 'to', Math.round(targetPosition));
+            reelRef.current.style.transform = `translateX(${targetPosition}px)`;
+          }
+        });
       });
       
       // Clear any existing timeout
@@ -204,7 +203,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       
       // Complete animation after exactly 4 seconds
       animationTimeoutRef.current = setTimeout(() => {
-        // Update state position ONLY after animation completes
         setCurrentPosition(targetPosition);
         setIsAnimating(false);
         setShowWinGlow(true);
@@ -212,31 +210,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         // Save final position for next round
         localStorage.setItem('rouletteReelPosition', targetPosition.toString());
         
-        // Remove transition for instant updates after animation
+        // Remove transition for instant updates
         if (reelRef.current) {
           reelRef.current.style.transition = 'none';
         }
         
-        console.log('✅ PROVABLY FAIR Animation Complete:', {
+        console.log('✅ Animation Complete:', {
           finalPosition: Math.round(targetPosition),
-          duration: `${SPIN_DURATION_MS}ms`,
           winningSlot,
-          positionSaved: true,
-          usedServerPosition: serverReelPosition !== null && serverReelPosition !== undefined
+          duration: `${SPIN_DURATION_MS}ms`
         });
         
         // Hide win glow after 2 seconds
         setTimeout(() => setShowWinGlow(false), 2000);
       }, SPIN_DURATION_MS);
-      
-      console.log('🎯 CSS Animation Started:', {
-        from: Math.round(startPosition),
-        to: Math.round(targetPosition),
-        distance: Math.round(Math.abs(targetPosition - startPosition)),
-        duration: `${SPIN_DURATION_MS}ms`,
-        winningSlot,
-        synchronizationMethod: serverReelPosition !== null && serverReelPosition !== undefined ? 'SERVER' : 'CLIENT'
-      });
     }
   }, [isSpinning, winningSlot, currentPosition, isAnimating, serverReelPosition]);
 
