@@ -816,6 +816,17 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
 
         if (data) {
           console.log('✅ Successfully fetched user stats for achievements:', data);
+          console.log('📊 Key stats for achievements:', {
+            total_games: data.total_games,
+            total_wins: data.total_wins,
+            current_level: data.current_level,
+            roulette_games: data.roulette_games,
+            roulette_wins: data.roulette_wins,
+            roulette_green_wins: data.roulette_green_wins,
+            chat_messages_count: data.chat_messages_count,
+            login_days_count: data.login_days_count,
+            account_created: data.account_created
+          });
           setUserStats(data);
         } else {
           console.log('⚠️ No user stats found for user:', userId);
@@ -835,17 +846,23 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
 
   const fetchAchievements = async () => {
     try {
+      console.log('🔍 Fetching achievements for user:', userId);
+      
       // Fetch all achievements
       const { data: allAchievements, error: achievementsError } = await supabase
         .from('achievements')
-        .select('*')
-        .order('rarity', { ascending: true })
-        .order('difficulty', { ascending: true });
+        .select('*');
 
       if (achievementsError) throw achievementsError;
 
+      console.log('📋 All achievements loaded:', allAchievements?.length || 0);
+      console.log('📋 Sample achievements:', allAchievements?.slice(0, 3).map(a => ({
+        name: a.name,
+        criteria: a.unlock_criteria
+      })));
+
       // Fetch user's unlocked achievements
-      const { data: unlockedAchievements, error: userError } = await supabase
+      const { data: userAchievements, error: userError } = await supabase
         .from('user_achievements')
         .select(`
           *,
@@ -855,18 +872,24 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
 
       if (userError) throw userError;
 
+      const unlockedAchievements = userAchievements || [];
+      console.log('🏆 User unlocked achievements:', unlockedAchievements.length);
+
       setAchievements(allAchievements || []);
       setUserAchievements(unlockedAchievements || []);
 
       // Check for claimable achievements (requirements met but not claimed)
       if (isOwnProfile && userStats) {
+        console.log('🔍 Checking for claimable achievements...');
         const claimable = (allAchievements || []).filter(achievement => {
           const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
           if (isAlreadyUnlocked) return false;
           
           const progress = calculateProgressForAchievement(achievement, userStats);
+          console.log(`🎯 Achievement "${achievement.name}": ${progress}% progress`);
           return progress >= 100;
         });
+        console.log('🎁 Claimable achievements found:', claimable.length);
         setClaimableAchievements(claimable);
       }
     } catch (error) {
@@ -888,39 +911,97 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
 
     console.log(`🔍 Calculating progress for "${achievement.name}" (${criteriaType}):`, {
       criteria,
-      userStats,
-      targetValue
+      targetValue,
+      userStatsKeys: Object.keys(userStats)
     });
 
     let currentValue = 0;
     
     switch (criteriaType) {
-      case 'total_games': currentValue = userStats.total_games || 0; break;
-      case 'total_wins': currentValue = userStats.total_wins || 0; break;
-      case 'total_profit': currentValue = userStats.total_profit || 0; break;
-      case 'total_wagered': currentValue = userStats.total_wagered || 0; break;
-      case 'roulette_games': currentValue = userStats.roulette_games || 0; break;
-      case 'roulette_wins': currentValue = userStats.roulette_wins || 0; break;
-      case 'roulette_green_wins': currentValue = userStats.roulette_green_wins || 0; break;
-      case 'roulette_biggest_win': currentValue = userStats.roulette_highest_win || 0; break;
-      case 'tower_games': currentValue = userStats.tower_games || 0; break;
-      case 'tower_highest_level': currentValue = userStats.tower_highest_level || 0; break;
-      case 'tower_perfect_games': currentValue = userStats.tower_perfect_games || 0; break;
-      case 'coinflip_wins': currentValue = userStats.coinflip_wins || 0; break;
-      case 'total_cases_opened': currentValue = userStats.total_cases_opened || 0; break;
-      case 'account_created': currentValue = userStats.account_created ? 1 : 0; break;
-      case 'chat_messages': currentValue = userStats.chat_messages_count || 0; break;
-      case 'login_days': currentValue = userStats.login_days_count || 0; break;
-      case 'win_streak': currentValue = userStats.best_win_streak || 0; break;
-      case 'biggest_single_bet': currentValue = userStats.biggest_single_bet || 0; break;
-      case 'user_level': currentValue = userStats.current_level || 0; break;
+      case 'total_games': 
+        currentValue = userStats.total_games || 0; 
+        console.log(`📊 total_games: ${currentValue}/${targetValue}`);
+        break;
+      case 'total_wins': 
+        currentValue = userStats.total_wins || 0; 
+        console.log(`📊 total_wins: ${currentValue}/${targetValue}`);
+        break;
+      case 'total_profit': 
+        currentValue = userStats.total_profit || 0; 
+        console.log(`📊 total_profit: ${currentValue}/${targetValue}`);
+        break;
+      case 'total_wagered': 
+        currentValue = userStats.total_wagered || 0; 
+        console.log(`📊 total_wagered: ${currentValue}/${targetValue}`);
+        break;
+      case 'roulette_games': 
+        currentValue = userStats.roulette_games || 0; 
+        console.log(`📊 roulette_games: ${currentValue}/${targetValue}`);
+        break;
+      case 'roulette_wins': 
+        currentValue = userStats.roulette_wins || 0; 
+        console.log(`📊 roulette_wins: ${currentValue}/${targetValue}`);
+        break;
+      case 'roulette_green_wins': 
+        currentValue = userStats.roulette_green_wins || 0; 
+        console.log(`📊 roulette_green_wins: ${currentValue}/${targetValue}`);
+        break;
+      case 'roulette_biggest_win': 
+        currentValue = userStats.roulette_highest_win || 0; 
+        console.log(`📊 roulette_highest_win: ${currentValue}/${targetValue}`);
+        break;
+      case 'tower_games': 
+        currentValue = userStats.tower_games || 0; 
+        console.log(`📊 tower_games: ${currentValue}/${targetValue}`);
+        break;
+      case 'tower_highest_level': 
+        currentValue = userStats.tower_highest_level || 0; 
+        console.log(`📊 tower_highest_level: ${currentValue}/${targetValue}`);
+        break;
+      case 'tower_perfect_games': 
+        currentValue = userStats.tower_perfect_games || 0; 
+        console.log(`📊 tower_perfect_games: ${currentValue}/${targetValue}`);
+        break;
+      case 'coinflip_wins': 
+        currentValue = userStats.coinflip_wins || 0; 
+        console.log(`📊 coinflip_wins: ${currentValue}/${targetValue}`);
+        break;
+      case 'total_cases_opened': 
+        currentValue = userStats.total_cases_opened || 0; 
+        console.log(`📊 total_cases_opened: ${currentValue}/${targetValue}`);
+        break;
+      case 'account_created': 
+        currentValue = userStats.account_created ? 1 : 0; 
+        console.log(`📊 account_created: ${currentValue}/${targetValue}`);
+        break;
+      case 'chat_messages': 
+        currentValue = userStats.chat_messages_count || 0; 
+        console.log(`📊 chat_messages_count: ${currentValue}/${targetValue}`);
+        break;
+      case 'login_days': 
+        currentValue = userStats.login_days_count || 0; 
+        console.log(`📊 login_days_count: ${currentValue}/${targetValue}`);
+        break;
+      case 'win_streak': 
+        currentValue = userStats.best_win_streak || 0; 
+        console.log(`📊 best_win_streak: ${currentValue}/${targetValue}`);
+        break;
+      case 'biggest_single_bet': 
+        currentValue = userStats.biggest_single_bet || 0; 
+        console.log(`📊 biggest_single_bet: ${currentValue}/${targetValue}`);
+        break;
+      case 'user_level': 
+        currentValue = userStats.current_level || 0; 
+        console.log(`📊 current_level: ${currentValue}/${targetValue}`);
+        break;
       default: 
         console.log(`⚠️ Unknown criteria type: ${criteriaType}`);
         currentValue = 0; 
         break;
     }
 
-    console.log(`📊 Progress calculation: ${currentValue}/${targetValue} = ${((currentValue / targetValue) * 100).toFixed(1)}%`);
+    const percentage = targetValue === 0 ? 0 : Math.min(100, (currentValue / targetValue) * 100);
+    console.log(`📊 Progress calculation: ${currentValue}/${targetValue} = ${percentage.toFixed(1)}%`);
 
     // Prevent division by zero and handle edge cases
     if (targetValue === 0) return 0;
