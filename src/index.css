@@ -273,27 +273,49 @@
   }
 
   /* Balance Increase Float Animation */
-  @keyframes float-up {
+  @keyframes float-into-balance {
     0% {
       transform: translateX(-50%) translateY(0px);
       opacity: 0;
       scale: 0.8;
     }
-    20% {
+    30% {
       opacity: 1;
       scale: 1;
     }
-    80% {
+    70% {
+      transform: translateX(-50%) translateY(-50px);
       opacity: 1;
+      scale: 1;
     }
     100% {
-      transform: translateX(-50%) translateY(-40px);
+      transform: translateX(-50%) translateY(-60px);
       opacity: 0;
-      scale: 1.1;
+      scale: 0.9;
     }
   }
 
-  .animate-float-up {
-    animation: float-up 2s ease-out forwards;
+  .animate-float-into-balance {
+    animation: float-into-balance 1.5s ease-out forwards;
+  }
+
+  /* Balance Number Count Up Animation */
+  @keyframes balance-pulse {
+    0% { 
+      scale: 1;
+      color: inherit;
+    }
+    50% { 
+      scale: 1.1;
+      color: rgb(74 222 128); /* text-green-400 */
+    }
+    100% { 
+      scale: 1;
+      color: inherit;
+    }
+  }
+
+  .animate-balance-increase {
+    animation: balance-pulse 1s ease-out;
   }
 }

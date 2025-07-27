@@ -24,10 +24,10 @@ export function useBalanceAnimation() {
 
         setIncreases(prev => [...prev, newIncrease]);
 
-        // Remove the animation after it completes (2 seconds)
+        // Remove the animation after it completes (1.5 seconds)
         setTimeout(() => {
           setIncreases(prev => prev.filter(inc => inc.id !== increaseId));
-        }, 2000);
+        }, 1500);
       }
     }
 

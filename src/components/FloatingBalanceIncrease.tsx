@@ -14,14 +14,15 @@ export function FloatingBalanceIncrease({ increases }: FloatingBalanceIncreasePr
   if (increases.length === 0) return null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+    <div className="absolute inset-0 pointer-events-none overflow-visible">
       {increases.map((increase) => (
         <div
           key={increase.id}
-          className="absolute bottom-0 left-1/2 transform -translate-x-1/2 animate-float-up"
+          className="absolute left-1/2 transform -translate-x-1/2 animate-float-into-balance"
           style={{
+            bottom: '-30px', // Start from below the balance display
             animationDelay: '0ms',
-            animationDuration: '2000ms',
+            animationDuration: '1500ms',
             animationFillMode: 'forwards'
           }}
         >

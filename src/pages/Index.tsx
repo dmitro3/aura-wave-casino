@@ -24,6 +24,7 @@ import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useBalanceAnimation } from '@/hooks/useBalanceAnimation';
 import { FloatingBalanceIncrease } from '@/components/FloatingBalanceIncrease';
+import { AnimatedBalance } from '@/components/AnimatedBalance';
 
 interface Notification {
   id: string;
@@ -329,9 +330,10 @@ export default function Index({ initialGame }: IndexProps) {
               {user && userData && (
                 <div className="relative flex items-center space-x-2 glass px-3 py-1 rounded-lg">
                   <Wallet className="w-4 h-4 text-primary" />
-                  <span className="font-semibold">
-                    ${userData.balance.toFixed(2)}
-                  </span>
+                  <AnimatedBalance
+                    balance={userData.balance}
+                    className="font-semibold"
+                  />
                   <FloatingBalanceIncrease increases={increases} />
                 </div>
               )}
