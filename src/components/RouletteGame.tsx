@@ -943,6 +943,26 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [currentRound?.id]);
 
+  // Debug bet amount state
+  useEffect(() => {
+    console.log('🔍 Bet amount debug:', {
+      betAmount,
+      betAmountType: typeof betAmount,
+      betAmountNumber: Number(betAmount),
+      isValidNumber: !isNaN(Number(betAmount)),
+      isGreaterThanZero: Number(betAmount) > 0,
+      isGreaterThanMin: Number(betAmount) >= 0.01,
+      isLessThanBalance: Number(betAmount) <= (profile?.balance || 0),
+      userBalance: profile?.balance,
+      currentRoundStatus: currentRound?.status,
+      isPlacingBet,
+      userBetLimits,
+      lastBetTime,
+      timeSinceLastBet: Date.now() - lastBetTime,
+      MIN_BET_INTERVAL
+    });
+  }, [betAmount, profile?.balance, currentRound?.status, isPlacingBet, userBetLimits, lastBetTime]);
+
 
   if (loading) {
     return (
@@ -1230,8 +1250,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         currentRound.status !== 'betting' || 
                         isPlacingBet ||
                         betAmount === '' ||
-                        Number(betAmount) > balanceRef.current ||
+                        isNaN(Number(betAmount)) ||
+                        Number(betAmount) <= 0 ||
                         Number(betAmount) < 0.01 ||
+                        Number(betAmount) > (profile?.balance || 0) ||
                         userBetLimits.betCount >= MAX_BETS_PER_ROUND ||
                         userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND ||
                         Date.now() - lastBetTime < MIN_BET_INTERVAL
@@ -1244,7 +1266,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         currentRound.status !== 'betting' ? 'Betting closed' :
                         isPlacingBet ? 'Processing bet...' :
                         betAmount === '' ? 'Enter bet amount' :
-                        Number(betAmount) > balanceRef.current ? 'Insufficient balance' :
+                        isNaN(Number(betAmount)) ? 'Invalid bet amount' :
+                        Number(betAmount) <= 0 ? 'Bet amount must be greater than 0' :
+                        Number(betAmount) < 0.01 ? 'Minimum bet is $0.01' :
+                        Number(betAmount) > (profile?.balance || 0) ? 'Insufficient balance' :
                         userBetLimits.betCount >= MAX_BETS_PER_ROUND ? 'Max bets reached' :
                         userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND ? 'Round limit reached' :
                         Date.now() - lastBetTime < MIN_BET_INTERVAL ? 'Rate limited' :
