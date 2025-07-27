@@ -14,7 +14,6 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 AS $function$
 DECLARE
   username_text TEXT;
-  profile_id UUID;
 BEGIN
   -- Generate username
   username_text := COALESCE(NEW.raw_user_meta_data->>'username', 'User_' || substr(NEW.id::text, 1, 8));
@@ -181,46 +180,7 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Step 4: Test the function with a mock user
-DO $$
-DECLARE
-  test_user_id UUID := gen_random_uuid();
-  test_username TEXT := 'TestUser_' || substr(test_user_id::text, 1, 8);
-  test_created_at TIMESTAMP WITH TIME ZONE := now();
-  mock_user RECORD;
-BEGIN
-  -- Create a mock user record
-  mock_user.id := test_user_id;
-  mock_user.raw_user_meta_data := jsonb_build_object('username', test_username);
-  mock_user.created_at := test_created_at;
-  
-  RAISE NOTICE '🧪 Testing user registration with mock user: %', test_user_id;
-  
-  -- Test the function (this will create the records)
-  PERFORM public.handle_new_user();
-  
-  -- Verify profile was created
-  IF EXISTS (SELECT 1 FROM public.profiles WHERE id = test_user_id) THEN
-    RAISE NOTICE '✅ Profile created successfully';
-  ELSE
-    RAISE NOTICE '❌ Profile was not created';
-  END IF;
-  
-  -- Verify user_level_stats was created
-  IF EXISTS (SELECT 1 FROM public.user_level_stats WHERE user_id = test_user_id) THEN
-    RAISE NOTICE '✅ User level stats created successfully';
-  ELSE
-    RAISE NOTICE '❌ User level stats were not created';
-  END IF;
-  
-  -- Clean up test data
-  DELETE FROM public.user_level_stats WHERE user_id = test_user_id;
-  DELETE FROM public.profiles WHERE id = test_user_id;
-  
-  RAISE NOTICE '🧹 Test data cleaned up';
-END $$;
-
--- Step 5: Show final setup
+-- Step 4: Show final setup
 SELECT 
   'Final trigger setup:' as info,
   trigger_name,
@@ -238,7 +198,7 @@ SELECT
 FROM information_schema.routines 
 WHERE routine_name = 'handle_new_user';
 
--- Step 6: Show current user data (if any)
+-- Step 5: Show current user data (if any)
 SELECT 
   'Current user data:' as info,
   (SELECT COUNT(*) FROM auth.users) as total_users,
