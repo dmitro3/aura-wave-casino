@@ -23,12 +23,12 @@
     --popover: 222 84% 5%;
     --popover-foreground: 210 40% 98%;
 
-    /* Primary - Electric Blue/Purple */
-    --primary: 239 84% 67%;
+    /* Primary - Emerald Gaming Theme */
+    --primary: 142 76% 36%;
     --primary-foreground: 210 40% 98%;
-    --primary-glow: 239 84% 67% / 0.3;
+    --primary-glow: 142 76% 36% / 0.3;
 
-    /* Secondary - Subtle Purple */
+    /* Secondary - Subtle Dark Green */
     --secondary: 222 47% 15%;
     --secondary-foreground: 210 40% 98%;
 
@@ -36,10 +36,10 @@
     --muted: 222 47% 15%;
     --muted-foreground: 215 20% 65%;
 
-    /* Accent - Cyan */
-    --accent: 188 95% 52%;
+    /* Accent - Emerald Bright */
+    --accent: 160 84% 39%;
     --accent-foreground: 222 47% 11%;
-    --accent-glow: 188 95% 52% / 0.3;
+    --accent-glow: 160 84% 39% / 0.3;
 
     /* Success/Win - Green */
     --success: 142 76% 36%;
@@ -59,10 +59,10 @@
     /* Borders and Inputs */
     --border: 222 47% 15%;
     --input: 222 47% 15%;
-    --ring: 239 84% 67%;
+    --ring: 142 76% 36%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%), hsl(188 95% 52%));
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(160 84% 39%));
     --gradient-glass: linear-gradient(135deg, hsl(222 47% 11% / 0.8), hsl(222 47% 15% / 0.6));
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(120 100% 25%));
     --gradient-destructive: linear-gradient(135deg, hsl(0 72% 51%), hsl(350 89% 60%));

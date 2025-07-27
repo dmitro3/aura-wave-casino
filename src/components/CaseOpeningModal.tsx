@@ -197,7 +197,7 @@ export const CaseOpeningModal = ({ isOpen, onClose, caseId, level, onCaseOpened 
                   w-full h-full flex items-center justify-center
                   ${animationPhase === 'spinning' ? 'animate-pulse' : ''}
                   ${animationPhase === 'revealing' ? 'animate-bounce' : ''}
-                  bg-gradient-to-br from-purple-500 to-pink-500
+                  bg-gradient-to-br from-emerald-500 to-green-500
                 `}>
                   <CardContent className="p-0">
                     {animationPhase === 'spinning' && (
@@ -210,7 +210,7 @@ export const CaseOpeningModal = ({ isOpen, onClose, caseId, level, onCaseOpened 
                 </Card>
                 
                 {animationPhase === 'spinning' && (
-                  <div className="absolute -inset-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full opacity-20 animate-pulse" />
+                  <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full opacity-20 animate-pulse" />
                 )}
               </div>
 
@@ -221,7 +221,7 @@ export const CaseOpeningModal = ({ isOpen, onClose, caseId, level, onCaseOpened 
                   </p>
                   <Button 
                     onClick={openCase}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                    className="w-full bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white"
                   >
                     <Gift className="w-4 h-4 mr-2" />
                     Open Case
