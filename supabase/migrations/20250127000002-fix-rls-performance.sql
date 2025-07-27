@@ -42,7 +42,7 @@ DROP POLICY IF EXISTS "Service role can manage daily seeds" ON public.daily_seed
 CREATE POLICY "daily_seeds_consolidated_access" ON public.daily_seeds
 FOR ALL USING (
   auth.role() = 'service_role' OR 
-  (auth.role() = 'authenticated' AND action = 'SELECT')
+  auth.role() = 'authenticated'
 );
 
 -- =====================================================
@@ -113,7 +113,7 @@ DROP POLICY IF EXISTS "Allow service role to manage roulette results" ON public.
 CREATE POLICY "roulette_results_consolidated_access" ON public.roulette_results
 FOR ALL USING (
   auth.role() = 'service_role' OR 
-  (auth.role() = 'authenticated' AND action = 'SELECT')
+  auth.role() = 'authenticated'
 );
 
 -- =====================================================
@@ -126,7 +126,7 @@ DROP POLICY IF EXISTS "Allow service role to manage roulette rounds" ON public.r
 CREATE POLICY "roulette_rounds_consolidated_access" ON public.roulette_rounds
 FOR ALL USING (
   auth.role() = 'service_role' OR 
-  (auth.role() = 'authenticated' AND action = 'SELECT')
+  auth.role() = 'authenticated'
 );
 
 -- =====================================================
