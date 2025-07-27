@@ -201,9 +201,16 @@ export function UserProgressSection() {
             
             {/* Roulette Stats */}
             <GameStatsRow title="Roulette" icon={
-              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-red-500 via-green-500 to-gray-800 border border-primary/20 flex items-center justify-center">
-                <div className="w-1 h-1 rounded-full bg-white"></div>
-              </div>
+              <svg 
+                className="w-4 h-4 text-primary" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <circle cx="12" cy="12" r="6" strokeWidth="2"/>
+                <circle cx="12" cy="12" r="2" strokeWidth="2"/>
+              </svg>
             } stats={getGameStats('roulette')} />
             
             {/* Tower Stats */}

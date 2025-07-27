@@ -1059,9 +1059,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         <CardHeader className="pb-4">
           <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <span className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-500 via-green-500 to-black border-2 border-primary/20 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-white shadow-sm"></div>
-              </div>
+              <svg 
+                className="w-5 h-5 text-primary" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <circle cx="12" cy="12" r="10" strokeWidth="2"/>
+                <circle cx="12" cy="12" r="3" strokeWidth="2"/>
+                <path d="M12 2v4M12 18v4M22 12h-4M6 12H2" strokeWidth="2"/>
+              </svg>
               Roulette
               <Badge variant="outline">Round #{currentRound.round_number}</Badge>
             </span>
@@ -1382,13 +1389,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <ScrollArea className="h-32">
                           {(color === 'green' ? greenBets : color === 'red' ? redBets : blackBets).length === 0 ? (
                             <div className="text-center py-6 text-muted-foreground">
-                              <div className="w-8 h-8 mx-auto mb-2 opacity-60 flex items-center justify-center">
-                                <div className="relative">
-                                  <div className="w-6 h-1.5 bg-primary/30 rounded-full"></div>
-                                  <div className="w-5 h-1.5 bg-primary/40 rounded-full absolute top-0.5 left-0.5"></div>
-                                  <div className="w-4 h-1.5 bg-primary/50 rounded-full absolute top-1 left-1"></div>
-                                </div>
-                              </div>
+                              <svg 
+                                className="w-8 h-8 mx-auto mb-2 opacity-60" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <circle cx="8" cy="8" r="6" strokeWidth="2"/>
+                                <path d="M16 16c0-3.314-2.686-6-6-6s-6 2.686-6 6" strokeWidth="2"/>
+                                <circle cx="16" cy="16" r="6" strokeWidth="2"/>
+                              </svg>
                               <p className="text-xs">No bets yet</p>
                             </div>
                           ) : (
