@@ -295,37 +295,23 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Server synchronization - COMPLETELY DISABLED DURING ANIMATION
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // ABSOLUTE BLOCKING: Never sync during any animation or spinning state
-      const shouldBlockSync = 
-        isCurrentlyAnimating.current || 
-        isInCriticalStartPhase.current ||
-        isAnimating || 
-        animationPhase === 'accelerating' || 
-        hasStartedAnimation.current || 
-        isSpinning || 
-        animationRef.current ||
-        (isSpinning && winningSlot !== null) ||
-        (winningSlot !== null && hasStartedAnimation.current) ||
-        (isSpinning && isAnimating) ||
-        (hasStartedAnimation.current && !hasCompletedAnimation.current) ||
-        (isSpinning && translateX !== synchronizedPosition) || // Block if spinning and position differs
-        (isSpinning && synchronizedPosition !== null); // BLOCK ALL SYNC DURING SPINNING
-      
-      if (shouldBlockSync) {
-        console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress, keeping current position');
+      // SIMPLE BLOCKING: Never sync during any animation or spinning state
+      if (isSpinning || isAnimating || hasStartedAnimation.current || isCurrentlyAnimating.current) {
+        console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress');
         return;
-      } else if (hasCompletedAnimation.current) {
+      }
+      
+      if (hasCompletedAnimation.current) {
         console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
         return;
-      } else {
-        // Only sync when completely idle and not in any animation state
-        console.log('🔄 Server sync:', synchronizedPosition);
-        setTranslateX(synchronizedPosition);
-        // Save server position to localStorage
-        localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
       }
+      
+      // Only sync when completely idle
+      console.log('🔄 Server sync:', synchronizedPosition);
+      setTranslateX(synchronizedPosition);
+      localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
     }
-  }, [synchronizedPosition, isAnimating, animationPhase, isSpinning, winningSlot, translateX]);
+  }, [synchronizedPosition, isSpinning, isAnimating]);
 
   // Ensure position is saved whenever it changes (except during animation)
   useEffect(() => {
