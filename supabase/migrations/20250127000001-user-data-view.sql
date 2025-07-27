@@ -72,4 +72,4 @@ LEFT JOIN public.user_level_stats uls ON p.id = uls.user_id;
 GRANT SELECT ON public.user_data_view TO authenticated;
 
 -- Create index on the view for faster lookups
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_data_view_id ON public.user_data_view(id);
+CREATE INDEX IF NOT EXISTS idx_user_data_view_id ON public.user_data_view(id);
