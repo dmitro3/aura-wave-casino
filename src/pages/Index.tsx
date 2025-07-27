@@ -437,78 +437,78 @@ export default function Index({ initialGame }: IndexProps) {
               <Button
                 onClick={() => handleGameChange('coinflip')}
                 variant={currentGame === 'coinflip' ? 'default' : 'ghost'}
-                className={`w-full justify-start p-3 h-auto transition-all duration-200 hover:scale-[1.02] ${
+                className={`w-full justify-start px-3 py-2 h-10 transition-all duration-200 hover:scale-[1.02] ${
                   currentGame === 'coinflip' 
                     ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:shadow-xl' 
                     : 'hover:bg-primary/10 hover:text-primary border-0'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-md ${
                     currentGame === 'coinflip' 
                       ? 'bg-white/20' 
                       : 'bg-primary/10'
                   }`}>
-                    <Gamepad2 className="w-4 h-4" />
+                    <Gamepad2 className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-medium">Coinflip</span>
+                  <span className="font-medium text-sm">Coinflip</span>
                 </div>
               </Button>
               
               <Button
                 onClick={() => handleGameChange('roulette')}
                 variant={currentGame === 'roulette' ? 'default' : 'ghost'}
-                className={`w-full justify-start p-3 h-auto transition-all duration-200 hover:scale-[1.02] ${
+                className={`w-full justify-start px-3 py-2 h-10 transition-all duration-200 hover:scale-[1.02] ${
                   currentGame === 'roulette' 
                     ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:shadow-xl' 
                     : 'hover:bg-primary/10 hover:text-primary border-0'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-md ${
                     currentGame === 'roulette' 
                       ? 'bg-white/20' 
                       : 'bg-primary/10'
                   }`}>
-                    <Target className="w-4 h-4" />
+                    <Target className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-medium">Roulette</span>
+                  <span className="font-medium text-sm">Roulette</span>
                 </div>
               </Button>
               
               <Button
                 onClick={() => handleGameChange('tower')}
                 variant={currentGame === 'tower' ? 'default' : 'ghost'}
-                className={`w-full justify-start p-3 h-auto transition-all duration-200 hover:scale-[1.02] ${
+                className={`w-full justify-start px-3 py-2 h-10 transition-all duration-200 hover:scale-[1.02] ${
                   currentGame === 'tower' 
                     ? 'bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:shadow-xl' 
                     : 'hover:bg-primary/10 hover:text-primary border-0'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-md ${
                     currentGame === 'tower' 
                       ? 'bg-white/20' 
                       : 'bg-primary/10'
                   }`}>
-                    <Building className="w-4 h-4" />
+                    <Building className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-medium">Tower</span>
+                  <span className="font-medium text-sm">Tower</span>
                 </div>
               </Button>
               
               <Button
                 disabled
                 variant="ghost"
-                className="w-full justify-start p-3 h-auto opacity-50 cursor-not-allowed hover:bg-muted/10 border-0"
+                className="w-full justify-start px-3 py-2 h-10 opacity-50 cursor-not-allowed hover:bg-muted/10 border-0"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-muted/20">
-                    <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-muted/20">
+                    <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                   <div className="text-left">
-                    <div className="font-medium text-muted-foreground">Crash</div>
-                    <div className="text-xs text-muted-foreground/70">Coming Soon</div>
+                    <div className="font-medium text-sm text-muted-foreground">Crash</div>
+                    <div className="text-xs text-muted-foreground/70 leading-tight">Coming Soon</div>
                   </div>
                 </div>
               </Button>
