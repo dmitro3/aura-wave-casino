@@ -55,8 +55,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const currentSpinningPhase = useRef<string>('');
   const hasCompletedAnimation = useRef<boolean>(false);
 
-  // Animation configuration - SIMPLE SMOOTH ANIMATION
-  const SPINNING_PHASE_DURATION = 5000; // 5 seconds (matches server SPINNING_DURATION)
+  // Animation configuration - EXACT MATCH TO SERVER
+  const SPINNING_PHASE_DURATION = 5000; // 5 seconds (matches server SPINNING_DURATION exactly)
   const WINNING_GLOW_DURATION = 2000; // 2 seconds
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, isAnimating, animationPhase });
@@ -126,38 +126,27 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return Math.round(targetPosition);
   }, []);
 
-  // ACCURATE SMOOTH ANIMATION FUNCTION - FULL DURATION
+  // EXACT DURATION ANIMATION FUNCTION - MATCHES SERVER TIMING
   const animate = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
-    // CRITICAL: Use linear progress to ensure full duration
-    // Only apply minimal smoothing to prevent early completion
-    let easeProgress = progress; // Start with exact linear progress
-    
-    // Apply very subtle smoothing that doesn't affect duration
-    if (progress < 0.2) {
-      // Very gentle acceleration (0-20%)
-      easeProgress = Math.pow(progress / 0.2, 1.5) * 0.2;
-    } else if (progress > 0.8) {
-      // Very gentle deceleration (80-100%)
-      const decelProgress = (progress - 0.8) / 0.2;
-      easeProgress = 0.8 + Math.pow(decelProgress, 2) * 0.2;
-    }
-    // Middle 60% stays linear to ensure consistent timing
+    // COMPLETELY LINEAR ANIMATION - NO EASING TO ENSURE EXACT DURATION
+    // This ensures the animation lasts exactly 5 seconds
+    const easeProgress = progress;
     
     // Calculate the total distance to travel from current position to target
     const totalDistance = targetPosition - translateX;
     
-    // Apply easing to the distance
+    // Apply linear progress to the distance
     const currentPosition = translateX + (easeProgress * totalDistance);
     
     setTranslateX(currentPosition);
 
     // CRITICAL: Continue animation until we reach the EXACT full duration
-    // Use elapsed time comparison, not progress
+    // Use elapsed time comparison to ensure we don't complete early
     if (elapsed < SPINNING_PHASE_DURATION) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
@@ -170,7 +159,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Save the final position to localStorage for persistence
       localStorage.setItem('rouletteReelPosition', targetPosition.toString());
       
-      console.log('✅ ANIMATION COMPLETE - FULL DURATION:', {
+      console.log('✅ ANIMATION COMPLETE - EXACT DURATION:', {
         targetPosition,
         finalPosition: targetPosition,
         winningSlot,
