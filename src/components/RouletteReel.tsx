@@ -31,7 +31,7 @@ const WHEEL_SLOTS = [
 const REEL_HEIGHT = 120; // Fixed reel height in pixels
 const LOGICAL_TILE_SIZE = 100; // Fixed logical tile size (device-independent)
 const VISIBLE_LOGICAL_TILES = 9; // Fixed number of visible logical tiles
-const BUFFER_MULTIPLIER = 20; // Increased buffer for better infinite scrolling
+const BUFFER_MULTIPLIER = 50; // Massive buffer to prevent any disappearing
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   // State management - all at the top to avoid initialization errors
@@ -88,7 +88,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return () => window.removeEventListener('resize', handleResize);
   }, [updateScaleFactor]);
 
-  // Generate tiles array with buffer for seamless looping
+  // Generate tiles array with massive buffer for seamless looping
   const tiles = useMemo(() => {
     const tilesArray = [];
     for (let i = 0; i < WHEEL_SLOTS.length * BUFFER_MULTIPLIER; i++) {
@@ -101,10 +101,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         color: slot.color
       });
     }
+    
+    console.log('🎰 Generated tiles:', {
+      totalTiles: tilesArray.length,
+      bufferMultiplier: BUFFER_MULTIPLIER,
+      wheelSlots: WHEEL_SLOTS.length,
+      totalWidth: WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER
+    });
+    
     return tilesArray;
   }, []);
 
-  // Improved infinite scrolling logic with better bounds checking
+  // Ultra-robust infinite scrolling logic
   const normalizePosition = useCallback((position: number) => {
     const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
     const halfWidth = totalLogicalWidth / 2;
@@ -117,6 +125,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
     while (normalizedPosition > halfWidth) {
       normalizedPosition -= totalLogicalWidth;
+    }
+    
+    // Additional safety check
+    if (Math.abs(normalizedPosition) > halfWidth) {
+      console.warn('⚠️ Position normalization failed, resetting to center');
+      normalizedPosition = 0;
     }
     
     return normalizedPosition;
@@ -187,7 +201,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [winningSlot, normalizePosition]);
 
-  // Animation functions with improved position management
+  // Animation functions with ultra-robust position management
   const animateAcceleration = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
     
@@ -355,7 +369,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [synchronizedPosition]);
 
-  // Safety check to ensure reel is always visible and properly positioned
+  // Enhanced safety check to ensure reel is always visible and properly positioned
   useEffect(() => {
     const checkReelVisibility = () => {
       if (containerRef.current) {
@@ -369,11 +383,22 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           setLogicalTranslateX(safePosition);
           positionRef.current = safePosition;
         }
+        
+        // Additional check for tile visibility
+        const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+        const halfWidth = totalLogicalWidth / 2;
+        
+        if (Math.abs(logicalTranslateX) > halfWidth) {
+          console.warn('⚠️ Position out of bounds, normalizing');
+          const normalizedPos = normalizePosition(logicalTranslateX);
+          setLogicalTranslateX(normalizedPos);
+          positionRef.current = normalizedPos;
+        }
       }
     };
 
-    // Check every 5 seconds
-    const interval = setInterval(checkReelVisibility, 5000);
+    // Check every 2 seconds for better responsiveness
+    const interval = setInterval(checkReelVisibility, 2000);
     return () => clearInterval(interval);
   }, [logicalTranslateX, scaleFactor, normalizePosition]);
 
