@@ -272,9 +272,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Phase 2: Full speed spinning
       console.log('🌀 Entering full-speed spinning phase');
       setAnimationPhase('fullSpeed');
-      animateFullSpeed();
     }
-  }, [animationPhase, spinStartTime, animateFullSpeed]);
+  }, [animationPhase, spinStartTime]);
 
   // Full speed spinning animation with proper frame timing
   const animateFullSpeed = useCallback(() => {
@@ -374,11 +373,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     if (animationPhase === 'accelerating') {
       console.log('🚀 Starting acceleration animation');
       animateAcceleration();
+    } else if (animationPhase === 'fullSpeed') {
+      console.log('🌀 Starting full speed animation');
+      animateFullSpeed();
     } else if (animationPhase === 'decelerating') {
       console.log('🎯 Starting deceleration animation');
       animateDeceleration();
     }
-  }, [animationPhase, animateAcceleration, animateDeceleration]);
+  }, [animationPhase, animateAcceleration, animateFullSpeed, animateDeceleration]);
 
   // Verify that the winning tile is centered when animation stops
   const verifyWinningTilePosition = useCallback((finalLogicalPosition: number) => {
