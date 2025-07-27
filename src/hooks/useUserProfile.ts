@@ -212,7 +212,10 @@ export function useUserProfile() {
         .eq('id', user.id)
         .single()
 
-      if (profileError) throw profileError
+      if (profileError) {
+        console.error('❌ Error fetching profile:', profileError);
+        throw new Error(`Database error finding user profile: ${profileError.message}`);
+      }
 
       // Fetch comprehensive level stats from user_level_stats (primary source of truth)
       const { data: levelStats, error: levelStatsError } = await supabase
@@ -273,7 +276,10 @@ export function useUserProfile() {
         return;
       }
 
-      if (levelStatsError) throw levelStatsError;
+      if (levelStatsError) {
+        console.error('❌ Error fetching level stats:', levelStatsError);
+        throw new Error(`Database error finding user level stats: ${levelStatsError.message}`);
+      }
 
       // Combine profile data with level stats (level stats takes precedence)
       const userProfile: UserProfile = {
