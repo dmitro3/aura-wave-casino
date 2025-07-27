@@ -17,6 +17,7 @@ import { ProfileBorder } from './ProfileBorder';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
 
 interface UserProfileProps {
   isOpen: boolean;
@@ -84,6 +85,7 @@ const difficultyColors = {
 export default function UserProfile({ isOpen, onClose, userData: propUserData, username }: UserProfileProps) {
   const { user } = useAuth();
   const { stats } = useUserLevelStats();
+  const { claimableAchievements: notificationClaimable, hasNewClaimable } = useAchievementNotifications();
   const [activeTab, setActiveTab] = useState('overview');
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [fetchedUserData, setFetchedUserData] = useState<UserProfileType | null>(null);
@@ -261,7 +263,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden p-0 border-0 bg-transparent">
+      <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-0 border-0 bg-transparent">
         <div className="relative h-full">
           {/* Animated Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/95 backdrop-blur-xl rounded-2xl border border-white/10" />
@@ -425,9 +427,14 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                   <Gamepad2 className="w-4 h-4 mr-2" />
                   Games
                 </TabsTrigger>
-                <TabsTrigger value="achievements" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <TabsTrigger value="achievements" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
                   <Award className="w-4 h-4 mr-2" />
                   Achievements
+                  {isOwnProfile && notificationClaimable.length > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                      {notificationClaimable.length}
+                    </div>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="stats" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <TrendingUp className="w-4 h-4 mr-2" />
@@ -726,7 +733,9 @@ interface AchievementsSectionProps {
 function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectionProps) {
   const [achievements, setAchievements] = useState<any[]>([]);
   const [userAchievements, setUserAchievements] = useState<any[]>([]);
+  const [claimableAchievements, setClaimableAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAchievements();
@@ -756,6 +765,18 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
 
       setAchievements(allAchievements || []);
       setUserAchievements(unlockedAchievements || []);
+
+      // Check for claimable achievements (requirements met but not claimed)
+      if (isOwnProfile && stats) {
+        const claimable = (allAchievements || []).filter(achievement => {
+          const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
+          if (isAlreadyUnlocked) return false;
+          
+          const progress = calculateProgressForAchievement(achievement, stats);
+          return progress >= 100;
+        });
+        setClaimableAchievements(claimable);
+      }
     } catch (error) {
       console.error('Error fetching achievements:', error);
     } finally {
@@ -763,8 +784,8 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
     }
   };
 
-  const calculateProgress = (achievement: any): number => {
-    if (!stats) return 0;
+  const calculateProgressForAchievement = (achievement: any, userStats: any): number => {
+    if (!userStats) return 0;
     
     const criteria = achievement.unlock_criteria;
     const criteriaType = criteria?.type;
@@ -773,23 +794,86 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
     let currentValue = 0;
     
     switch (criteriaType) {
-      case 'total_games': currentValue = stats.total_games || 0; break;
-      case 'total_wins': currentValue = stats.total_wins || 0; break;
-      case 'total_profit': currentValue = stats.total_profit || 0; break;
-      case 'total_wagered': currentValue = stats.total_wagered || 0; break;
-      case 'roulette_games': currentValue = stats.roulette_games || 0; break;
-      case 'roulette_wins': currentValue = stats.roulette_wins || 0; break;
-      case 'roulette_green_wins': currentValue = stats.roulette_green_wins || 0; break;
-      case 'roulette_biggest_win': currentValue = stats.roulette_highest_win || 0; break;
-      case 'tower_games': currentValue = stats.tower_games || 0; break;
-      case 'tower_highest_level': currentValue = stats.tower_highest_level || 0; break;
-      case 'tower_perfect_games': currentValue = stats.tower_perfect_games || 0; break;
-      case 'coinflip_wins': currentValue = stats.coinflip_wins || 0; break;
-      case 'total_cases_opened': currentValue = stats.total_cases_opened || 0; break;
+      case 'total_games': currentValue = userStats.total_games || 0; break;
+      case 'total_wins': currentValue = userStats.total_wins || 0; break;
+      case 'total_profit': currentValue = userStats.total_profit || 0; break;
+      case 'total_wagered': currentValue = userStats.total_wagered || 0; break;
+      case 'roulette_games': currentValue = userStats.roulette_games || 0; break;
+      case 'roulette_wins': currentValue = userStats.roulette_wins || 0; break;
+      case 'roulette_green_wins': currentValue = userStats.roulette_green_wins || 0; break;
+      case 'roulette_biggest_win': currentValue = userStats.roulette_highest_win || 0; break;
+      case 'tower_games': currentValue = userStats.tower_games || 0; break;
+      case 'tower_highest_level': currentValue = userStats.tower_highest_level || 0; break;
+      case 'tower_perfect_games': currentValue = userStats.tower_perfect_games || 0; break;
+      case 'coinflip_wins': currentValue = userStats.coinflip_wins || 0; break;
+      case 'total_cases_opened': currentValue = userStats.total_cases_opened || 0; break;
       default: currentValue = 0;
     }
 
     return Math.min(100, (currentValue / targetValue) * 100);
+  };
+
+  const calculateProgress = (achievement: any): number => {
+    return calculateProgressForAchievement(achievement, stats);
+  };
+
+  const claimAchievement = async (achievement: any) => {
+    if (!isOwnProfile) return;
+    
+    setClaiming(achievement.id);
+    try {
+      // Insert the achievement as unlocked
+      const { error: insertError } = await supabase
+        .from('user_achievements')
+        .insert({
+          user_id: userId,
+          achievement_id: achievement.id,
+          unlocked_at: new Date().toISOString()
+        });
+
+      if (insertError) throw insertError;
+
+      // Award the reward
+      if (achievement.reward_type === 'money') {
+        const { error: balanceError } = await supabase
+          .from('profiles')
+          .update({ 
+            balance: supabase.sql`balance + ${achievement.reward_amount}` 
+          })
+          .eq('id', userId);
+
+        if (balanceError) throw balanceError;
+      } else if (achievement.reward_type === 'xp') {
+        const { error: xpError } = await supabase
+          .from('user_level_stats')
+          .update({ 
+            lifetime_xp: supabase.sql`lifetime_xp + ${achievement.reward_amount}`,
+            current_level_xp: supabase.sql`current_level_xp + ${achievement.reward_amount}`
+          })
+          .eq('user_id', userId);
+
+        if (xpError) throw xpError;
+      } else if (achievement.reward_type === 'cases') {
+        const { error: casesError } = await supabase
+          .from('user_level_stats')
+          .update({ 
+            available_cases: supabase.sql`available_cases + ${achievement.reward_amount}` 
+          })
+          .eq('user_id', userId);
+
+        if (casesError) throw casesError;
+      }
+
+      // Show success notification
+      console.log(`🎉 Achievement unlocked: ${achievement.name}! Reward: ${achievement.reward_type === 'money' ? '$' : ''}${achievement.reward_amount}${achievement.reward_type === 'cases' ? ' cases' : achievement.reward_type === 'xp' ? ' XP' : ''}`);
+
+      // Refresh achievements
+      fetchAchievements();
+    } catch (error) {
+      console.error('Error claiming achievement:', error);
+    } finally {
+      setClaiming(null);
+    }
   };
 
   const isUnlocked = (achievementId: string): boolean => {
@@ -848,6 +932,63 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
         </CardContent>
       </Card>
 
+      {/* Claimable Achievements */}
+      {isOwnProfile && claimableAchievements.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Gift className="w-5 h-5 text-green-400 animate-pulse" />
+            Ready to Claim ({claimableAchievements.length})
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {claimableAchievements.map((achievement) => {
+              const IconComponent = getIconComponent(achievement.icon);
+              
+              return (
+                <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:scale-105 animate-pulse`}>
+                  <CardContent className="p-4 text-center">
+                    <div className="mb-3">
+                      <div className="w-8 h-8 mx-auto bg-green-500/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <IconComponent className="w-4 h-4 text-green-400" />
+                      </div>
+                    </div>
+                    <h3 className="font-bold mb-1 text-green-400 text-sm">{achievement.name}</h3>
+                    <p className="text-xs text-green-300/80 mb-2 line-clamp-2">{achievement.description}</p>
+                    
+                    <div className="flex justify-between items-center mb-2">
+                      <Badge variant="secondary" className={`capitalize text-xs ${difficultyColors[achievement.difficulty]} text-xs`}>
+                        {achievement.difficulty}
+                      </Badge>
+                      <Badge variant="secondary" className={`capitalize text-xs ${rarityColors[achievement.rarity]} bg-white/10 text-xs`}>
+                        {achievement.rarity}
+                      </Badge>
+                    </div>
+                    
+                    <div className="text-xs space-y-2">
+                      <div className="flex items-center justify-center gap-1 text-green-400 font-semibold">
+                        <DollarSign className="w-3 h-3" />
+                        <span>+${achievement.reward_amount}</span>
+                      </div>
+                      
+                      <Button
+                        onClick={() => claimAchievement(achievement)}
+                        disabled={claiming === achievement.id}
+                        className="w-full h-7 text-xs bg-green-500 hover:bg-green-400 text-white border-0 transition-all duration-200"
+                      >
+                        {claiming === achievement.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          'Claim Reward'
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Unlocked Achievements */}
       {unlockedAchievements.length > 0 && (
         <div className="space-y-4">
@@ -855,21 +996,21 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
             <Star className="w-5 h-5 text-yellow-400" />
             Unlocked Achievements ({unlockedAchievements.length})
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {unlockedAchievements.map((achievement) => {
               const IconComponent = getIconComponent(achievement.icon);
               const unlockDate = getUnlockDate(achievement.id);
               
               return (
                 <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br ${rarityGradients[achievement.rarity]} opacity-90 hover:opacity-100 transition-all duration-300 hover:scale-105 border ${rarityColors[achievement.rarity]}`}>
-                  <CardContent className="p-6 text-center">
-                    <div className="mb-4">
-                      <div className="w-12 h-12 mx-auto bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                        <IconComponent className="w-6 h-6 text-white" />
+                  <CardContent className="p-4 text-center">
+                    <div className="mb-3">
+                      <div className="w-8 h-8 mx-auto bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <IconComponent className="w-4 h-4 text-white" />
                       </div>
                     </div>
-                    <h3 className="font-bold mb-2 text-white">{achievement.name}</h3>
-                    <p className="text-sm opacity-90 text-white mb-3">{achievement.description}</p>
+                    <h3 className="font-bold mb-1 text-white text-sm">{achievement.name}</h3>
+                    <p className="text-xs opacity-90 text-white mb-2 line-clamp-2">{achievement.description}</p>
                     
                     <div className="flex justify-between items-center mb-3">
                       <Badge variant="secondary" className={`capitalize text-xs ${difficultyColors[achievement.difficulty]}`}>
@@ -906,7 +1047,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
             <Target className="w-5 h-5 text-muted-foreground" />
             Locked Achievements ({lockedAchievements.length})
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {lockedAchievements.map((achievement) => {
               const IconComponent = getIconComponent(achievement.icon);
               const progress = calculateProgress(achievement);
@@ -914,14 +1055,14 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
               
               return (
                 <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br from-gray-800/30 to-gray-900/30 border border-gray-600/30 opacity-60 hover:opacity-80 transition-all duration-300 ${isNearlyComplete ? 'hover:scale-105 border-yellow-500/30' : ''}`}>
-                  <CardContent className="p-6 text-center">
-                    <div className="mb-4">
-                      <div className="w-12 h-12 mx-auto bg-gray-700/50 rounded-full flex items-center justify-center backdrop-blur-sm">
-                        <IconComponent className="w-6 h-6 text-gray-400" />
+                  <CardContent className="p-4 text-center">
+                    <div className="mb-3">
+                      <div className="w-8 h-8 mx-auto bg-gray-700/50 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <IconComponent className="w-4 h-4 text-gray-400" />
                       </div>
                     </div>
-                    <h3 className="font-bold mb-2 text-gray-300">{achievement.name}</h3>
-                    <p className="text-sm text-gray-400 mb-3">{achievement.description}</p>
+                    <h3 className="font-bold mb-1 text-gray-300 text-sm">{achievement.name}</h3>
+                    <p className="text-xs text-gray-400 mb-2 line-clamp-2">{achievement.description}</p>
                     
                     <div className="flex justify-between items-center mb-3">
                       <Badge variant="secondary" className={`capitalize text-xs ${difficultyColors[achievement.difficulty]} opacity-70`}>
