@@ -22,6 +22,8 @@ import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useBalanceAnimation } from '@/hooks/useBalanceAnimation';
+import { FloatingBalanceIncrease } from '@/components/FloatingBalanceIncrease';
 
 interface Notification {
   id: string;
@@ -58,6 +60,7 @@ export default function Index({ initialGame }: IndexProps) {
   };
 
   const [currentGame, setCurrentGame] = useState(getCurrentGame());
+  const { increases, checkBalanceChange } = useBalanceAnimation();
 
   // Notification functions
   const fetchNotifications = async () => {
@@ -162,6 +165,13 @@ export default function Index({ initialGame }: IndexProps) {
   useEffect(() => {
     setCurrentGame(getCurrentGame());
   }, [location.pathname, initialGame]);
+
+  // Monitor balance changes for animation
+  useEffect(() => {
+    if (userData?.balance !== undefined) {
+      checkBalanceChange(userData.balance);
+    }
+  }, [userData?.balance, checkBalanceChange]);
 
   const handleLogout = async () => {
     try {
@@ -317,11 +327,12 @@ export default function Index({ initialGame }: IndexProps) {
 
               {/* Balance Display - Only show for authenticated users */}
               {user && userData && (
-                <div className="flex items-center space-x-2 glass px-3 py-1 rounded-lg">
+                <div className="relative flex items-center space-x-2 glass px-3 py-1 rounded-lg">
                   <Wallet className="w-4 h-4 text-primary" />
                   <span className="font-semibold">
                     ${userData.balance.toFixed(2)}
                   </span>
+                  <FloatingBalanceIncrease increases={increases} />
                 </div>
               )}
 
