@@ -133,24 +133,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / SPINNING_PHASE_DURATION, 1);
     
-    // Ensure animation lasts the FULL duration by using progress directly
-    // Don't let easing complete before the full time
-    let easeProgress = progress; // Start with linear progress
+    // CRITICAL: Use linear progress to ensure full duration
+    // Only apply minimal smoothing to prevent early completion
+    let easeProgress = progress; // Start with exact linear progress
     
-    // Apply smoothing only within the progress bounds
-    if (progress < 0.3) {
-      // Acceleration phase (0-30%) - smooth ease-in
-      const accelProgress = progress / 0.3;
-      easeProgress = Math.pow(accelProgress, 2) * 0.3;
-    } else if (progress < 0.7) {
-      // Constant speed phase (30-70%) - mostly linear
-      const constProgress = (progress - 0.3) / 0.4;
-      easeProgress = 0.3 + constProgress * 0.4;
-    } else {
-      // Deceleration phase (70-100%) - smooth ease-out
-      const decelProgress = (progress - 0.7) / 0.3;
-      easeProgress = 0.7 + Math.pow(decelProgress, 3) * 0.3;
+    // Apply very subtle smoothing that doesn't affect duration
+    if (progress < 0.2) {
+      // Very gentle acceleration (0-20%)
+      easeProgress = Math.pow(progress / 0.2, 1.5) * 0.2;
+    } else if (progress > 0.8) {
+      // Very gentle deceleration (80-100%)
+      const decelProgress = (progress - 0.8) / 0.2;
+      easeProgress = 0.8 + Math.pow(decelProgress, 2) * 0.2;
     }
+    // Middle 60% stays linear to ensure consistent timing
     
     // Calculate the total distance to travel from current position to target
     const totalDistance = targetPosition - translateX;
@@ -161,6 +157,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     setTranslateX(currentPosition);
 
     // CRITICAL: Continue animation until we reach the EXACT full duration
+    // Use elapsed time comparison, not progress
     if (elapsed < SPINNING_PHASE_DURATION) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
@@ -212,6 +209,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // Create a unique identifier for this spinning phase
     const spinningPhaseId = `${isSpinning}-${winningSlot}`;
     
+    // Only start animation if we haven't started one for this phase
     if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
       console.log('🚀 STARTING SINGLE ANIMATION - New spinning phase detected');
       
