@@ -128,7 +128,7 @@ export function Footer() {
           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2 md:mt-0">
             <div>🛡️ Cryptographically Secure & Provably Fair</div>
             <div className="hidden md:block">•</div>
-            <div className="font-mono text-emerald-400 font-semibold">v0.0.1</div>
+            <div className="font-mono text-emerald-400 font-semibold">v0.0.2</div>
           </div>
         </div>
       </div>
