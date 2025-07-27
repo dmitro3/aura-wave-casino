@@ -1291,7 +1291,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                           size="sm"
                           onClick={() => setBetAmount(Math.max(0.01, Math.floor(Number(betAmount) / 2 * 100) / 100))}
                           disabled={currentRound.status !== 'betting'}
-                          className="h-9 w-14 rounded-lg bg-gradient-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/30 hover:border-red-400 text-red-400 font-bold text-sm hover:shadow-lg hover:shadow-red-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
+                          className="h-9 w-14 rounded-lg bg-gradient-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/30 hover:border-red-400 text-red-400 hover:text-red-300 font-bold text-sm hover:shadow-lg hover:shadow-red-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
                         >
                           ÷2
                         </Button>
@@ -1301,7 +1301,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                           size="sm"
                           onClick={() => setBetAmount(Math.min(profile?.balance || 0, Number(betAmount) * 2))}
                           disabled={currentRound.status !== 'betting'}
-                          className="h-9 w-14 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 hover:border-emerald-400 text-emerald-400 font-bold text-sm hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
+                          className="h-9 w-14 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 font-bold text-sm hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
                         >
                           ×2
                         </Button>

@@ -217,7 +217,7 @@ export function CaseNotification({ notification, onRefresh }: CaseNotificationPr
                     size="sm"
                     variant="outline"
                     disabled={loading}
-                    className="border-primary/50 text-primary hover:bg-primary/10 hover:border-primary transition-all duration-300"
+                    className="border-primary/50 text-primary hover:text-primary/80 hover:bg-primary/10 hover:border-primary transition-all duration-300"
                   >
                     Open All ({availableCases.length})
                   </Button>

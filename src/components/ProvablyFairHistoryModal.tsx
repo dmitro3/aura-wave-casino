@@ -221,7 +221,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                     variant="ghost" 
                     size="sm"
                     onClick={() => changeDate('prev')}
-                    className="h-8 w-8 p-0 hover:bg-emerald-500/20 text-emerald-400 hover:shadow-md hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
+                    className="h-8 w-8 p-0 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 hover:shadow-md hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
@@ -244,7 +244,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                     size="sm"
                     onClick={() => changeDate('next')}
                     disabled={selectedDate >= new Date().toISOString().split('T')[0]}
-                    className="h-8 w-8 p-0 hover:bg-emerald-500/20 text-emerald-400 hover:shadow-md hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out disabled:opacity-50"
+                    className="h-8 w-8 p-0 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 hover:shadow-md hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out disabled:opacity-50"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -413,7 +413,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                           onClick={() => openRoundDetails(round)}
                           variant="outline"
                           size="sm"
-                          className="glass border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-400 text-emerald-400 hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
+                          className="glass border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
                         >
                           <Eye className="w-3 h-3 mr-1" />
                           Details
