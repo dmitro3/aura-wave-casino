@@ -1091,8 +1091,8 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
         ? `${achievement.reward_amount} cases` 
         : `${achievement.reward_amount} XP`;
         
-      // You can add a toast notification here if you have a toast system
-      alert(`🎉 Achievement Unlocked!\n\n${achievement.name}\nReward: ${rewardText}`);
+      // Show success notification (you can replace this with a toast system)
+      console.log(`🎉 Achievement Claimed!\n\n${achievement.name}\nReward: ${rewardText}`);
 
       // Track newly claimed achievement for smooth transition
       setNewlyClaimed(prev => [...prev, achievement.id]);
