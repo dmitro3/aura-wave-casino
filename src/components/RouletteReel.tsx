@@ -55,6 +55,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const currentSpinningPhase = useRef<string>('');
   const hasCompletedAnimation = useRef<boolean>(false);
   const isCurrentlyAnimating = useRef<boolean>(false); // Track animation state that can't be overridden
+  const isInCriticalStartPhase = useRef<boolean>(false); // Track critical animation start phase
 
   // Animation configuration - EXACT MATCH TO SERVER
   const SPINNING_PHASE_DURATION = 4000; // 4 seconds (matches server SPINNING_DURATION exactly)
@@ -236,6 +237,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       hasCompletedAnimation.current = false;
       currentSpinningPhase.current = spinningPhaseId;
       isCurrentlyAnimating.current = true; // CRITICAL: Set this BEFORE any state updates
+      isInCriticalStartPhase.current = true; // CRITICAL: Mark critical start phase
       
       const target = calculateTargetPosition(winningSlot);
       setTargetPosition(target);
@@ -247,6 +249,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setShowWinningGlow(false);
       
       console.log('✅ ANIMATION FLAGS SET - Protected from server sync');
+      
+      // Clear critical start phase after a short delay
+      setTimeout(() => {
+        isInCriticalStartPhase.current = false;
+        console.log('✅ CRITICAL START PHASE CLEARED - Animation fully protected');
+      }, 500); // 500ms should be enough for animation to fully start
       
     } else if (!isSpinning && isAnimating && hasCompletedAnimation.current) {
       console.log('🛑 SPINNING PHASE ENDED - Animation completed successfully');
@@ -290,6 +298,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // COMPREHENSIVE BLOCKING: Block server sync during ANY animation-related state
       const shouldBlockSync = 
         isCurrentlyAnimating.current || 
+        isInCriticalStartPhase.current ||
         isAnimating || 
         animationPhase === 'accelerating' || 
         hasStartedAnimation.current || 
@@ -307,10 +316,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
         return;
       } else {
-        console.log('🔄 Server sync:', synchronizedPosition);
-        setTranslateX(synchronizedPosition);
-        // Save server position to localStorage
-        localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
+        // ADD DELAY TO PREVENT RACE CONDITION WITH ANIMATION START
+        const syncTimeout = setTimeout(() => {
+                  // Double-check blocking conditions after delay
+        if (isCurrentlyAnimating.current || isInCriticalStartPhase.current || isAnimating || hasStartedAnimation.current) {
+          console.log('🚫 BLOCKING DELAYED SERVER SYNC - Animation started during delay');
+          return;
+        }
+          console.log('🔄 Server sync:', synchronizedPosition);
+          setTranslateX(synchronizedPosition);
+          // Save server position to localStorage
+          localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
+        }, 100); // 100ms delay to prevent race condition
+        
+        return () => clearTimeout(syncTimeout);
       }
     }
   }, [synchronizedPosition, isAnimating, animationPhase, isSpinning, winningSlot]);
