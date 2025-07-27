@@ -66,6 +66,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Position tracking
   const previousPosition = useRef<number>(currentPosition);
   const positionChangeCount = useRef<number>(0);
+  const stablePosition = useRef<number>(currentPosition); // Track stable position between rounds
 
   // Track position changes for debugging
   useEffect(() => {
@@ -78,9 +79,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         change: Math.round(change),
         isAnimating,
         isSpinning,
-        cause: isAnimating ? 'ANIMATION' : 'OTHER'
+        cause: isAnimating ? 'ANIMATION' : 'UNEXPECTED - SHOULD NOT HAPPEN'
       });
       previousPosition.current = currentPosition;
+      
+      // Update stable position only when animation completes
+      if (!isAnimating && !isSpinning) {
+        stablePosition.current = currentPosition;
+        console.log('🔒 Stable position updated:', Math.round(currentPosition));
+      }
     }
   }, [currentPosition, isAnimating, isSpinning]);
 
@@ -92,7 +99,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     positionStable: !isAnimating && !isSpinning
   });
 
-  // Generate tile array with buffer cycles
+  // Generate tile array for rendering (but don't use it in calculateTargetPosition)
   const tiles = [];
   for (let cycle = 0; cycle < BUFFER_CYCLES; cycle++) {
     for (let slotIdx = 0; slotIdx < WHEEL_SLOTS.length; slotIdx++) {
@@ -108,7 +115,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }
 
-  // 🧮 Calculate target position for winning number
+  // 🧮 Calculate target position for winning number - PURE FUNCTION
   const calculateTargetPosition = useCallback((winningNumber: number, fromPosition: number): number => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningNumber);
     if (slotIndex === -1) {
@@ -129,25 +136,31 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     let bestTargetPosition = null;
     let bestDistance = Infinity;
     
-    for (const tile of tiles) {
-      if (tile.slot === winningNumber) {
-        // Calculate where vertical line would be if this tile is the target
-        const tileLeftEdge = tile.leftPosition;
-        const tileRightEdge = tileLeftEdge + TILE_SIZE_PX;
+    // Calculate directly without depending on tiles array
+    for (let cycle = 0; cycle < BUFFER_CYCLES; cycle++) {
+      for (let slotIdx = 0; slotIdx < WHEEL_SLOTS.length; slotIdx++) {
+        const slot = WHEEL_SLOTS[slotIdx];
         
-        // Random position within the winning tile (not always center)
-        const randomOffsetWithinTile = Math.random() * TILE_SIZE_PX;
-        const verticalLineOnTile = tileLeftEdge + randomOffsetWithinTile;
-        
-        // Calculate required position to put vertical line on this spot
-        const requiredPosition = VERTICAL_LINE_PX - verticalLineOnTile;
-        
-        // Check if this position is in our target area (to the left of start)
-        if (requiredPosition <= targetAreaCenter) {
-          const distanceFromTarget = Math.abs(requiredPosition - targetAreaCenter);
-          if (distanceFromTarget < bestDistance) {
-            bestDistance = distanceFromTarget;
-            bestTargetPosition = requiredPosition;
+        if (slot.slot === winningNumber) {
+          // Calculate tile position directly
+          const tileIndex = cycle * WHEEL_SLOTS.length + slotIdx;
+          const tileLeftEdge = tileIndex * TILE_SIZE_PX;
+          const tileRightEdge = tileLeftEdge + TILE_SIZE_PX;
+          
+          // Random position within the winning tile (not always center)
+          const randomOffsetWithinTile = Math.random() * TILE_SIZE_PX;
+          const verticalLineOnTile = tileLeftEdge + randomOffsetWithinTile;
+          
+          // Calculate required position to put vertical line on this spot
+          const requiredPosition = VERTICAL_LINE_PX - verticalLineOnTile;
+          
+          // Check if this position is in our target area (to the left of start)
+          if (requiredPosition <= targetAreaCenter) {
+            const distanceFromTarget = Math.abs(requiredPosition - targetAreaCenter);
+            if (distanceFromTarget < bestDistance) {
+              bestDistance = distanceFromTarget;
+              bestTargetPosition = requiredPosition;
+            }
           }
         }
       }
@@ -167,7 +180,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     });
 
     return bestTargetPosition;
-  }, [tiles]);
+  }, []); // NO DEPENDENCIES - pure function
 
   // 🎬 PRECISELY TIMED 4-second animation loop
   const animate = useCallback(() => {
@@ -237,19 +250,22 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     animationRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // 🚀 Start animation when spinning begins - VALIDATE 4-SECOND TIMING
+  // 🚀 Start animation when spinning begins - FIXED DEPENDENCIES
   useEffect(() => {
     if (isSpinning && !isAnimating && winningSlot !== null && !hasAnimationStarted.current) {
       console.log('🚀 Starting EXACTLY 4-Second Roulette Animation');
       
-      // Calculate target position from current position
-      const targetPos = calculateTargetPosition(winningSlot, currentPosition);
+      // Capture current position at the EXACT moment spinning starts
+      const startingPosition = currentPosition;
+      
+      // Calculate target position from captured starting position
+      const targetPos = calculateTargetPosition(winningSlot, startingPosition);
       
       // Setup animation with PRECISE timing
       const startTime = performance.now();
       animationStartTime.current = startTime;
       lastFrameTime.current = startTime;
-      animationStartPosition.current = currentPosition;
+      animationStartPosition.current = startingPosition; // Use captured position
       animationTargetPosition.current = targetPos;
       hasAnimationStarted.current = true;
       setIsAnimating(true);
@@ -260,9 +276,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       console.log('🎯 4-Second Animation Started:', {
         startTime: Math.round(startTime),
-        startPosition: Math.round(currentPosition),
+        startPosition: Math.round(startingPosition),
         targetPosition: Math.round(targetPos),
-        totalDistance: Math.round(Math.abs(targetPos - currentPosition)),
+        totalDistance: Math.round(Math.abs(targetPos - startingPosition)),
         expectedDuration: `${SPINNING_DURATION_MS}ms (4 seconds)`,
         direction: 'RIGHT → LEFT',
         winningNumber: winningSlot
@@ -282,7 +298,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       hasAnimationStarted.current = false;
       console.log('🛑 Spinning phase ended - animation flags reset');
     }
-  }, [isSpinning, winningSlot, currentPosition, calculateTargetPosition, animate, isAnimating]);
+  }, [isSpinning, winningSlot, calculateTargetPosition, animate]); // REMOVED currentPosition and isAnimating from dependencies
 
   // 🚫 DISABLED Server synchronization - position is maintained locally only
   // This prevents any teleporting/resetting of the reel position
