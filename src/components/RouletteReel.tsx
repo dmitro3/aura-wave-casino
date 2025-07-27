@@ -27,13 +27,13 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// FIXED PIXEL-PERFECT DIMENSIONS - NO RESPONSIVE BEHAVIOR
-const TILE_SIZE = 100; // Fixed 100px tiles
-const VISIBLE_TILES = 15; // Always show exactly 15 tiles
-const REEL_WIDTH = TILE_SIZE * VISIBLE_TILES; // 1500px fixed width
-const REEL_HEIGHT = 120; // Fixed height
-const CENTER_TILE_INDEX = Math.floor(VISIBLE_TILES / 2); // 7th tile (0-indexed)
-const BUFFER_TILES = 50; // Extra tiles for smooth scrolling
+// IMMUTABLE PIXEL-PERFECT DIMENSIONS - NEVER CHANGE
+const TILE_SIZE = 80; // Fixed 80px tiles (smaller for better fit)
+const VISIBLE_TILES = 11; // Always show exactly 11 tiles
+const REEL_VIEWPORT_WIDTH = TILE_SIZE * VISIBLE_TILES; // 880px fixed viewport
+const REEL_HEIGHT = 100; // Fixed height
+const CENTER_TILE_INDEX = Math.floor(VISIBLE_TILES / 2); // 5th tile (0-indexed)
+const BUFFER_TILES = 100; // Extra tiles for smooth scrolling
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   // State management
@@ -47,7 +47,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Refs
   const animationRef = useRef<number>();
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // Animation configuration
   const ACCELERATION_DURATION = 1000; // 1 second
@@ -84,7 +83,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     // Calculate position so that the tile center aligns with the center marker
     const targetTileCenter = targetTileIndex * TILE_SIZE + TILE_SIZE / 2;
-    const targetPosition = (REEL_WIDTH / 2) - targetTileCenter;
+    const targetPosition = (REEL_VIEWPORT_WIDTH / 2) - targetTileCenter;
 
     console.log('🎯 TARGET CALCULATION:', {
       slot,
@@ -92,7 +91,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       centerRepeat,
       targetTileIndex,
       targetTileCenter,
-      targetPosition: Math.round(targetPosition)
+      targetPosition: Math.round(targetPosition),
+      viewportCenter: REEL_VIEWPORT_WIDTH / 2
     });
 
     return Math.round(targetPosition);
@@ -109,7 +109,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const easeProgress = 1 - Math.pow(1 - progress, 3);
     
     // Move from current position to full speed position
-    const fullSpeedDistance = -TILE_SIZE * 20; // Move 20 tiles left during acceleration
+    const fullSpeedDistance = -TILE_SIZE * 15; // Move 15 tiles left during acceleration
     const currentPosition = easeProgress * fullSpeedDistance;
     
     setTranslateX(currentPosition);
@@ -129,8 +129,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const progress = Math.min(elapsed / FULL_SPEED_DURATION, 1);
     
     // Linear movement during full speed
-    const accelerationDistance = -TILE_SIZE * 20;
-    const fullSpeedDistance = -TILE_SIZE * 40; // Move 40 more tiles left
+    const accelerationDistance = -TILE_SIZE * 15;
+    const fullSpeedDistance = -TILE_SIZE * 30; // Move 30 more tiles left
     const currentPosition = accelerationDistance + (fullSpeedDistance * progress);
     
     setTranslateX(currentPosition);
@@ -163,7 +163,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
     
     // Move from full speed position to target position
-    const fullSpeedEndPosition = -TILE_SIZE * 60; // End of full speed
+    const fullSpeedEndPosition = -TILE_SIZE * 45; // End of full speed
     const remainingDistance = targetPosition - fullSpeedEndPosition;
     const currentPosition = fullSpeedEndPosition + (remainingDistance * easeProgress);
     
@@ -248,16 +248,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   return (
     <div className="flex justify-center w-full">
-      {/* Fixed-width container for pixel-perfect consistency */}
+      {/* IMMUTABLE FIXED-WIDTH CONTAINER - NEVER CHANGES */}
       <div 
-        ref={containerRef}
         className="relative overflow-hidden rounded-xl shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800"
         style={{ 
-          width: `${REEL_WIDTH}px`,
-          height: `${REEL_HEIGHT}px`
+          width: `${REEL_VIEWPORT_WIDTH}px`,
+          height: `${REEL_HEIGHT}px`,
+          minWidth: `${REEL_VIEWPORT_WIDTH}px`,
+          maxWidth: `${REEL_VIEWPORT_WIDTH}px`
         }}
       >
-        {/* Center marker - always at the same pixel position */}
+        {/* Center marker - ALWAYS at the same pixel position */}
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
           {/* Top arrow */}
           <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-emerald-400"></div>
@@ -272,7 +273,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-emerald-400/20 blur-sm"></div>
         </div>
 
-        {/* Reel with tiles */}
+        {/* Reel with tiles - IMMUTABLE TILE SIZES */}
         <div 
           className="flex h-full items-center"
           style={{
@@ -285,8 +286,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             // Calculate if this tile is under the center marker
             const tileLeft = tile.index * TILE_SIZE;
             const tileCenter = tileLeft + TILE_SIZE / 2;
-            const reelCenter = REEL_WIDTH / 2;
-            const distanceFromCenter = Math.abs(tileCenter + translateX - reelCenter);
+            const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
+            const distanceFromCenter = Math.abs(tileCenter + translateX - viewportCenter);
             const isUnderCenter = distanceFromCenter < TILE_SIZE / 3;
             const isWinningTile = tile.slot === winningSlot && isUnderCenter && !isAnimating;
             const isWinningGlow = isWinningTile && showWinningGlow;
@@ -304,7 +305,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                 `}
                 style={{ 
                   width: `${TILE_SIZE}px`,
-                  height: `${TILE_SIZE}px`
+                  height: `${TILE_SIZE}px`,
+                  minWidth: `${TILE_SIZE}px`,
+                  maxWidth: `${TILE_SIZE}px`,
+                  minHeight: `${TILE_SIZE}px`,
+                  maxHeight: `${TILE_SIZE}px`
                 }}
               >
                 <div className={`text-lg font-bold drop-shadow-lg transition-all duration-200 ${
