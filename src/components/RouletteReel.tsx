@@ -295,20 +295,26 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Server synchronization - COMPLETELY DISABLED DURING ANIMATION
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // AGGRESSIVE BLOCKING: Never sync during any animation-related state
-      if (isSpinning || isAnimating || hasStartedAnimation.current || isCurrentlyAnimating.current || isInCriticalStartPhase.current) {
-        console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress or critical start phase');
-        return;
-      }
+      // ULTRA AGGRESSIVE BLOCKING: Block sync if ANY animation-related condition is true
+      const shouldBlockSync = 
+        isSpinning || 
+        isAnimating || 
+        hasStartedAnimation.current || 
+        isCurrentlyAnimating.current || 
+        isInCriticalStartPhase.current ||
+        hasCompletedAnimation.current ||
+        animationPhase !== 'idle' && animationPhase !== 'stopped';
       
-      if (hasCompletedAnimation.current) {
-        console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
-        return;
-      }
-      
-      // Additional safety check: if we're in any animation phase, block sync
-      if (animationPhase !== 'idle' && animationPhase !== 'stopped') {
-        console.log('🚫 BLOCKING SERVER SYNC - Animation phase active:', animationPhase);
+      if (shouldBlockSync) {
+        console.log('🚫 BLOCKING SERVER SYNC - Animation protection active:', {
+          isSpinning,
+          isAnimating,
+          hasStartedAnimation: hasStartedAnimation.current,
+          isCurrentlyAnimating: isCurrentlyAnimating.current,
+          isInCriticalStartPhase: isInCriticalStartPhase.current,
+          hasCompletedAnimation: hasCompletedAnimation.current,
+          animationPhase
+        });
         return;
       }
       
