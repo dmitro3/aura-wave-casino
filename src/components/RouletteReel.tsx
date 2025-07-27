@@ -31,7 +31,7 @@ const WHEEL_SLOTS = [
 const TILE_SIZE_PX = 100;                              // Each tile is exactly 100px × 100px  
 const VISIBLE_TILES = 15;                              // Always show exactly 15 tiles
 const REEL_WIDTH_PX = VISIBLE_TILES * TILE_SIZE_PX;    // 1500px viewport width
-const REEL_HEIGHT_PX = 120;                            // Fixed height
+const REEL_HEIGHT_PX = TILE_SIZE_PX;                   // Match tile height exactly - no gray area
 const CENTER_MARKER_PX = REEL_WIDTH_PX / 2;            // 750px - fixed center marker
 
 // 🔄 INFINITE LOOPING SYSTEM - Duplicated sequences for seamless scrolling
@@ -323,9 +323,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
 
   return (
     <div className="flex justify-center w-full">
-      {/* 🎰 ROULETTE CONTAINER - Fixed 1500px width, 120px height */}
+      {/* 🎰 ROULETTE CONTAINER - Fixed 1500px width, 100px height (matches tiles) */}
       <div 
-        className="relative bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 rounded-xl shadow-2xl overflow-hidden"
+        className="relative rounded-xl shadow-2xl overflow-hidden"
         style={{ 
           width: `${REEL_WIDTH_PX}px`,
           height: `${REEL_HEIGHT_PX}px`
