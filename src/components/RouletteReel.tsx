@@ -27,53 +27,53 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// Fixed configuration for device-independent positioning
+// Fixed configuration for truly device-independent positioning
 const REEL_HEIGHT = 120; // Fixed reel height in pixels
-const VISIBLE_TILES_COUNT = 9; // Fixed number of visible tiles (must be odd for center alignment)
+const LOGICAL_TILE_SIZE = 100; // Fixed logical tile size (device-independent)
+const VISIBLE_LOGICAL_TILES = 9; // Fixed number of visible logical tiles
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
-  const [translateX, setTranslateX] = useState(0);
+  const [logicalTranslateX, setLogicalTranslateX] = useState(0); // Logical position (device-independent)
   const [isAnimating, setIsAnimating] = useState(false);
-  const [tileSize, setTileSize] = useState(REEL_HEIGHT); // Tile size equals reel height for perfect squares
-  const [viewportWidth, setViewportWidth] = useState(0);
+  const [scaleFactor, setScaleFactor] = useState(1); // Scale factor to convert logical to physical pixels
   const animationRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastSpinningState = useRef<boolean>(false);
 
-  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating, tileSize, viewportWidth });
+  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, logicalTranslateX, synchronizedPosition, isAnimating, scaleFactor });
 
-  // Update viewport width on mount and resize
-  useEffect(() => {
-    const updateViewportWidth = () => {
-      setViewportWidth(window.innerWidth);
-    };
-    
-    updateViewportWidth();
-    window.addEventListener('resize', updateViewportWidth);
-    return () => window.removeEventListener('resize', updateViewportWidth);
-  }, []);
-
-  // Calculate tile size based on viewport width to ensure consistent positioning
-  useEffect(() => {
-    if (viewportWidth > 0) {
-      // Calculate tile size based on viewport width and visible tiles count
-      const calculatedTileSize = viewportWidth / VISIBLE_TILES_COUNT;
+  // Calculate scale factor based on container width to maintain consistent logical positioning
+  const updateScaleFactor = useCallback(() => {
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.offsetWidth;
+      const visibleLogicalWidth = VISIBLE_LOGICAL_TILES * LOGICAL_TILE_SIZE;
+      const newScaleFactor = containerWidth / visibleLogicalWidth;
       
-      // Use the smaller of calculated size or reel height to maintain square tiles
-      const newTileSize = Math.min(calculatedTileSize, REEL_HEIGHT);
-      setTileSize(newTileSize);
+      setScaleFactor(newScaleFactor);
       
-      console.log('📱 Tile size calculation:', {
-        viewportWidth,
-        visibleTilesCount: VISIBLE_TILES_COUNT,
-        calculatedTileSize,
-        reelHeight: REEL_HEIGHT,
-        newTileSize,
-        device: viewportWidth < 768 ? 'mobile' : viewportWidth < 1024 ? 'tablet' : 'desktop'
+      console.log('📱 Scale factor calculation:', {
+        containerWidth,
+        visibleLogicalWidth,
+        newScaleFactor,
+        logicalTileSize: LOGICAL_TILE_SIZE,
+        visibleLogicalTiles: VISIBLE_LOGICAL_TILES,
+        device: containerWidth < 768 ? 'mobile' : containerWidth < 1024 ? 'tablet' : 'desktop'
       });
     }
-  }, [viewportWidth]);
+  }, []);
+
+  // Update scale factor on mount and resize
+  useEffect(() => {
+    updateScaleFactor();
+    
+    const handleResize = () => {
+      updateScaleFactor();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [updateScaleFactor]);
 
   // Generate tiles array with buffer for seamless looping
   const tiles = useMemo(() => {
@@ -91,8 +91,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return tilesArray;
   }, []);
 
-  // Calculate target position for winning slot to be centered using viewport-based positioning
-  const calculateTargetPosition = useCallback((slot: number) => {
+  // Calculate target logical position for winning slot to be centered
+  const calculateTargetLogicalPosition = useCallback((slot: number) => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
       console.error('❌ Invalid slot:', slot);
@@ -102,42 +102,39 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // Find the center instance of the winning slot in the buffer
     const centerRepeat = Math.floor(BUFFER_MULTIPLIER / 2);
     const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
-    const targetTileCenter = targetTileIndex * tileSize + tileSize / 2;
+    const targetTileLogicalCenter = targetTileIndex * LOGICAL_TILE_SIZE + LOGICAL_TILE_SIZE / 2;
     
-    // Calculate position so that the tile center aligns with the viewport center
-    const viewportCenter = viewportWidth / 2;
-    const targetPosition = viewportCenter - targetTileCenter;
+    // Calculate logical position so that the tile center aligns with logical center (0)
+    const targetLogicalPosition = 0 - targetTileLogicalCenter;
     
-    console.log('🎯 Target position calculation (viewport-based):', {
+    console.log('🎯 Target logical position calculation:', {
       winningSlot: slot,
       slotIndex,
       centerRepeat,
       targetTileIndex,
-      targetTileCenter,
-      viewportCenter,
-      viewportWidth,
-      targetPosition,
-      tileSize,
-      visibleTilesCount: VISIBLE_TILES_COUNT
+      targetTileLogicalCenter,
+      logicalCenter: 0,
+      targetLogicalPosition,
+      logicalTileSize: LOGICAL_TILE_SIZE
     });
     
-    return targetPosition;
-  }, [tileSize, viewportWidth]);
+    return targetLogicalPosition;
+  }, []);
 
-  // Simple spinning animation
+  // Simple spinning animation using logical positioning
   const animate = useCallback(() => {
     if (isSpinning) {
-      // Move the reel to the left (simulating spinning)
-      setTranslateX(prev => {
-        const newPosition = prev - (tileSize * 0.125); // Fixed speed based on tile size
+      // Move the reel to the left (simulating spinning) using logical units
+      setLogicalTranslateX(prev => {
+        const newLogicalPosition = prev - (LOGICAL_TILE_SIZE * 0.125); // Fixed logical speed
         
         // Reset position when we've moved too far left to maintain infinite scrolling
-        const totalWidth = WHEEL_SLOTS.length * tileSize * BUFFER_MULTIPLIER;
-        if (Math.abs(newPosition) > totalWidth / 2) {
-          return newPosition + totalWidth / 2;
+        const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+        if (Math.abs(newLogicalPosition) > totalLogicalWidth / 2) {
+          return newLogicalPosition + totalLogicalWidth / 2;
         }
         
-        return newPosition;
+        return newLogicalPosition;
       });
       
       animationRef.current = requestAnimationFrame(animate);
@@ -145,14 +142,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Ensure the winning slot lands under the center line
       console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Winning slot:', winningSlot);
       
-      const startPosition = translateX;
-      const targetPosition = calculateTargetPosition(winningSlot);
+      const startLogicalPosition = logicalTranslateX;
+      const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
       
       console.log('🎲 Starting deceleration animation:', {
         winningSlot,
-        startPosition,
-        targetPosition,
-        distance: Math.abs(targetPosition - startPosition)
+        startLogicalPosition,
+        targetLogicalPosition,
+        distance: Math.abs(targetLogicalPosition - startLogicalPosition)
       });
       
       const duration = 2500; // 2.5 seconds for smooth deceleration
@@ -179,20 +176,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           easeProgress = 0.9 + smoothEaseOut * 0.1; // 90% to 100% distance
         }
         
-        const newPosition = startPosition + (targetPosition - startPosition) * easeProgress;
-        setTranslateX(newPosition);
+        const newLogicalPosition = startLogicalPosition + (targetLogicalPosition - startLogicalPosition) * easeProgress;
+        setLogicalTranslateX(newLogicalPosition);
         
         if (progress < 1) {
           animationRef.current = requestAnimationFrame(animateToResult);
         } else {
           setIsAnimating(false);
-          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final position:', newPosition);
+          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final logical position:', newLogicalPosition);
         }
       };
       
       animateToResult();
     }
-  }, [isSpinning, winningSlot, synchronizedPosition, translateX, calculateTargetPosition, tileSize]);
+  }, [isSpinning, winningSlot, synchronizedPosition, logicalTranslateX, calculateTargetLogicalPosition]);
 
   // Handle spinning state changes
   useEffect(() => {
@@ -213,7 +210,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Reset position when round changes
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      setTranslateX(synchronizedPosition);
+      setLogicalTranslateX(synchronizedPosition);
     }
   }, [synchronizedPosition]);
 
@@ -254,17 +251,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         <div 
           className="flex h-full items-center"
           style={{
-            transform: `translateX(${translateX}px)`,
+            transform: `translateX(${logicalTranslateX * scaleFactor}px)`,
             transition: 'none', // No CSS transitions, we control animation with JS
             willChange: 'transform'
           }}
         >
           {tiles.map((tile) => {
-            const tileCenter = translateX + (tile.index * tileSize + tileSize / 2);
-            const viewportCenter = viewportWidth / 2;
-            const distanceFromCenter = Math.abs(tileCenter - viewportCenter);
-            const isNearCenter = distanceFromCenter < tileSize / 2;
-            const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < tileSize / 3;
+            const tileLogicalCenter = logicalTranslateX + (tile.index * LOGICAL_TILE_SIZE + LOGICAL_TILE_SIZE / 2);
+            const distanceFromCenter = Math.abs(tileLogicalCenter - 0); // Logical center is always 0
+            const isNearCenter = distanceFromCenter < LOGICAL_TILE_SIZE / 2;
+            const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < LOGICAL_TILE_SIZE / 3;
 
             return (
               <div
@@ -277,12 +273,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   ${isNearCenter && isAnimating ? 'scale-105 z-10' : ''}
                 `}
                 style={{ 
-                  width: `${tileSize}px`,
-                  height: `${tileSize}px`,
-                  minWidth: `${tileSize}px`,
-                  maxWidth: `${tileSize}px`,
-                  minHeight: `${tileSize}px`,
-                  maxHeight: `${tileSize}px`
+                  width: `${LOGICAL_TILE_SIZE * scaleFactor}px`,
+                  height: `${LOGICAL_TILE_SIZE * scaleFactor}px`,
+                  minWidth: `${LOGICAL_TILE_SIZE * scaleFactor}px`,
+                  maxWidth: `${LOGICAL_TILE_SIZE * scaleFactor}px`,
+                  minHeight: `${LOGICAL_TILE_SIZE * scaleFactor}px`,
+                  maxHeight: `${LOGICAL_TILE_SIZE * scaleFactor}px`
                 }}
               >
                 <div className={`text-lg font-bold drop-shadow-lg ${
