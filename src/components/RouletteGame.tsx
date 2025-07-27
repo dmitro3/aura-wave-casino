@@ -53,8 +53,7 @@ interface RouletteResult {
   round_number: number;
   result_color: string;
   result_slot: number;
-  total_bets_count: number;
-  total_bets_amount: number;
+  result_multiplier?: number;
   created_at: string;
 }
 
@@ -309,12 +308,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const openRoundDetails = (result: RouletteResult) => {
     // Convert RouletteResult to RouletteRound format for the modal
     const roundData: RouletteRound = {
-      id: result.round_id,
+      id: result.id, // Fixed: use id instead of round_id
       round_number: result.round_number,
       status: 'completed',
       result_slot: result.result_slot,
       result_color: result.result_color,
-      result_multiplier: 0, // Not needed for display
+      result_multiplier: result.result_multiplier,
       reel_position: 0, // Not needed for display
       betting_start_time: '',
       betting_end_time: '',

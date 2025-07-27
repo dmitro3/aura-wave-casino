@@ -119,10 +119,12 @@ serve(async (req) => {
       }
 
       case 'get_recent_results': {
+        // Pull from authoritative roulette_rounds table (same as Provably Fair)
         const { data: results, error } = await supabase
-          .from('roulette_results')
-          .select('*')
-          .order('created_at', { ascending: false })
+          .from('roulette_rounds')
+          .select('id, round_number, result_slot, result_color, result_multiplier, created_at')
+          .eq('status', 'completed')
+          .order('round_number', { ascending: false })
           .limit(15);
 
         if (error) throw error;
