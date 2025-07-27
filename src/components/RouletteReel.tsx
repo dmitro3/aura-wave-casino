@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Dice1, Dice2, Dice3, Dice4, Dice5, Dice6 } from 'lucide-react';
 
 interface RouletteReelProps {
   isSpinning: boolean;
@@ -11,24 +10,24 @@ interface RouletteReelProps {
 
 // Roulette wheel configuration: 15 slots in order
 const WHEEL_SLOTS = [
-  { slot: 0, color: 'green', icon: Dice1 },
-  { slot: 11, color: 'black', icon: Dice2 },
-  { slot: 5, color: 'red', icon: Dice3 },
-  { slot: 10, color: 'black', icon: Dice4 },
-  { slot: 6, color: 'red', icon: Dice5 },
-  { slot: 9, color: 'black', icon: Dice6 },
-  { slot: 7, color: 'red', icon: Dice1 },
-  { slot: 8, color: 'black', icon: Dice2 },
-  { slot: 1, color: 'red', icon: Dice3 },
-  { slot: 14, color: 'black', icon: Dice4 },
-  { slot: 2, color: 'red', icon: Dice5 },
-  { slot: 13, color: 'black', icon: Dice6 },
-  { slot: 3, color: 'red', icon: Dice1 },
-  { slot: 12, color: 'black', icon: Dice2 },
-  { slot: 4, color: 'red', icon: Dice3 }
+  { slot: 0, color: 'green' },
+  { slot: 11, color: 'black' },
+  { slot: 5, color: 'red' },
+  { slot: 10, color: 'black' },
+  { slot: 6, color: 'red' },
+  { slot: 9, color: 'black' },
+  { slot: 7, color: 'red' },
+  { slot: 8, color: 'black' },
+  { slot: 1, color: 'red' },
+  { slot: 14, color: 'black' },
+  { slot: 2, color: 'red' },
+  { slot: 13, color: 'black' },
+  { slot: 3, color: 'red' },
+  { slot: 12, color: 'black' },
+  { slot: 4, color: 'red' }
 ];
 
-const TILE_WIDTH = 140; // Increased width for better visual impact
+const TILE_WIDTH = 120; // Width of each tile in pixels
 const CONTAINER_WIDTH = 1200;
 const CENTER_OFFSET = CONTAINER_WIDTH / 2;
 const BUFFER_MULTIPLIER = 5; // 5x buffer for seamless looping
@@ -78,7 +77,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const currentSpeed = maxSpeed * easedProgress;
       setCurrentSpeed(currentSpeed);
       
-      const newPosition = initialPositionRef.current - (currentSpeed * elapsed / 1000);
+      const newPosition = translateX - (currentSpeed * 0.016); // Move left (negative)
       setTranslateX(newPosition);
       
       if (progress >= 1) {
@@ -88,20 +87,21 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         animationRef.current = requestAnimationFrame(animate);
       }
     } else if (animationPhase === 'spinning') {
-      // Full speed spinning phase
-      const newPosition = translateX - currentSpeed * 0.016; // 60fps
+      // Full speed spinning phase - continuous movement
+      const newPosition = translateX - currentSpeed * 0.016; // Move left continuously
       setTranslateX(newPosition);
       
       // Continue spinning until we get the result
       if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
         setAnimationPhase('decelerating');
         startTimeRef.current = currentTime;
+        initialPositionRef.current = translateX;
         targetPositionRef.current = synchronizedPosition;
       } else {
         animationRef.current = requestAnimationFrame(animate);
       }
     } else if (animationPhase === 'decelerating') {
-      // Deceleration phase: 2-3 seconds
+      // Deceleration phase: 2 seconds
       const decelerationDuration = 2000;
       const progress = Math.min(elapsed / decelerationDuration, 1);
       const easedProgress = easeOutQuart(progress);
@@ -113,15 +113,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       if (progress >= 1) {
         setAnimationPhase('stopped');
         setCurrentSpeed(0);
-        
-        // Add bounce effect
-        setTimeout(() => {
-          const bounceDistance = 20;
-          setTranslateX(prev => prev + bounceDistance);
-          setTimeout(() => {
-            setTranslateX(prev => prev - bounceDistance);
-          }, 100);
-        }, 50);
       } else {
         animationRef.current = requestAnimationFrame(animate);
       }
@@ -171,15 +162,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     };
   }, []);
 
-  // Get tile color styling with enhanced visual effects
+  // Get tile color styling
   const getTileColor = (color: string) => {
     switch (color) {
       case 'green':
-        return 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 border-emerald-300 text-white shadow-lg shadow-emerald-500/20';
+        return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 text-white';
       case 'red':
-        return 'bg-gradient-to-br from-red-400 via-red-500 to-red-600 border-red-300 text-white shadow-lg shadow-red-500/20';
+        return 'bg-gradient-to-br from-red-400 to-red-600 border-red-300 text-white';
       case 'black':
-        return 'bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 border-gray-600 text-white shadow-lg shadow-gray-800/20';
+        return 'bg-gradient-to-br from-gray-700 to-gray-900 border-gray-600 text-white';
       default:
         return 'bg-gray-500 text-white';
     }
@@ -190,31 +181,26 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   return (
     <div className="relative w-full max-w-7xl mx-auto">
       {/* Reel container */}
-      <div ref={containerRef} className="relative h-40 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 border border-gray-600">
+      <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
-        {/* Center indicator line - Result marker */}
+        {/* Center indicator line */}
         <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 z-30 pointer-events-none">
           {/* Top arrow */}
-          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-10 border-r-10 border-b-10 border-l-transparent border-r-transparent border-b-emerald-400 drop-shadow-lg"></div>
+          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+            <div className="w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-emerald-400"></div>
           </div>
           
           {/* Bottom arrow */}
-          <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-10 border-r-10 border-t-10 border-l-transparent border-r-transparent border-t-emerald-400 drop-shadow-lg"></div>
+          <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
+            <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-emerald-400"></div>
           </div>
           
           {/* Center line */}
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-300 via-emerald-400 to-emerald-300 shadow-lg"></div>
           
           {/* Glow effect */}
-          <div className="absolute inset-0 bg-emerald-400 shadow-emerald-400/50 shadow-2xl blur-sm"></div>
+          <div className="absolute inset-0 bg-emerald-400 shadow-emerald-400/50 shadow-2xl blur-sm animate-pulse"></div>
         </div>
-
-        {/* Motion blur overlay during high speed */}
-        {currentSpeed > 400 && (
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent z-20 pointer-events-none animate-pulse"></div>
-        )}
 
         {/* Horizontal scrolling tiles */}
         <div 
@@ -231,33 +217,24 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             const distanceFromCenter = Math.abs(tileCenter - CENTER_OFFSET);
             const isNearCenter = distanceFromCenter < TILE_WIDTH / 2;
             const isWinningTile = animationPhase === 'stopped' && tile.slot === winningSlot && distanceFromCenter < TILE_WIDTH / 3;
-            const isSpinningTile = (animationPhase === 'accelerating' || animationPhase === 'spinning') && distanceFromCenter < TILE_WIDTH / 2;
-            const IconComponent = tile.icon;
 
             return (
               <div
                 key={tile.key}
                 className={`
-                  flex-shrink-0 h-32 flex flex-col items-center justify-center relative
-                  border-2 shadow-lg transition-all duration-300
+                  flex-shrink-0 h-28 flex items-center justify-center relative
+                  border-2 shadow-lg transition-all duration-200
                   ${getTileColor(tile.color)}
-                  ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20 animate-bounce' : ''}
-                  ${isSpinningTile ? 'scale-105 z-10' : ''}
-                  ${isNearCenter ? 'ring-1 ring-white/20' : ''}
+                  ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : ''}
+                  ${isNearCenter && animationPhase !== 'idle' ? 'scale-105 z-10' : ''}
                 `}
                 style={{ width: `${TILE_WIDTH}px` }}
               >
-                {/* Slot number */}
-                <div className={`text-3xl font-bold drop-shadow-lg mb-1 ${
+                <div className={`text-2xl font-bold drop-shadow-lg ${
                   isWinningTile ? 'text-emerald-200 scale-125' : ''
                 }`}>
                   {tile.slot}
                 </div>
-                
-                {/* Icon */}
-                <IconComponent className={`w-6 h-6 drop-shadow-lg ${
-                  isWinningTile ? 'text-emerald-200 scale-125' : 'text-white/80'
-                }`} />
               </div>
             );
           })}
