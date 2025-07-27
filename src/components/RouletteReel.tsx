@@ -29,7 +29,7 @@ const WHEEL_SLOTS = [
 
 // Fixed logical grid system - completely device-independent
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 80; // Fixed logical tile width (device-independent) - reduced from 100
+const LOGICAL_TILE_WIDTH = 70; // Fixed logical tile width (device-independent) - reduced from 80
 const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
