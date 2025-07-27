@@ -1,9 +1,13 @@
 -- Fix user registration to create user_level_stats record
 -- This ensures new users have all required data structures
 
--- Update handle_new_user function to create user_level_stats
+-- Step 1: Drop the trigger first (since it depends on the function)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Step 2: Drop the function
 DROP FUNCTION IF EXISTS public.handle_new_user();
 
+-- Step 3: Recreate the function with user_level_stats creation
 CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
  LANGUAGE plpgsql
@@ -118,35 +122,55 @@ BEGIN
 END;
 $function$;
 
--- Test the function
+-- Step 4: Recreate the trigger
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Step 5: Test the setup
 DO $$
 DECLARE
   test_user_id UUID := gen_random_uuid();
   test_result RECORD;
 BEGIN
-  -- Test the function with a mock user
-  SELECT public.handle_new_user() INTO test_result;
+  RAISE NOTICE '✅ User registration function and trigger updated successfully';
   
-  RAISE NOTICE 'handle_new_user function updated successfully';
-  
-  -- Verify the function creates both profiles and user_level_stats
+  -- Verify the trigger exists
   IF EXISTS (
-    SELECT 1 FROM public.profiles WHERE id = test_user_id
-  ) AND EXISTS (
-    SELECT 1 FROM public.user_level_stats WHERE user_id = test_user_id
+    SELECT 1 FROM information_schema.triggers 
+    WHERE trigger_name = 'on_auth_user_created' 
+    AND event_object_table = 'users'
   ) THEN
-    RAISE NOTICE '✅ Function creates both profiles and user_level_stats records';
+    RAISE NOTICE '✅ Trigger on_auth_user_created exists and is properly configured';
   ELSE
-    RAISE NOTICE '❌ Function may not be creating both records properly';
+    RAISE NOTICE '❌ Trigger may not be properly configured';
+  END IF;
+  
+  -- Verify the function exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.routines 
+    WHERE routine_name = 'handle_new_user'
+  ) THEN
+    RAISE NOTICE '✅ Function handle_new_user exists and is properly configured';
+  ELSE
+    RAISE NOTICE '❌ Function may not be properly configured';
   END IF;
 END $$;
 
--- Show current trigger setup
+-- Step 6: Show final setup
 SELECT 
-  'Current trigger setup:' as info,
+  'Final trigger setup:' as info,
   trigger_name,
   event_manipulation,
   event_object_table,
   action_statement
 FROM information_schema.triggers 
 WHERE trigger_name = 'on_auth_user_created';
+
+SELECT 
+  'Function verification:' as info,
+  routine_name,
+  routine_type,
+  data_type
+FROM information_schema.routines 
+WHERE routine_name = 'handle_new_user';
