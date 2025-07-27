@@ -24,6 +24,7 @@ interface UserProfileProps {
   onClose: () => void;
   userData?: UserProfileType | null;
   username?: string;
+  onUserDataUpdate?: () => void;
 }
 
 // Icon mapping for achievements
@@ -82,7 +83,7 @@ const difficultyColors = {
   extreme: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
 };
 
-export default function UserProfile({ isOpen, onClose, userData: propUserData, username }: UserProfileProps) {
+export default function UserProfile({ isOpen, onClose, userData: propUserData, username, onUserDataUpdate }: UserProfileProps) {
   const { user } = useAuth();
   const { stats } = useUserLevelStats();
   const { claimableAchievements: notificationClaimable, hasNewClaimable } = useAchievementNotifications();
@@ -663,6 +664,8 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                     isOwnProfile={isOwnProfile}
                     userId={userData.id}
                     stats={stats}
+                    propUserData={propUserData}
+                    onUserDataUpdate={onUserDataUpdate}
                   />
                 )}
               </TabsContent>
@@ -737,9 +740,11 @@ interface AchievementsSectionProps {
   isOwnProfile: boolean;
   userId: string;
   stats: any;
+  propUserData?: UserProfileType | null;
+  onUserDataUpdate?: () => void;
 }
 
-function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectionProps) {
+function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUserDataUpdate }: AchievementsSectionProps) {
   const [achievements, setAchievements] = useState<any[]>([]);
   const [userAchievements, setUserAchievements] = useState<any[]>([]);
   const [claimableAchievements, setClaimableAchievements] = useState<any[]>([]);
@@ -1079,11 +1084,41 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       // Show success notification
       console.log(`🎉 Achievement unlocked: ${achievement.name}! Reward: ${achievement.reward_type === 'money' ? '$' : ''}${achievement.reward_amount}${achievement.reward_type === 'cases' ? ' cases' : achievement.reward_type === 'xp' ? ' XP' : ''}`);
 
+      // Show success notification to user
+      const rewardText = achievement.reward_type === 'money' 
+        ? `$${achievement.reward_amount}` 
+        : achievement.reward_type === 'cases' 
+        ? `${achievement.reward_amount} cases` 
+        : `${achievement.reward_amount} XP`;
+        
+      // You can add a toast notification here if you have a toast system
+      alert(`🎉 Achievement Unlocked!\n\n${achievement.name}\nReward: ${rewardText}`);
+
       // Track newly claimed achievement for smooth transition
       setNewlyClaimed(prev => [...prev, achievement.id]);
 
       // Refresh achievements data to update the UI
       await fetchData();
+      
+      // Also refresh user profile data to update balance display
+      if (achievement.reward_type === 'money') {
+        // Trigger a refresh of the user profile data
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .select('balance, level, xp, total_wagered, total_profit')
+          .eq('id', userId)
+          .single();
+          
+        if (updatedProfile) {
+          // Update the user profile data in the parent component
+          if (propUserData) {
+            // If we have propUserData, update it through the parent
+            // This will trigger a re-render with updated balance
+            console.log('Updated balance:', updatedProfile.balance);
+            onUserDataUpdate?.(); // Call the callback to update the parent's userData
+          }
+        }
+      }
       
       // Clear the newly claimed status after a delay
       setTimeout(() => {
