@@ -253,52 +253,51 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     animationRef.current = requestAnimationFrame(animate);
   }, [animationPhase]);
 
-  // 🚀 Animation trigger - ONLY start when spinning begins
+  // 🚀 Animation trigger - SINGLE ANIMATION PER SPINNING PHASE ONLY
   useEffect(() => {
-    // ONLY start animation when spinning phase begins
+    // STRICT SINGLE ANIMATION: Only start when spinning phase begins
     if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
-      console.log('🚀 Starting 4-Second RIGHT-TO-LEFT Spin');
+      console.log('🚀 Starting SINGLE 4-Second RIGHT-TO-LEFT Spin');
       
       const target = calculateTargetPosition(winningSlot, translateX);
       targetPosition.current = target;
       startPosition.current = translateX; // Start from current position
       animationStartTime.current = Date.now();
       
-      // Set flags and start animation
+      // LOCK animation flags to prevent re-triggers
       hasStartedAnimation.current = true;
       setIsAnimating(true);
       setAnimationPhase('accelerating');
       setShowWinningGlow(false);
       
-      // Start animation loop
+      // Start single animation loop
       animationRef.current = requestAnimationFrame(animate);
       
-      console.log('🎯 Spin Started:', {
+      console.log('🎯 Single Spin Started:', {
         startPosition: Math.round(startPosition.current),
         targetPosition: Math.round(target),
         winningSlot,
         totalDistance: Math.round(Math.abs(target - startPosition.current)),
-        direction: 'RIGHT → LEFT ONLY'
+        direction: 'RIGHT → LEFT ONLY',
+        guaranteedSingleAnimation: true
       });
       
     }
-    // When spinning stops, let animation complete naturally but reset flags
+    // When spinning stops, clean up flags for next round
     else if (!isSpinning && hasStartedAnimation.current) {
-      console.log('🛑 Spinning phase ended - position will be maintained');
-      // Reset the animation flag so next round can start
-      setTimeout(() => {
-        hasStartedAnimation.current = false;
-      }, 100);
+      console.log('🛑 Spinning phase ended - cleaning up for next round');
+      // Clean reset for next round
+      hasStartedAnimation.current = false;
     }
-    // When completely idle, just ensure we're in idle state
-    else if (!isSpinning && !isAnimating) {
+    // Ensure idle state when not spinning
+    else if (!isSpinning && !isAnimating && !hasStartedAnimation.current) {
       if (animationPhase !== 'idle' && animationPhase !== 'completed') {
         setAnimationPhase('idle');
       }
     }
-  }, [isSpinning, winningSlot, isAnimating, calculateTargetPosition, animate, translateX, animationPhase]);
+  }, [isSpinning, winningSlot]); // REMOVED problematic dependencies
 
-  // 🔄 Server synchronization - ONLY when completely idle and not spinning
+  // 🔄 Server synchronization - ONLY when completely idle
   useEffect(() => {
     if (synchronizedPosition !== null && 
         synchronizedPosition !== undefined && 
@@ -307,7 +306,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         (animationPhase === 'idle' || animationPhase === 'completed') &&
         !hasStartedAnimation.current) {
       
-      console.log('🔄 Server sync (only when idle):', synchronizedPosition);
+      console.log('🔄 Server sync (betting phase only):', synchronizedPosition);
       setTranslateX(synchronizedPosition);
       localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
     }
@@ -432,10 +431,28 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             <div>Position: {Math.round(translateX)}</div>
             <div>Spinning: {isSpinning ? 'YES' : 'NO'}</div>
             <div>Animating: {isAnimating ? 'YES' : 'NO'}</div>
+            <div>Started: {hasStartedAnimation.current ? 'YES' : 'NO'}</div>
             <div>Winning: {winningSlot}</div>
             <div>Direction: RIGHT → LEFT ONLY</div>
+            <div className={`font-bold ${!isSpinning && !isAnimating ? 'text-green-400' : 'text-yellow-400'}`}>
+              Status: {!isSpinning && !isAnimating ? 'MOTIONLESS' : 'MOVING'}
+            </div>
           </div>
         )}
+
+        {/* 🎯 Visual state indicator */}
+        <div className="absolute top-2 right-2 z-40">
+          {!isSpinning && !isAnimating && (
+            <div className="bg-green-500/20 border border-green-400 text-green-400 px-2 py-1 rounded text-xs font-bold">
+              BETTING PHASE - REEL LOCKED
+            </div>
+          )}
+          {isSpinning && isAnimating && (
+            <div className="bg-yellow-500/20 border border-yellow-400 text-yellow-400 px-2 py-1 rounded text-xs font-bold animate-pulse">
+              SPINNING - SINGLE ANIMATION
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
