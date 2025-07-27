@@ -308,7 +308,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         (winningSlot !== null && hasStartedAnimation.current) ||
         (isSpinning && isAnimating) ||
         (hasStartedAnimation.current && !hasCompletedAnimation.current) ||
-        (isSpinning && translateX !== synchronizedPosition); // Block if spinning and position differs
+        (isSpinning && translateX !== synchronizedPosition) || // Block if spinning and position differs
+        (isSpinning && synchronizedPosition !== null); // BLOCK ALL SYNC DURING SPINNING
       
       if (shouldBlockSync) {
         console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress, keeping current position');
