@@ -46,7 +46,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const updateScaleFactor = useCallback(() => {
     if (containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
-      const visibleLogicalWidth = 10 * LOGICAL_TILE_WIDTH; // 10 tiles visible (increased from 9)
+      const visibleLogicalWidth = 12 * LOGICAL_TILE_WIDTH; // 12 tiles visible (increased from 10)
       const newScaleFactor = containerWidth / visibleLogicalWidth;
       
       setScaleFactor(newScaleFactor);
@@ -409,16 +409,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   ${isNearCenter && isAnimating ? 'scale-105 z-10' : ''}
                 `}
                 style={{ 
-                  width: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
-                  height: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
-                  minWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
-                  maxWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
-                  minHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
-                  maxHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
-                  aspectRatio: '1 / 1',
-                  flexShrink: 0,
-                  flexGrow: 0,
-                  flexBasis: `${LOGICAL_TILE_WIDTH * scaleFactor}px`
+                  width: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
+                  height: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
+                  minWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
+                  maxWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
+                  minHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
+                  maxHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
+                  aspectRatio: '1 / 1 !important',
+                  flexShrink: '0 !important',
+                  flexGrow: '0 !important',
+                  flexBasis: `${LOGICAL_TILE_WIDTH * scaleFactor}px !important`,
+                  boxSizing: 'border-box !important'
                 }}
               >
                 <div className={`text-lg font-bold drop-shadow-lg ${
