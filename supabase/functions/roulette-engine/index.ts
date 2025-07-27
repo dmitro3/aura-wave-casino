@@ -970,14 +970,30 @@ async function completeRound(supabase: any, round: any) {
       .eq('game_type', 'roulette')
       .eq('round_id', round.id);
 
-    // Update user stats using the proper function
-    await supabase.rpc('update_user_stats', {
+    // Update user stats and level using the comprehensive function
+    const { data: statsResult, error: statsError } = await supabase.rpc('update_user_stats_and_level', {
       p_user_id: bet.user_id,
       p_game_type: 'roulette',
       p_bet_amount: bet.bet_amount,
+      p_result: isWinner ? 'win' : 'loss',
       p_profit: profit,
-      p_is_winner: isWinner
+      p_streak_length: 0,
+      p_winning_color: round.result_color,
+      p_bet_color: bet.bet_color
     });
+
+    if (statsError) {
+      console.error('❌ Error updating user stats:', statsError);
+    } else if (statsResult && statsResult.length > 0) {
+      const result = statsResult[0];
+      console.log(`📊 Stats updated for ${bet.user_id}:`, {
+        leveledUp: result.leveled_up,
+        newLevel: result.new_level,
+        oldLevel: result.old_level,
+        casesEarned: result.cases_earned,
+        borderTierChanged: result.border_tier_changed
+      });
+    }
 
     // Process winnings (update balance with real-time trigger)
     if (isWinner && actualPayout > 0) {

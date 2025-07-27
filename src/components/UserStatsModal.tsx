@@ -491,6 +491,57 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
                             <div className="text-xs text-muted-foreground">Profit</div>
                           </div>
                         </div>
+                        
+                        {/* Enhanced Roulette Stats */}
+                        {gameType === 'roulette' && levelStats && (
+                          <div className="mt-3 p-3 rounded-lg bg-card/30 border">
+                            <div className="text-sm font-medium mb-2">Detailed Roulette Statistics</div>
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div className="space-y-1">
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Best Streak:</span>
+                                  <span className="font-medium">{levelStats.roulette_best_streak || 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Current Streak:</span>
+                                  <span className="font-medium">{levelStats.roulette_current_streak || 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Biggest Bet:</span>
+                                  <span className="font-medium">${(levelStats.roulette_biggest_bet || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Favorite Color:</span>
+                                  <span className={`font-medium capitalize ${
+                                    levelStats.roulette_favorite_color === 'green' ? 'text-green-400' :
+                                    levelStats.roulette_favorite_color === 'red' ? 'text-red-400' :
+                                    levelStats.roulette_favorite_color === 'black' ? 'text-gray-300' : ''
+                                  }`}>
+                                    {levelStats.roulette_favorite_color || 'None'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between">
+                                  <span className="text-green-400">Green Wins:</span>
+                                  <span className="font-medium">{levelStats.roulette_green_wins || 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-red-400">Red Wins:</span>
+                                  <span className="font-medium">{levelStats.roulette_red_wins || 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-300">Black Wins:</span>
+                                  <span className="font-medium">{levelStats.roulette_black_wins || 0}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Highest Win:</span>
+                                  <span className="font-medium text-green-400">+${(levelStats.roulette_highest_win || 0).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {Object.values(userStats.gameStats).every(stats => stats.wins === 0 && stats.losses === 0) && (

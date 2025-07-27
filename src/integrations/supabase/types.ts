@@ -801,6 +801,15 @@ export type Database = {
           roulette_profit: number
           roulette_wagered: number
           roulette_wins: number
+          roulette_highest_win: number
+          roulette_highest_loss: number
+          roulette_green_wins: number
+          roulette_red_wins: number
+          roulette_black_wins: number
+          roulette_favorite_color: string | null
+          roulette_best_streak: number
+          roulette_current_streak: number
+          roulette_biggest_bet: number
           total_case_value: number
           total_cases_opened: number
           total_games: number
@@ -840,6 +849,15 @@ export type Database = {
           roulette_profit?: number
           roulette_wagered?: number
           roulette_wins?: number
+          roulette_highest_win?: number
+          roulette_highest_loss?: number
+          roulette_green_wins?: number
+          roulette_red_wins?: number
+          roulette_black_wins?: number
+          roulette_favorite_color?: string | null
+          roulette_best_streak?: number
+          roulette_current_streak?: number
+          roulette_biggest_bet?: number
           total_case_value?: number
           total_cases_opened?: number
           total_games?: number
@@ -879,6 +897,15 @@ export type Database = {
           roulette_profit?: number
           roulette_wagered?: number
           roulette_wins?: number
+          roulette_highest_win?: number
+          roulette_highest_loss?: number
+          roulette_green_wins?: number
+          roulette_red_wins?: number
+          roulette_black_wins?: number
+          roulette_favorite_color?: string | null
+          roulette_best_streak?: number
+          roulette_current_streak?: number
+          roulette_biggest_bet?: number
           total_case_value?: number
           total_cases_opened?: number
           total_games?: number
@@ -978,6 +1005,8 @@ export type Database = {
           p_result: string
           p_profit: number
           p_streak_length?: number
+          p_winning_color?: string
+          p_bet_color?: string
         }
         Returns: {
           leveled_up: boolean
