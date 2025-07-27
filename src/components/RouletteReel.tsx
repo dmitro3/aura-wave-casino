@@ -46,7 +46,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const updateScaleFactor = useCallback(() => {
     if (containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
-      const visibleLogicalWidth = 7 * LOGICAL_TILE_WIDTH; // 7 tiles visible
+      const visibleLogicalWidth = 9 * LOGICAL_TILE_WIDTH; // 9 tiles visible (increased from 7)
       const newScaleFactor = containerWidth / visibleLogicalWidth;
       
       setScaleFactor(newScaleFactor);
@@ -355,7 +355,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   return (
     <div className="relative w-full max-w-7xl mx-auto">
       {/* Reel container */}
-      <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
+      <div ref={containerRef} className="relative h-24 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
         {/* Center indicator line - positioned at container center */}
         <div 
@@ -413,7 +413,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   height: `${LOGICAL_TILE_WIDTH * scaleFactor}px` // Make tiles square
                 }}
               >
-                <div className={`text-2xl font-bold drop-shadow-lg ${
+                <div className={`text-lg font-bold drop-shadow-lg ${
                   isWinningTile ? 'text-emerald-200 scale-125' : ''
                 }`}>
                   {tile.slot}
