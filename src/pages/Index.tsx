@@ -423,7 +423,7 @@ export default function Index({ initialGame }: IndexProps) {
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 pb-8">
         {/* Left Sidebar - Games Navigation */}
-        <div className="lg:col-span-3 space-y-4">
+        <div className="lg:col-span-1 space-y-4">
           <Card className="glass border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
