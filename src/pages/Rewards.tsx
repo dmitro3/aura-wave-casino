@@ -8,10 +8,13 @@ import { useCaseRewards } from '@/hooks/useCaseRewards';
 import { useFreeCases } from '@/hooks/useFreeCases';
 import { EnhancedCaseOpeningModal } from '@/components/EnhancedCaseOpeningModal';
 import { useToast } from '@/hooks/use-toast';
+import RewardsPanel from '@/components/RewardsPanel';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 export default function Rewards() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { userData, updateUserProfile } = useUserProfile();
   const { availableCases, openedCases, loading, openCase } = useCaseRewards();
   const { caseStatuses, selectedFreeCase, openFreeCaseModal, handleFreeCaseOpened, closeFreeCaseModal } = useFreeCases();
   const [selectedCase, setSelectedCase] = useState<string | null>(null);
@@ -85,6 +88,17 @@ export default function Rewards() {
       </header>
 
       <div className="max-w-6xl mx-auto space-y-6">
+        {/* Daily Rewards Section */}
+        {user && userData && (
+          <div className="mb-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Daily Rewards
+            </h2>
+            <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />
+          </div>
+        )}
+
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="glass border-0">

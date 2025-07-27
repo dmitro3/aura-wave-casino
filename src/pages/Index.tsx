@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User, Wallet, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot } from 'lucide-react';
@@ -12,7 +12,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import AuthModal from '@/components/AuthModal';
 import UserProfile from '@/components/UserProfile';
-import RewardsPanel from '@/components/RewardsPanel';
+
 import CoinflipGame from '@/components/CoinflipGame';
 import { RealtimeChat } from '@/components/RealtimeChat';
 import { RouletteGame } from '@/components/RouletteGame';
@@ -422,60 +422,80 @@ export default function Index({ initialGame }: IndexProps) {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6 pb-8">
-        {/* Left Sidebar */}
-        <div className="lg:col-span-1 space-y-4">
-          {user && <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />}
-          
-
+        {/* Left Sidebar - Games Navigation */}
+        <div className="lg:col-span-3 space-y-4">
+          <Card className="glass border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gamepad2 className="w-5 h-5 text-primary" />
+                Games
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={() => handleGameChange('coinflip')}
+                variant={currentGame === 'coinflip' ? 'default' : 'outline'}
+                className="w-full justify-start glass border-0"
+              >
+                <Gamepad2 className="w-4 h-4 mr-2" />
+                Coinflip
+              </Button>
+              <Button
+                onClick={() => handleGameChange('roulette')}
+                variant={currentGame === 'roulette' ? 'default' : 'outline'}
+                className="w-full justify-start glass border-0"
+              >
+                <Target className="w-4 h-4 mr-2" />
+                Roulette
+              </Button>
+              <Button
+                onClick={() => handleGameChange('tower')}
+                variant={currentGame === 'tower' ? 'default' : 'outline'}
+                className="w-full justify-start glass border-0"
+              >
+                <Building className="w-4 h-4 mr-2" />
+                Tower
+              </Button>
+              <Button
+                disabled
+                variant="outline"
+                className="w-full justify-start glass border-0 opacity-50"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Crash (Coming Soon)
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Games Area */}
         <div className="lg:col-span-7">
-          <Tabs value={currentGame} onValueChange={handleGameChange} className="space-y-4">
-            <TabsList className="glass w-full">
-              <TabsTrigger value="coinflip" className="flex-1">
-                <Gamepad2 className="w-4 h-4 mr-2" />
-                Coinflip
-              </TabsTrigger>
-              <TabsTrigger value="roulette" className="flex-1">
-                <Target className="w-4 h-4 mr-2" />
-                Roulette
-              </TabsTrigger>
-              <TabsTrigger value="tower" className="flex-1">
-                <Building className="w-4 h-4 mr-2" />
-                Tower
-              </TabsTrigger>
-              <TabsTrigger value="crash" className="flex-1" disabled>
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Crash (Coming Soon)
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="coinflip">
-              {user && userData ? (
+          <div className="space-y-4">
+            {currentGame === 'coinflip' && (
+              user && userData ? (
                 <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
               ) : (
                 <CoinflipGame userData={null} onUpdateUser={() => {}} />
-              )}
-            </TabsContent>
+              )
+            )}
 
-            <TabsContent value="roulette">
-              {user && userData ? (
+            {currentGame === 'roulette' && (
+              user && userData ? (
                 <RouletteGame userData={userData} onUpdateUser={updateUserProfile} />
               ) : (
                 <RouletteGame userData={null} onUpdateUser={() => Promise.resolve()} />
-              )}
-            </TabsContent>
+              )
+            )}
 
-            <TabsContent value="tower">
-              {user && userData ? (
+            {currentGame === 'tower' && (
+              user && userData ? (
                 <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
               ) : (
                 <TowerGame userData={null} onUpdateUser={() => {}} />
-              )}
-            </TabsContent>
+              )
+            )}
 
-            <TabsContent value="crash">
+            {currentGame === 'crash' && (
               <Card className="glass border-0 p-12 text-center">
                 <div className="space-y-4">
                   <div className="text-4xl">🚀</div>
@@ -485,8 +505,8 @@ export default function Index({ initialGame }: IndexProps) {
                   </p>
                 </div>
               </Card>
-            </TabsContent>
-          </Tabs>
+            )}
+          </div>
         </div>
 
         {/* Right Sidebar - Real-time Chat */}
