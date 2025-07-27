@@ -173,9 +173,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Animation configuration
   const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
-  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.15; // Reduced for smoother animation
+  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.12; // Slightly reduced for smoother animation
   const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
-  const DECELERATION_DISTANCE = LOGICAL_TILE_SIZE * 50; // Distance to decelerate over
 
   // Full speed spinning animation with proper frame timing
   const animateFullSpeed = useCallback(() => {
@@ -359,8 +358,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setDecelerationStartTime(Date.now());
       setDecelerationStartPosition(logicalTranslateX);
       
+      // Calculate target position and log it
       const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
-      
       console.log('🎲 DECELERATION CALCULATION:', {
         serverWinningSlot: winningSlot,
         decelerationStartPosition: logicalTranslateX,
@@ -372,19 +371,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         const elapsed = Date.now() - decelerationStartTime;
         const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
         
-        // Realistic deceleration curve (ease-out with bounce)
+        // Simplified deceleration curve for more predictable landing
         let decelerationProgress;
-        if (progress < 0.7) {
-          // First 70%: Smooth deceleration
-          decelerationProgress = 1 - Math.pow(1 - progress / 0.7, 3);
+        if (progress < 0.8) {
+          // First 80%: Smooth deceleration
+          decelerationProgress = 1 - Math.pow(1 - progress / 0.8, 2);
         } else {
-          // Last 30%: Very slow final approach with micro-bounce
-          const finalProgress = (progress - 0.7) / 0.3;
-          const smoothEase = 1 - Math.pow(1 - finalProgress, 5);
-          const microBounce = Math.sin(finalProgress * Math.PI * 2) * 0.02 * (1 - finalProgress);
-          decelerationProgress = 0.7 + smoothEase * 0.3 + microBounce;
+          // Last 20%: Very slow final approach
+          const finalProgress = (progress - 0.8) / 0.2;
+          decelerationProgress = 0.8 + (finalProgress * 0.2);
         }
         
+        // Calculate the target position for the winning slot
         const newLogicalPosition = decelerationStartPosition + (targetLogicalPosition - decelerationStartPosition) * decelerationProgress;
         
         // Ensure position stays within bounds during deceleration
@@ -403,17 +401,29 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         if (progress < 1) {
           animationRef.current = requestAnimationFrame(animateDeceleration);
         } else {
-          // Animation complete
+          // Animation complete - ensure we land exactly on target
+          const exactTargetPosition = calculateTargetLogicalPosition(winningSlot);
+          let exactFinalPosition = exactTargetPosition;
+          
+          // Ensure final position is within bounds
+          if (exactFinalPosition < -halfWidth) {
+            exactFinalPosition += totalLogicalWidth;
+          } else if (exactFinalPosition > halfWidth) {
+            exactFinalPosition -= totalLogicalWidth;
+          }
+          
+          setLogicalTranslateX(exactFinalPosition);
+          
           console.log('✅ DECELERATION COMPLETE:', {
             serverWinningSlot: winningSlot,
-            finalLogicalPosition: finalPosition,
-            targetLogicalPosition,
-            accuracy: Math.abs(finalPosition - targetLogicalPosition)
+            finalLogicalPosition: exactFinalPosition,
+            targetLogicalPosition: exactTargetPosition,
+            accuracy: Math.abs(exactFinalPosition - exactTargetPosition)
           });
           
           setAnimationPhase('stopped');
           setIsAnimating(false);
-          verifyWinningTilePosition(finalPosition);
+          verifyWinningTilePosition(exactFinalPosition);
         }
       };
       
