@@ -54,6 +54,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const hasStartedAnimation = useRef<boolean>(false);
   const currentSpinningPhase = useRef<string>('');
   const hasCompletedAnimation = useRef<boolean>(false);
+  const isCurrentlyAnimating = useRef<boolean>(false); // Track animation state that can't be overridden
 
   // Animation configuration - EXACT MATCH TO SERVER
   const SPINNING_PHASE_DURATION = 4000; // 4 seconds (matches server SPINNING_DURATION exactly)
@@ -176,6 +177,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setTranslateX(targetPosition);
       setAnimationPhase('stopped');
       setIsAnimating(false);
+      isCurrentlyAnimating.current = false; // Clear animation ref
       hasCompletedAnimation.current = true; // Mark animation as completed
       
       // Save the final position to localStorage for persistence
@@ -233,6 +235,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       hasStartedAnimation.current = true;
       hasCompletedAnimation.current = false; // Reset completion flag
       currentSpinningPhase.current = spinningPhaseId;
+      isCurrentlyAnimating.current = true; // Set animation ref immediately
       
       const target = calculateTargetPosition(winningSlot);
       setTargetPosition(target);
@@ -246,6 +249,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log('🛑 SPINNING PHASE ENDED - Animation completed successfully');
       setIsAnimating(false);
       setAnimationPhase('stopped');
+      isCurrentlyAnimating.current = false; // Clear animation ref
       // DO NOT reset hasStartedAnimation here - keep it true until next round
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -257,6 +261,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         console.log('🔄 RESETTING ANIMATION FLAGS - Ready for next round');
         hasStartedAnimation.current = false; // Reset for next phase
         hasCompletedAnimation.current = false; // Reset completion flag
+        isCurrentlyAnimating.current = false; // Clear animation ref
       }
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -281,7 +286,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // BLOCK ALL SERVER SYNC during any animation phase or if animation was completed
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
       // ULTRA STRICT BLOCKING: Never sync during any animation-related state
-      if (isAnimating || animationPhase === 'accelerating' || hasStartedAnimation.current || isSpinning || animationRef.current) {
+      if (isCurrentlyAnimating.current || isAnimating || animationPhase === 'accelerating' || hasStartedAnimation.current || isSpinning || animationRef.current) {
         console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress, keeping current position');
         return;
       } else if (hasCompletedAnimation.current) {
