@@ -44,7 +44,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Calculate the target position for the winning slot to be centered
   const calculateTargetPosition = useCallback((slot: number) => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
-    if (slotIndex === -1) return 0;
+    if (slotIndex === -1) {
+      console.error('❌ Invalid slot:', slot);
+      return 0;
+    }
     
     // Find the center instance of the winning slot in the buffer
     const centerRepeat = Math.floor(BUFFER_MULTIPLIER / 2);
@@ -54,14 +57,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // Calculate position so that the tile center aligns with the container center
     const targetPosition = CENTER_OFFSET - targetTileCenter;
     
-    console.log('🎯 Target position calculation:', {
-      slot,
+    console.log('🎯 Target position calculation for winning slot:', {
+      winningSlot: slot,
       slotIndex,
       centerRepeat,
       targetTileIndex,
       targetTileCenter,
       centerOffset: CENTER_OFFSET,
-      targetPosition
+      targetPosition,
+      verification: `Slot ${slot} should be at position ${targetPosition} to be centered`
     });
     
     return targetPosition;
@@ -84,42 +88,45 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       });
       
       animationRef.current = requestAnimationFrame(animate);
-    } else if (winningSlot !== null && synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // Animate to the final position when we have the result
+    } else if (winningSlot !== null) {
+      // PRIORITY: Ensure the winning slot lands under the center line
+      console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Winning slot:', winningSlot);
+      
       const startPosition = translateX;
       
-      // Calculate the exact target position for the winning slot to be centered
+      // Calculate the EXACT target position for the winning slot to be centered
       const targetPosition = calculateTargetPosition(winningSlot);
       
-      console.log('🎲 Starting deceleration animation:', {
+      console.log('🎲 Starting precise deceleration animation:', {
+        winningSlot,
         startPosition,
         targetPosition,
         distance: Math.abs(targetPosition - startPosition),
-        winningSlot
+        goal: `Move reel to position ${targetPosition} so slot ${winningSlot} is centered`
       });
       
-      const duration = 3000; // 3 seconds for smoother deceleration
+      const duration = 2500; // 2.5 seconds for smooth deceleration
       const startTime = Date.now();
       
       const animateToResult = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        // Enhanced easing function for ultra-smooth deceleration
+        // Smooth deceleration with emphasis on final precision
         let easeProgress;
-        if (progress < 0.3) {
-          // First 30%: Still moving fast
-          const phaseProgress = progress / 0.3;
-          easeProgress = phaseProgress * 0.4; // 0% to 40% distance
-        } else if (progress < 0.7) {
-          // 30%-70%: Slowing down
-          const phaseProgress = (progress - 0.3) / 0.4;
-          easeProgress = 0.4 + phaseProgress * 0.4; // 40% to 80% distance
+        if (progress < 0.4) {
+          // First 40%: Still moving at good speed
+          const phaseProgress = progress / 0.4;
+          easeProgress = phaseProgress * 0.6; // 0% to 60% distance
+        } else if (progress < 0.8) {
+          // 40%-80%: Slowing down significantly
+          const phaseProgress = (progress - 0.4) / 0.4;
+          easeProgress = 0.6 + phaseProgress * 0.3; // 60% to 90% distance
         } else {
-          // Last 30%: Very slow final approach
-          const phaseProgress = (progress - 0.7) / 0.3;
-          const smoothEaseOut = 1 - Math.pow(1 - phaseProgress, 4); // Quartic ease-out
-          easeProgress = 0.8 + smoothEaseOut * 0.2; // 80% to 100% distance
+          // Last 20%: Very slow final approach for precision
+          const phaseProgress = (progress - 0.8) / 0.2;
+          const smoothEaseOut = 1 - Math.pow(1 - phaseProgress, 5); // Quintic ease-out for precision
+          easeProgress = 0.9 + smoothEaseOut * 0.1; // 90% to 100% distance
         }
         
         const newPosition = startPosition + (targetPosition - startPosition) * easeProgress;
@@ -131,7 +138,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           setIsAnimating(false);
           
           // Verify the result landed correctly
-          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at position:', newPosition);
+          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final position:', newPosition);
           verifyWinningTilePosition(newPosition);
         }
       };
@@ -197,12 +204,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     if (winningSlot === null) return;
     
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
-    if (slotIndex === -1) return;
+    if (slotIndex === -1) {
+      console.error('❌ Invalid winning slot for verification:', winningSlot);
+      return;
+    }
     
     // Find the closest instance of the winning slot to the center
     let closestDistance = Infinity;
     let closestTileCenter = 0;
     let closestRepeat = 0;
+    let closestTileIndex = 0;
     
     for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
       const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
@@ -214,29 +225,38 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         closestDistance = distanceFromCenter;
         closestTileCenter = tileCenterPosition;
         closestRepeat = repeat;
+        closestTileIndex = tileGlobalIndex;
       }
     }
     
-    const isAccurate = closestDistance < 5; // 5px tolerance for precision
+    const isAccurate = closestDistance < 3; // 3px tolerance for precision
     
     console.log('🎯 PROVABLY FAIR VERIFICATION:', {
-      expectedSlot: winningSlot,
+      winningSlot,
       expectedCenter: CENTER_OFFSET,
       actualTileCenter: closestTileCenter,
       distanceOff: closestDistance.toFixed(2) + 'px',
       closestRepeat,
+      closestTileIndex,
+      finalPosition,
       result: isAccurate ? '✅ PERFECT LANDING' : '❌ POSITION ERROR',
-      tolerance: '5px'
+      tolerance: '3px'
     });
     
     if (!isAccurate) {
       console.warn(`⚠️ Position adjustment needed: Slot ${winningSlot} is ${closestDistance.toFixed(2)}px off center`);
       
-      // Auto-correct if significantly off
-      if (closestDistance > 20) {
+      // Auto-correct if off by more than 5px
+      if (closestDistance > 5) {
         const correction = CENTER_OFFSET - closestTileCenter;
         console.log(`🔧 Auto-correcting position by ${correction.toFixed(2)}px`);
         setTranslateX(prev => prev + correction);
+        
+        // Verify the correction worked
+        setTimeout(() => {
+          const correctedPosition = finalPosition + correction;
+          console.log(`🔍 Verification after correction: Position ${correctedPosition.toFixed(2)}`);
+        }, 100);
       }
     } else {
       console.log(`🎉 Perfect! Slot ${winningSlot} landed exactly under the center line!`);
