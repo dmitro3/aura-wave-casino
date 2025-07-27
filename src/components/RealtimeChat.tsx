@@ -231,23 +231,30 @@ export const RealtimeChat = () => {
         
         <div className="p-4 border-t">
           {user ? (
-            <div className="flex gap-2">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type a message..."
-                disabled={loading}
-                className="flex-1 glass border-0"
-                maxLength={200}
-              />
-              <Button
-                onClick={sendMessage}
-                disabled={!newMessage.trim() || loading}
-                className="glass border-0 hover:glow-primary"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type a message..."
+                  disabled={loading}
+                  className="flex-1 glass border-0"
+                  maxLength={100}
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || loading}
+                  className="glass border-0 hover:glow-primary"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex justify-end">
+                <span className={`text-xs ${newMessage.length > 90 ? 'text-destructive' : newMessage.length > 80 ? 'text-warning' : 'text-muted-foreground'}`}>
+                  {newMessage.length}/100
+                </span>
+              </div>
             </div>
           ) : (
             <div className="text-center py-3 space-y-2">
