@@ -307,81 +307,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     animationRef.current = requestAnimationFrame(animateFullSpeed);
   }, [animationPhase]);
 
-  const animateDeceleration = useCallback(() => {
-    if (animationPhase !== 'decelerating') return;
-    
-    const elapsed = Date.now() - decelerationStartTime;
-    const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
-    
-    // Simplified deceleration curve for more predictable landing
-    let decelerationProgress;
-    if (progress < 0.8) {
-      // First 80%: Smooth deceleration
-      decelerationProgress = 1 - Math.pow(1 - progress / 0.8, 2);
-    } else {
-      // Last 20%: Very slow final approach
-      const finalProgress = (progress - 0.8) / 0.2;
-      decelerationProgress = 0.8 + (finalProgress * 0.2);
-    }
-    
-    // Interpolate between start and target position
-    const newLogicalPosition = decelerationStartPosition + (targetPosition - decelerationStartPosition) * decelerationProgress;
-    
-    // Ensure position stays within bounds during deceleration
-    const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
-    const halfWidth = totalLogicalWidth / 2;
-    
-    let finalPosition = newLogicalPosition;
-    if (finalPosition < -halfWidth) {
-      finalPosition += totalLogicalWidth;
-    } else if (finalPosition > halfWidth) {
-      finalPosition -= totalLogicalWidth;
-    }
-    
-    setLogicalTranslateX(finalPosition);
-    
-    if (progress < 1) {
-      animationRef.current = requestAnimationFrame(animateDeceleration);
-    } else {
-      // Animation complete - ensure we land exactly on target
-      let exactFinalPosition = targetPosition;
-      
-      // Ensure final position is within bounds
-      if (exactFinalPosition < -halfWidth) {
-        exactFinalPosition += totalLogicalWidth;
-      } else if (exactFinalPosition > halfWidth) {
-        exactFinalPosition -= totalLogicalWidth;
-      }
-      
-      setLogicalTranslateX(exactFinalPosition);
-      
-      console.log('✅ DECELERATION COMPLETE:', {
-        serverWinningSlot: winningSlot,
-        finalLogicalPosition: exactFinalPosition,
-        targetPosition,
-        accuracy: Math.abs(exactFinalPosition - targetPosition)
-      });
-      
-      setAnimationPhase('stopped');
-      setIsAnimating(false);
-      verifyWinningTilePosition(exactFinalPosition);
-    }
-  }, [animationPhase, decelerationStartTime, decelerationStartPosition, targetPosition, winningSlot, verifyWinningTilePosition]);
-
-  // Start animation when phase changes
-  useEffect(() => {
-    if (animationPhase === 'accelerating') {
-      console.log('🚀 Starting acceleration animation');
-      animateAcceleration();
-    } else if (animationPhase === 'fullSpeed') {
-      console.log('🌀 Starting full speed animation');
-      animateFullSpeed();
-    } else if (animationPhase === 'decelerating') {
-      console.log('🎯 Starting deceleration animation');
-      animateDeceleration();
-    }
-  }, [animationPhase, animateAcceleration, animateFullSpeed, animateDeceleration]);
-
   // Verify that the winning tile is centered when animation stops
   const verifyWinningTilePosition = useCallback((finalLogicalPosition: number) => {
     if (winningSlot === null) return;
@@ -445,6 +370,81 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log(`🎉 Perfect! Server result ${winningSlot} landed exactly under the center line!`);
     }
   }, [winningSlot]);
+
+  const animateDeceleration = useCallback(() => {
+    if (animationPhase !== 'decelerating') return;
+    
+    const elapsed = Date.now() - decelerationStartTime;
+    const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
+    
+    // Simplified deceleration curve for more predictable landing
+    let decelerationProgress;
+    if (progress < 0.8) {
+      // First 80%: Smooth deceleration
+      decelerationProgress = 1 - Math.pow(1 - progress / 0.8, 2);
+    } else {
+      // Last 20%: Very slow final approach
+      const finalProgress = (progress - 0.8) / 0.2;
+      decelerationProgress = 0.8 + (finalProgress * 0.2);
+    }
+    
+    // Interpolate between start and target position
+    const newLogicalPosition = decelerationStartPosition + (targetPosition - decelerationStartPosition) * decelerationProgress;
+    
+    // Ensure position stays within bounds during deceleration
+    const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+    const halfWidth = totalLogicalWidth / 2;
+    
+    let finalPosition = newLogicalPosition;
+    if (finalPosition < -halfWidth) {
+      finalPosition += totalLogicalWidth;
+    } else if (finalPosition > halfWidth) {
+      finalPosition -= totalLogicalWidth;
+    }
+    
+    setLogicalTranslateX(finalPosition);
+    
+    if (progress < 1) {
+      animationRef.current = requestAnimationFrame(animateDeceleration);
+    } else {
+      // Animation complete - ensure we land exactly on target
+      let exactFinalPosition = targetPosition;
+      
+      // Ensure final position is within bounds
+      if (exactFinalPosition < -halfWidth) {
+        exactFinalPosition += totalLogicalWidth;
+      } else if (exactFinalPosition > halfWidth) {
+        exactFinalPosition -= totalLogicalWidth;
+      }
+      
+      setLogicalTranslateX(exactFinalPosition);
+      
+      console.log('✅ DECELERATION COMPLETE:', {
+        serverWinningSlot: winningSlot,
+        finalLogicalPosition: exactFinalPosition,
+        targetPosition,
+        accuracy: Math.abs(exactFinalPosition - targetPosition)
+      });
+      
+      setAnimationPhase('stopped');
+      setIsAnimating(false);
+      verifyWinningTilePosition(exactFinalPosition);
+    }
+  }, [animationPhase, decelerationStartTime, decelerationStartPosition, targetPosition, winningSlot]);
+
+  // Start animation when phase changes
+  useEffect(() => {
+    if (animationPhase === 'accelerating') {
+      console.log('🚀 Starting acceleration animation');
+      animateAcceleration();
+    } else if (animationPhase === 'fullSpeed') {
+      console.log('🌀 Starting full speed animation');
+      animateFullSpeed();
+    } else if (animationPhase === 'decelerating') {
+      console.log('🎯 Starting deceleration animation');
+      animateDeceleration();
+    }
+  }, [animationPhase, animateAcceleration, animateFullSpeed, animateDeceleration]);
 
   // Debug animation state
   useEffect(() => {
