@@ -21,7 +21,7 @@ export function useAchievementNotifications() {
   const calculateProgress = (achievement: any, userStats: any): number => {
     if (!userStats) return 0;
     
-    const criteria = achievement.unlock_criteria;
+    const criteria = achievement.criteria; // Use 'criteria' field from database
     const criteriaType = criteria?.type;
     const targetValue = criteria?.value || 0;
 
