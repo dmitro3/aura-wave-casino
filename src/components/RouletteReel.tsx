@@ -46,7 +46,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const updateScaleFactor = useCallback(() => {
     if (containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
-      const visibleLogicalWidth = 9 * LOGICAL_TILE_WIDTH; // 9 tiles visible (increased from 7)
+      const visibleLogicalWidth = 10 * LOGICAL_TILE_WIDTH; // 10 tiles visible (increased from 9)
       const newScaleFactor = containerWidth / visibleLogicalWidth;
       
       setScaleFactor(newScaleFactor);
