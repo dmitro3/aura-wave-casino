@@ -5,6 +5,11 @@
 DROP TRIGGER IF EXISTS check_achievements_trigger ON public.user_level_stats;
 DROP TRIGGER IF EXISTS check_ready_achievements_trigger ON public.user_level_stats;
 
+-- Drop the functions first before recreating them
+DROP FUNCTION IF EXISTS public.check_and_award_achievements(uuid);
+DROP FUNCTION IF EXISTS public.check_ready_achievements(uuid);
+DROP FUNCTION IF EXISTS public.trigger_check_ready_achievements();
+
 -- Disable the old auto-awarding function by replacing it with a no-op version
 CREATE OR REPLACE FUNCTION public.check_and_award_achievements(
   p_user_id UUID
@@ -52,7 +57,6 @@ END;
 $$;
 
 -- Create a new trigger that does absolutely nothing
-DROP TRIGGER IF EXISTS check_ready_achievements_trigger ON public.user_level_stats;
 CREATE TRIGGER check_ready_achievements_trigger
   AFTER UPDATE ON public.user_level_stats
   FOR EACH ROW
