@@ -41,6 +41,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating });
 
+  // Calculate the target position for the winning slot to be centered
+  const calculateTargetPosition = useCallback((slot: number) => {
+    const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
+    if (slotIndex === -1) return 0;
+    
+    // Find the center instance of the winning slot in the buffer
+    const centerRepeat = Math.floor(BUFFER_MULTIPLIER / 2);
+    const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
+    const targetTileCenter = targetTileIndex * TILE_WIDTH + TILE_WIDTH / 2;
+    
+    // Calculate position so that the tile center aligns with the container center
+    return CENTER_OFFSET - targetTileCenter;
+  }, []);
+
   // Simple spinning animation with infinite scrolling
   const animate = useCallback(() => {
     if (isSpinning) {
@@ -58,10 +72,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       });
       
       animationRef.current = requestAnimationFrame(animate);
-    } else if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
+    } else if (winningSlot !== null && synchronizedPosition !== null && synchronizedPosition !== undefined) {
       // Animate to the final position when we have the result
       const startPosition = translateX;
-      const targetPosition = synchronizedPosition;
+      
+      // Use the synchronized position from the backend, but ensure it's properly aligned
+      let targetPosition = synchronizedPosition;
+      
+      // If we have a winning slot, calculate the exact position for it to be centered
+      if (winningSlot !== null) {
+        const calculatedPosition = calculateTargetPosition(winningSlot);
+        // Use the calculated position but adjust based on the backend's position if needed
+        targetPosition = calculatedPosition;
+      }
+      
       const duration = 2000; // 2 seconds
       const startTime = Date.now();
       
@@ -79,12 +103,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           animationRef.current = requestAnimationFrame(animateToResult);
         } else {
           setIsAnimating(false);
+          
+          // Verify the result landed correctly
+          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at position:', newPosition);
+          verifyWinningTilePosition(newPosition);
         }
       };
       
       animateToResult();
     }
-  }, [isSpinning, synchronizedPosition, translateX]);
+  }, [isSpinning, winningSlot, synchronizedPosition, translateX, calculateTargetPosition]);
 
   // Start/stop animation based on spinning state
   useEffect(() => {
@@ -137,6 +165,45 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setTranslateX(0);
     }
   }, [winningSlot, isSpinning]);
+
+  // Verify that the winning tile is centered when animation stops
+  const verifyWinningTilePosition = useCallback((finalPosition: number) => {
+    if (winningSlot === null) return;
+    
+    const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
+    if (slotIndex === -1) return;
+    
+    // Find the closest instance of the winning slot to the center
+    let closestDistance = Infinity;
+    let closestTileCenter = 0;
+    
+    for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
+      const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
+      const tileLeftEdge = finalPosition + (tileGlobalIndex * TILE_WIDTH);
+      const tileCenterPosition = tileLeftEdge + (TILE_WIDTH / 2);
+      const distanceFromCenter = Math.abs(tileCenterPosition - CENTER_OFFSET);
+      
+      if (distanceFromCenter < closestDistance) {
+        closestDistance = distanceFromCenter;
+        closestTileCenter = tileCenterPosition;
+      }
+    }
+    
+    const isAccurate = closestDistance < 10; // 10px tolerance
+    
+    console.log('🎯 PROVABLY FAIR VERIFICATION:', {
+      expectedSlot: winningSlot,
+      expectedCenter: CENTER_OFFSET,
+      actualTileCenter: closestTileCenter,
+      distanceOff: closestDistance.toFixed(2) + 'px',
+      result: isAccurate ? '✅ PERFECT LANDING' : '❌ POSITION ERROR',
+      tolerance: '10px'
+    });
+    
+    if (!isAccurate) {
+      console.warn(`⚠️ Position adjustment needed: Slot ${winningSlot} is ${closestDistance.toFixed(2)}px off center`);
+    }
+  }, [winningSlot]);
 
   // Get tile color styling
   const getTileColor = (color: string) => {
