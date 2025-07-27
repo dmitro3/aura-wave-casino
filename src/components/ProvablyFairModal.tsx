@@ -37,7 +37,7 @@ interface ProvablyFairModalProps {
   showCurrentRound?: boolean;
 }
 
-// Roulette wheel configuration (same as RouletteReel)
+// 🎰 EXACT WHEEL CONFIGURATION - Must match backend provably fair system
 const WHEEL_SLOTS = [
   { slot: 0, color: 'green', multiplier: '14x' },
   { slot: 11, color: 'black', multiplier: '2x' },

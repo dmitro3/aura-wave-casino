@@ -5,6 +5,7 @@ interface RouletteReelProps {
   winningSlot: number | null;
   showWinAnimation: boolean;
   extendedWinAnimation?: boolean;
+  serverReelPosition?: number | null; // 🎯 NEW: Server-calculated position for synchronization
 }
 
 // 🎰 EXACT WHEEL CONFIGURATION - Must match backend provably fair system
@@ -26,7 +27,7 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// 🎯 FIXED DIMENSIONS - PIXEL PERFECT (Match backend calculations)
+// 🎯 FIXED DIMENSIONS - PIXEL PERFECT (Match backend calculations EXACTLY)
 const TILE_SIZE_PX = 100;                              // Each tile is exactly 100px × 100px  
 const VISIBLE_TILES = 15;                              // Always show exactly 15 tiles
 const REEL_WIDTH_PX = VISIBLE_TILES * TILE_SIZE_PX;    // 1500px viewport width
@@ -41,7 +42,7 @@ const TOTAL_REEL_WIDTH_PX = TOTAL_TILES * TILE_SIZE_PX; // 150,000px total width
 // ⏱️ ANIMATION CONFIGURATION - Exactly 4 seconds
 const SPIN_DURATION_MS = 4000;
 
-export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extendedWinAnimation }: RouletteReelProps) {
+export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extendedWinAnimation, serverReelPosition }: RouletteReelProps) {
   // 🎲 Reel position state - starts from localStorage or 0
   const [currentPosition, setCurrentPosition] = useState(() => {
     const saved = localStorage.getItem('rouletteReelPosition');
@@ -128,7 +129,19 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       console.log('🚀 Starting PROVABLY FAIR Roulette Animation');
       
       const startPosition = currentPosition;
-      const targetPosition = calculateWinningPosition(winningSlot, startPosition);
+      
+      // 🎯 USE SERVER POSITION FOR SYNCHRONIZATION if available
+      let targetPosition: number;
+      
+      if (serverReelPosition !== null && serverReelPosition !== undefined) {
+        // Use the server-calculated position for perfect synchronization
+        targetPosition = serverReelPosition;
+        console.log('🌐 Using server-calculated position for synchronization:', targetPosition);
+      } else {
+        // Fallback to client-side calculation
+        targetPosition = calculateWinningPosition(winningSlot, startPosition);
+        console.log('🖥️ Using client-side calculation (server position not available)');
+      }
       
       if (!reelRef.current) return;
       
@@ -163,7 +176,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
           finalPosition: Math.round(targetPosition),
           duration: `${SPIN_DURATION_MS}ms`,
           winningSlot,
-          positionSaved: true
+          positionSaved: true,
+          usedServerPosition: serverReelPosition !== null && serverReelPosition !== undefined
         });
         
         // Hide win glow after 2 seconds
@@ -175,10 +189,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         to: Math.round(targetPosition),
         distance: Math.round(Math.abs(targetPosition - startPosition)),
         duration: `${SPIN_DURATION_MS}ms`,
-        winningSlot
+        winningSlot,
+        synchronizationMethod: serverReelPosition !== null && serverReelPosition !== undefined ? 'SERVER' : 'CLIENT'
       });
     }
-  }, [isSpinning, winningSlot, currentPosition, isAnimating]);
+  }, [isSpinning, winningSlot, currentPosition, isAnimating, serverReelPosition]);
 
   // 🧹 Cleanup on unmount
   useEffect(() => {
@@ -304,6 +319,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
             <div>Spinning: {isSpinning ? 'YES' : 'NO'}</div>
             {winningSlot !== null && <div>Winning Slot: {winningSlot}</div>}
             <div>Full Rotations: {Math.round(Math.abs(currentPosition) / (WHEEL_SLOTS.length * TILE_SIZE_PX))}</div>
+            {serverReelPosition !== null && serverReelPosition !== undefined && (
+              <div>Server Pos: {Math.round(serverReelPosition)}px</div>
+            )}
+            <div>Sync: {serverReelPosition !== null && serverReelPosition !== undefined ? 'SERVER' : 'CLIENT'}</div>
           </div>
         )}
 
@@ -317,6 +336,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
           {!isSpinning && !isAnimating && (
             <div className="bg-green-500/20 border border-green-400 text-green-400 px-3 py-1 rounded-md text-sm font-bold">
               READY
+            </div>
+          )}
+          {/* Synchronization indicator */}
+          {isSpinning && serverReelPosition !== null && serverReelPosition !== undefined && (
+            <div className="bg-blue-500/20 border border-blue-400 text-blue-400 px-2 py-1 rounded-md text-xs mt-1">
+              SYNCED
             </div>
           )}
         </div>

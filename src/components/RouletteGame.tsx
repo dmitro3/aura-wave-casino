@@ -1058,6 +1058,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 winningSlot={currentRound.result_slot !== undefined ? currentRound.result_slot : null}
                 showWinAnimation={currentRound.status === 'completed'}
                 extendedWinAnimation={extendedWinAnimation}
+                serverReelPosition={currentRound.reel_position}
               />
             </CardContent>
           </Card>

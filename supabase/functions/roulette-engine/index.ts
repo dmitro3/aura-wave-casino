@@ -271,10 +271,10 @@ async function getCurrentRound(supabase: any) {
         result = await generateLegacyResult(supabase, activeRound);
       }
       
-      // Calculate final reel position for cross-user sync
-      const TILE_WIDTH = 120;
-      const CONTAINER_WIDTH = 1200; // Match frontend value
-      const CENTER_OFFSET = CONTAINER_WIDTH / 2; // Exact center at 600px
+      // Calculate final reel position for cross-user sync (MUST MATCH FRONTEND EXACTLY)
+      const TILE_WIDTH = 100; // EXACTLY matches frontend TILE_SIZE_PX
+      const CONTAINER_WIDTH = 1500; // EXACTLY matches frontend REEL_WIDTH_PX
+      const CENTER_OFFSET = CONTAINER_WIDTH / 2; // Exact center at 750px
       const WHEEL_SLOTS_LENGTH = 15;
       
       // Find the position of the winning slot in our WHEEL_SLOTS array
