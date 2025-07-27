@@ -47,6 +47,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Refs
   const animationRef = useRef<number>();
+  const hasStartedAnimation = useRef<boolean>(false);
+  const currentSpinningPhase = useRef<string>('');
 
   // Animation configuration - SIMPLIFIED FOR SMOOTHNESS
   const ANIMATION_DURATION = 4000; // 4 seconds total
@@ -161,10 +163,17 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [animationPhase, startTime, targetPosition, winningSlot]);
 
-  // Main animation trigger
+  // Main animation trigger - FIXED TO PREVENT DOUBLE ANIMATION
   useEffect(() => {
-    if (isSpinning && !isAnimating && winningSlot !== null) {
-      console.log('🚀 STARTING ANIMATION');
+    // Create a unique identifier for this spinning phase
+    const spinningPhaseId = `${isSpinning}-${winningSlot}`;
+    
+    if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
+      console.log('🚀 STARTING ANIMATION - New spinning phase detected');
+      
+      // Mark that we've started animation for this phase
+      hasStartedAnimation.current = true;
+      currentSpinningPhase.current = spinningPhaseId;
       
       const target = calculateTargetPosition(winningSlot);
       setTargetPosition(target);
@@ -175,14 +184,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setShowWinningGlow(false);
       
     } else if (!isSpinning && isAnimating) {
-      console.log('🛑 STOPPING ANIMATION');
+      console.log('🛑 STOPPING ANIMATION - Spinning phase ended');
       setIsAnimating(false);
       setAnimationPhase('stopped');
+      hasStartedAnimation.current = false; // Reset for next phase
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     } else if (!isSpinning && !isAnimating) {
       setAnimationPhase('idle');
+      hasStartedAnimation.current = false; // Reset for next phase
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
