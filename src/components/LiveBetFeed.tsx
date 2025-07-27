@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, TrendingDown, Coins, Zap } from 'lucide-react';
 import { useRealtimeFeeds, LiveBetFeed } from '@/hooks/useRealtimeFeeds';
 import { formatDistanceToNow } from 'date-fns';
-import UserStatsModal from './UserStatsModal';
+import UserProfile from './UserProfile';
 import { supabase } from '@/integrations/supabase/client';
 
 export const LiveBetFeedComponent = () => {
@@ -152,8 +152,8 @@ export const LiveBetFeedComponent = () => {
         </ScrollArea>
       </CardContent>
       
-      {/* User Stats Modal */}
-      <UserStatsModal 
+      {/* User Profile Modal */}
+      <UserProfile 
         isOpen={showUserStats}
         onClose={() => setShowUserStats(false)}
         username={selectedUsername}

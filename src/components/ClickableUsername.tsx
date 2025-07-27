@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import UserStatsModal from './UserStatsModal';
+import UserProfile from './UserProfile';
 
 interface ClickableUsernameProps {
   username: string;
@@ -9,7 +9,7 @@ interface ClickableUsernameProps {
 }
 
 export default function ClickableUsername({ username, className = "", children }: ClickableUsernameProps) {
-  const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   return (
     <>
@@ -17,14 +17,14 @@ export default function ClickableUsername({ username, className = "", children }
         variant="ghost"
         size="sm"
         className={`h-auto p-0 text-inherit font-inherit hover:text-primary transition-colors ${className}`}
-        onClick={() => setShowStatsModal(true)}
+        onClick={() => setShowProfile(true)}
       >
         {children || username}
       </Button>
       
-      <UserStatsModal
-        isOpen={showStatsModal}
-        onClose={() => setShowStatsModal(false)}
+      <UserProfile
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
         username={username}
       />
     </>

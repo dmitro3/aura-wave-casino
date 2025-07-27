@@ -10,16 +10,19 @@ import {
   Trophy, Target, TrendingUp, Calendar, Star, DollarSign, 
   Crown, Flame, Sparkles, Zap, Award, Medal, Gamepad2,
   BarChart3, Coins, X, Wallet, Gift, Globe, Users,
-  ChevronUp, ChevronDown, Eye, EyeOff
+  ChevronUp, ChevronDown, Eye, EyeOff, Loader2
 } from 'lucide-react';
 import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
 import { ProfileBorder } from './ProfileBorder';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UserProfileProps {
   isOpen: boolean;
   onClose: () => void;
-  userData: UserProfileType | null;
+  userData?: UserProfileType | null;
+  username?: string;
 }
 
 const rarityGradients = {
@@ -40,15 +43,98 @@ const achievementIcons: Record<string, { icon: any; name: string; description: s
   millionaire: { icon: Coins, name: "Millionaire", description: "Accumulated $1M+ lifetime", rarity: 'mythical' }
 };
 
-export default function UserProfile({ isOpen, onClose, userData }: UserProfileProps) {
+export default function UserProfile({ isOpen, onClose, userData: propUserData, username }: UserProfileProps) {
+  const { user } = useAuth();
   const { stats } = useUserLevelStats();
   const [activeTab, setActiveTab] = useState('overview');
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
+  const [fetchedUserData, setFetchedUserData] = useState<UserProfileType | null>(null);
+  const [loading, setLoading] = useState(false);
   const [animatedStats, setAnimatedStats] = useState({
     level: 0,
     xp: 0,
     balance: 0
   });
+
+  // Determine which userData to use
+  const userData = propUserData || fetchedUserData;
+  
+  // Check if this is the current user's own profile
+  const isOwnProfile = user && userData && user.id === userData.id;
+
+  // Fetch user data when only username is provided
+  useEffect(() => {
+    if (isOpen && username && !propUserData) {
+      const fetchUserData = async () => {
+        setLoading(true);
+        try {
+          console.log('🔍 Fetching profile data for username:', username);
+
+          // First get the user ID from profiles table
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('username', username)
+            .single();
+
+          if (profileError) {
+            console.error('❌ Error fetching user profile:', profileError);
+            setLoading(false);
+            return;
+          }
+
+          if (!profile) {
+            console.warn('⚠️ No profile found for username:', username);
+            setLoading(false);
+            return;
+          }
+
+          // Get user level stats
+          const { data: levelStats, error: levelError } = await supabase
+            .from('user_level_stats')
+            .select('*')
+            .eq('user_id', profile.id)
+            .single();
+
+          // Create mock game stats - in a real app, you'd fetch these from the database
+          const gameStats = {
+            coinflip: { wins: levelStats?.coinflip_wins || 0, losses: Math.max(0, (levelStats?.coinflip_games || 0) - (levelStats?.coinflip_wins || 0)), profit: levelStats?.coinflip_profit || 0 },
+            crash: { wins: levelStats?.crash_wins || 0, losses: Math.max(0, (levelStats?.crash_games || 0) - (levelStats?.crash_wins || 0)), profit: levelStats?.crash_profit || 0 },
+            roulette: { wins: levelStats?.roulette_wins || 0, losses: Math.max(0, (levelStats?.roulette_games || 0) - (levelStats?.roulette_wins || 0)), profit: levelStats?.roulette_profit || 0 }
+          };
+
+          // Build user data object
+          const fetchedUser: UserProfileType = {
+            id: profile.id,
+            username: profile.username,
+            balance: profile.balance,
+            current_level: levelStats?.current_level || 1,
+            current_xp: levelStats?.current_level_xp || 0,
+            xp_to_next_level: levelStats?.xp_to_next_level || 100,
+            registration_date: profile.created_at,
+            gameStats,
+            badges: [] // You might want to fetch this from a badges table
+          };
+
+          console.log('✅ Successfully fetched user data:', fetchedUser);
+          setFetchedUserData(fetchedUser);
+        } catch (error) {
+          console.error('❌ Error in fetchUserData:', error);
+        }
+        setLoading(false);
+      };
+
+      fetchUserData();
+    }
+  }, [isOpen, username, propUserData]);
+
+  // Reset fetched data when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFetchedUserData(null);
+      setActiveTab('overview');
+    }
+  }, [isOpen]);
 
   // Animate numbers on mount
   useEffect(() => {
@@ -85,6 +171,24 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
     }
   }, [isOpen, userData, stats]);
   
+  // Show loading state
+  if (loading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md border-0 bg-transparent">
+          <div className="relative h-full">
+            <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/95 backdrop-blur-xl rounded-2xl border border-white/10" />
+            <div className="relative p-8 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-4 animate-spin text-primary" />
+              <h3 className="text-lg font-semibold mb-2">Loading Profile</h3>
+              <p className="text-muted-foreground">Fetching user data...</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   if (!userData) return null;
 
   const currentLevel = stats?.current_level || userData.current_level;
@@ -229,26 +333,46 @@ export default function UserProfile({ isOpen, onClose, userData }: UserProfilePr
                   </div>
                 </div>
 
-                {/* Balance Card */}
-                <Card className="glass border-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
-                  <CardContent className="p-6 text-center">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Wallet className="w-5 h-5 text-green-400" />
-                      <span className="text-sm font-medium text-green-400">Balance</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                        onClick={() => setIsBalanceVisible(!isBalanceVisible)}
-                      >
-                        {isBalanceVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                      </Button>
-                    </div>
-                    <div className="text-3xl font-bold text-green-400">
-                      {isBalanceVisible ? `$${animatedStats.balance.toFixed(2)}` : '$••••••'}
-                    </div>
-                  </CardContent>
-                </Card>
+                                 {/* Balance Card - Only show for own profile */}
+                 {isOwnProfile && (
+                   <Card className="glass border-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
+                     <CardContent className="p-6 text-center">
+                       <div className="flex items-center justify-center gap-2 mb-2">
+                         <Wallet className="w-5 h-5 text-green-400" />
+                         <span className="text-sm font-medium text-green-400">Balance</span>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           className="h-6 w-6 p-0"
+                           onClick={() => setIsBalanceVisible(!isBalanceVisible)}
+                         >
+                           {isBalanceVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                         </Button>
+                       </div>
+                       <div className="text-3xl font-bold text-green-400">
+                         {isBalanceVisible ? `$${animatedStats.balance.toFixed(2)}` : '$••••••'}
+                       </div>
+                     </CardContent>
+                   </Card>
+                 )}
+                 
+                 {/* Player Info Card for Other Users */}
+                 {!isOwnProfile && (
+                   <Card className="glass border-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+                     <CardContent className="p-6 text-center">
+                       <div className="flex items-center justify-center gap-2 mb-2">
+                         <Globe className="w-5 h-5 text-blue-400" />
+                         <span className="text-sm font-medium text-blue-400">Player Info</span>
+                       </div>
+                       <div className="text-xl font-bold text-blue-400 mb-1">
+                         {totalGames} Games
+                       </div>
+                       <div className="text-sm text-muted-foreground">
+                         {winRate.toFixed(1)}% Win Rate
+                       </div>
+                     </CardContent>
+                   </Card>
+                 )}
               </div>
             </div>
 

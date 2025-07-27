@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Coins, TrendingUp } from 'lucide-react';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
-import UserStatsModal from '../UserStatsModal';
+import UserProfile from '../UserProfile';
 
 export default function StreakFeed() {
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
@@ -102,7 +102,7 @@ export default function StreakFeed() {
         )}
       </CardContent>
 
-      <UserStatsModal 
+      <UserProfile 
         isOpen={showUserStats}
         onClose={() => setShowUserStats(false)}
         username={selectedUsername}

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Coins, TrendingUp, TrendingDown } from 'lucide-react';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
-import UserStatsModal from '../UserStatsModal';
+import UserProfile from '../UserProfile';
 
 export default function LiveCoinflipFeed() {
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
@@ -108,7 +108,7 @@ export default function LiveCoinflipFeed() {
         )}
       </CardContent>
 
-      <UserStatsModal 
+      <UserProfile 
         isOpen={showUserStats}
         onClose={() => setShowUserStats(false)}
         username={selectedUsername}
