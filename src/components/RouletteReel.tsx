@@ -35,7 +35,6 @@ const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [logicalTranslateX, setLogicalTranslateX] = useState(0); // Logical position (device-independent)
-  const [isAnimating, setIsAnimating] = useState(false);
   const [scaleFactor, setScaleFactor] = useState(1); // Scale factor to convert logical to physical pixels
   const animationRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -165,59 +164,117 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return targetLogicalPosition;
   }, []);
 
-  // Animation state management
+  // Animation configuration
+  const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
+  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.08; // Reduced for smoother animation
+  const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
+  const FULL_SPEED_DURATION = 2000; // 2 seconds of full speed spinning
+
+  // Simple animation state management
+  const [isAnimating, setIsAnimating] = useState(false);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'accelerating' | 'fullSpeed' | 'decelerating' | 'stopped'>('idle');
   const [spinStartTime, setSpinStartTime] = useState(0);
   const [decelerationStartTime, setDecelerationStartTime] = useState(0);
   const [decelerationStartPosition, setDecelerationStartPosition] = useState(0);
+  const [targetPosition, setTargetPosition] = useState(0);
 
-  // Animation configuration
-  const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
-  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.12; // Slightly reduced for smoother animation
-  const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
-  const FULL_SPEED_DURATION = 2000; // 2 seconds of full speed spinning
+  // Handle spinning state changes
+  useEffect(() => {
+    console.log('🎰 RouletteReel state change:', { 
+      isSpinning, 
+      winningSlot, 
+      animationPhase, 
+      isAnimating,
+      logicalTranslateX: logicalTranslateX.toFixed(2)
+    });
 
-  // Calculate complete animation path based on provably fair result
-  const calculateAnimationPath = useCallback((winningSlot: number) => {
-    const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
+    if (isSpinning && !isAnimating) {
+      console.log('🚀 STARTING ANIMATION - Round entered spinning phase');
+      setIsAnimating(true);
+      setAnimationPhase('accelerating');
+      setSpinStartTime(Date.now());
+      
+      // Calculate target position if we have a winning slot
+      if (winningSlot !== null) {
+        const target = calculateTargetLogicalPosition(winningSlot);
+        setTargetPosition(target);
+        console.log('🎯 TARGET CALCULATED:', { winningSlot, target });
+      }
+      
+    } else if (!isSpinning && isAnimating) {
+      console.log('🛑 STOPPING ANIMATION - Round left spinning phase');
+      setIsAnimating(false);
+      setAnimationPhase('stopped');
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    }
+  }, [isSpinning, winningSlot, isAnimating, calculateTargetLogicalPosition]);
+
+  // Handle deceleration when winning slot is received during spinning
+  useEffect(() => {
+    if (isSpinning && winningSlot !== null && animationPhase === 'fullSpeed') {
+      console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Starting deceleration');
+      setAnimationPhase('decelerating');
+      setDecelerationStartTime(Date.now());
+      setDecelerationStartPosition(logicalTranslateX);
+      
+      const target = calculateTargetLogicalPosition(winningSlot);
+      setTargetPosition(target);
+      
+      console.log('🎲 DECELERATION START:', {
+        serverWinningSlot: winningSlot,
+        startPosition: logicalTranslateX,
+        targetPosition: target,
+        distance: Math.abs(target - logicalTranslateX)
+      });
+    }
+  }, [isSpinning, winningSlot, animationPhase, logicalTranslateX, calculateTargetLogicalPosition]);
+
+  // Animation functions
+  const animateAcceleration = useCallback(() => {
+    if (animationPhase !== 'accelerating') return;
     
-    // Calculate how far we need to travel during deceleration
-    const decelerationDistance = FULL_SPEED_VELOCITY * (DECELERATION_DURATION / 1000) * 0.5; // Average velocity during deceleration
+    const currentTime = Date.now();
+    const elapsed = currentTime - spinStartTime;
+    const progress = Math.min(elapsed / ACCELERATION_DURATION, 1);
     
-    // Calculate the position where deceleration should start
-    const decelerationStartPosition = targetLogicalPosition + decelerationDistance;
+    // Smooth acceleration curve (ease-in)
+    const accelerationProgress = 1 - Math.pow(1 - progress, 2);
+    const currentVelocity = FULL_SPEED_VELOCITY * accelerationProgress;
     
-    // Calculate how far we travel during full speed
-    const fullSpeedDistance = FULL_SPEED_VELOCITY * (FULL_SPEED_DURATION / 1000);
+    // Use frame timing for smooth movement
+    const deltaTime = currentTime - (animateAcceleration.lastTime || currentTime);
+    animateAcceleration.lastTime = currentTime;
+    const clampedDeltaTime = Math.min(deltaTime, 50); // Max 50ms between frames
     
-    // Calculate the position where full speed should start (after acceleration)
-    const fullSpeedStartPosition = decelerationStartPosition + fullSpeedDistance;
-    
-    // Calculate how far we travel during acceleration
-    const accelerationDistance = FULL_SPEED_VELOCITY * (ACCELERATION_DURATION / 1000) * 0.5; // Average velocity during acceleration
-    
-    // Calculate the starting position
-    const animationStartPosition = fullSpeedStartPosition + accelerationDistance;
-    
-    console.log('🎯 COMPLETE ANIMATION PATH CALCULATION:', {
-      serverWinningSlot: winningSlot,
-      targetLogicalPosition,
-      decelerationDistance,
-      decelerationStartPosition,
-      fullSpeedDistance,
-      fullSpeedStartPosition,
-      accelerationDistance,
-      animationStartPosition,
-      totalDistance: Math.abs(animationStartPosition - targetLogicalPosition)
+    setLogicalTranslateX(prev => {
+      const velocity = currentVelocity * (clampedDeltaTime / 16.67); // Normalize to 60fps
+      const newPosition = prev - velocity;
+      
+      // Improved infinite scrolling logic to prevent disappearing
+      const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+      const halfWidth = totalLogicalWidth / 2;
+      
+      // Reset position when we've moved too far in either direction
+      if (newPosition < -halfWidth) {
+        return newPosition + totalLogicalWidth;
+      } else if (newPosition > halfWidth) {
+        return newPosition - totalLogicalWidth;
+      }
+      
+      return newPosition;
     });
     
-    return {
-      startPosition: animationStartPosition,
-      fullSpeedStartPosition,
-      decelerationStartPosition,
-      targetPosition: targetLogicalPosition
-    };
-  }, [calculateTargetLogicalPosition]);
+    if (progress < 1) {
+      animationRef.current = requestAnimationFrame(animateAcceleration);
+    } else {
+      // Phase 2: Full speed spinning
+      console.log('🌀 Entering full-speed spinning phase');
+      setAnimationPhase('fullSpeed');
+      animateFullSpeed();
+    }
+  }, [animationPhase, spinStartTime, animateFullSpeed]);
 
   // Full speed spinning animation with proper frame timing
   const animateFullSpeed = useCallback(() => {
@@ -251,7 +308,77 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     animationRef.current = requestAnimationFrame(animateFullSpeed);
   }, [animationPhase]);
 
+  const animateDeceleration = useCallback(() => {
+    if (animationPhase !== 'decelerating') return;
+    
+    const elapsed = Date.now() - decelerationStartTime;
+    const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
+    
+    // Simplified deceleration curve for more predictable landing
+    let decelerationProgress;
+    if (progress < 0.8) {
+      // First 80%: Smooth deceleration
+      decelerationProgress = 1 - Math.pow(1 - progress / 0.8, 2);
+    } else {
+      // Last 20%: Very slow final approach
+      const finalProgress = (progress - 0.8) / 0.2;
+      decelerationProgress = 0.8 + (finalProgress * 0.2);
+    }
+    
+    // Interpolate between start and target position
+    const newLogicalPosition = decelerationStartPosition + (targetPosition - decelerationStartPosition) * decelerationProgress;
+    
+    // Ensure position stays within bounds during deceleration
+    const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+    const halfWidth = totalLogicalWidth / 2;
+    
+    let finalPosition = newLogicalPosition;
+    if (finalPosition < -halfWidth) {
+      finalPosition += totalLogicalWidth;
+    } else if (finalPosition > halfWidth) {
+      finalPosition -= totalLogicalWidth;
+    }
+    
+    setLogicalTranslateX(finalPosition);
+    
+    if (progress < 1) {
+      animationRef.current = requestAnimationFrame(animateDeceleration);
+    } else {
+      // Animation complete - ensure we land exactly on target
+      let exactFinalPosition = targetPosition;
+      
+      // Ensure final position is within bounds
+      if (exactFinalPosition < -halfWidth) {
+        exactFinalPosition += totalLogicalWidth;
+      } else if (exactFinalPosition > halfWidth) {
+        exactFinalPosition -= totalLogicalWidth;
+      }
+      
+      setLogicalTranslateX(exactFinalPosition);
+      
+      console.log('✅ DECELERATION COMPLETE:', {
+        serverWinningSlot: winningSlot,
+        finalLogicalPosition: exactFinalPosition,
+        targetPosition,
+        accuracy: Math.abs(exactFinalPosition - targetPosition)
+      });
+      
+      setAnimationPhase('stopped');
+      setIsAnimating(false);
+      verifyWinningTilePosition(exactFinalPosition);
+    }
+  }, [animationPhase, decelerationStartTime, decelerationStartPosition, targetPosition, winningSlot, verifyWinningTilePosition]);
 
+  // Start animation when phase changes
+  useEffect(() => {
+    if (animationPhase === 'accelerating') {
+      console.log('🚀 Starting acceleration animation');
+      animateAcceleration();
+    } else if (animationPhase === 'decelerating') {
+      console.log('🎯 Starting deceleration animation');
+      animateDeceleration();
+    }
+  }, [animationPhase, animateAcceleration, animateDeceleration]);
 
   // Verify that the winning tile is centered when animation stops
   const verifyWinningTilePosition = useCallback((finalLogicalPosition: number) => {
@@ -316,177 +443,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log(`🎉 Perfect! Server result ${winningSlot} landed exactly under the center line!`);
     }
   }, [winningSlot]);
-
-  // Handle spinning state changes
-  useEffect(() => {
-    if (isSpinning !== lastSpinningState.current) {
-      lastSpinningState.current = isSpinning;
-      
-      if (isSpinning) {
-        console.log('🎰 SPINNING STARTED - Initializing animation');
-        setIsAnimating(true);
-        setAnimationPhase('idle');
-        
-        // Calculate the complete animation path if we have a winning slot
-        if (winningSlot !== null) {
-          const animationPath = calculateAnimationPath(winningSlot);
-          
-          // Set the starting position for the animation
-          setLogicalTranslateX(animationPath.startPosition);
-          setDecelerationStartPosition(animationPath.decelerationStartPosition);
-          
-          console.log('🎯 ANIMATION PATH SET:', {
-            serverWinningSlot: winningSlot,
-            startPosition: animationPath.startPosition,
-            targetPosition: animationPath.targetPosition
-          });
-        }
-        
-        // Start animation immediately
-        const startAnimation = () => {
-          console.log('🚀 Starting roulette acceleration');
-          setAnimationPhase('accelerating');
-          setSpinStartTime(Date.now());
-          
-          const animateAcceleration = () => {
-            const currentTime = Date.now();
-            const elapsed = currentTime - spinStartTime;
-            const progress = Math.min(elapsed / ACCELERATION_DURATION, 1);
-            
-            // Smooth acceleration curve (ease-in)
-            const accelerationProgress = 1 - Math.pow(1 - progress, 2);
-            const currentVelocity = FULL_SPEED_VELOCITY * accelerationProgress;
-            
-            // Use frame timing for smooth movement
-            const deltaTime = currentTime - (animateAcceleration.lastTime || currentTime);
-            animateAcceleration.lastTime = currentTime;
-            const clampedDeltaTime = Math.min(deltaTime, 50); // Max 50ms between frames
-            
-            setLogicalTranslateX(prev => {
-              const velocity = currentVelocity * (clampedDeltaTime / 16.67); // Normalize to 60fps
-              const newPosition = prev - velocity;
-              
-              // Improved infinite scrolling logic to prevent disappearing
-              const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
-              const halfWidth = totalLogicalWidth / 2;
-              
-              // Reset position when we've moved too far in either direction
-              if (newPosition < -halfWidth) {
-                return newPosition + totalLogicalWidth;
-              } else if (newPosition > halfWidth) {
-                return newPosition - totalLogicalWidth;
-              }
-              
-              return newPosition;
-            });
-            
-            if (progress < 1) {
-              animationRef.current = requestAnimationFrame(animateAcceleration);
-            } else {
-              // Phase 2: Full speed spinning
-              console.log('🌀 Entering full-speed spinning phase');
-              setAnimationPhase('fullSpeed');
-              animateFullSpeed();
-            }
-          };
-          
-          animateAcceleration();
-        };
-        
-        // Start animation after a small delay to ensure state is updated
-        setTimeout(startAnimation, 10);
-        
-      } else {
-        console.log('🛑 SPINNING STOPPED - Cleaning up animation');
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
-        }
-        setIsAnimating(false);
-      }
-    }
-  }, [isSpinning, logicalTranslateX, animateFullSpeed, winningSlot, calculateAnimationPath]);
-
-  // Handle deceleration when winning slot is received
-  useEffect(() => {
-    if (!isSpinning && winningSlot !== null && animationPhase === 'fullSpeed') {
-      // Phase 3: Start deceleration to provably fair result
-      console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Starting deceleration');
-      setAnimationPhase('decelerating');
-      setDecelerationStartTime(Date.now());
-      
-      // Use the pre-calculated animation path
-      const animationPath = calculateAnimationPath(winningSlot);
-      const targetLogicalPosition = animationPath.targetPosition;
-      
-      console.log('🎲 DECELERATION CALCULATION:', {
-        serverWinningSlot: winningSlot,
-        decelerationStartPosition: decelerationStartPosition,
-        targetLogicalPosition,
-        distance: Math.abs(targetLogicalPosition - decelerationStartPosition)
-      });
-      
-      const animateDeceleration = () => {
-        const elapsed = Date.now() - decelerationStartTime;
-        const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
-        
-        // Simplified deceleration curve for more predictable landing
-        let decelerationProgress;
-        if (progress < 0.8) {
-          // First 80%: Smooth deceleration
-          decelerationProgress = 1 - Math.pow(1 - progress / 0.8, 2);
-        } else {
-          // Last 20%: Very slow final approach
-          const finalProgress = (progress - 0.8) / 0.2;
-          decelerationProgress = 0.8 + (finalProgress * 0.2);
-        }
-        
-        // Interpolate between start and target position
-        const newLogicalPosition = decelerationStartPosition + (targetLogicalPosition - decelerationStartPosition) * decelerationProgress;
-        
-        // Ensure position stays within bounds during deceleration
-        const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
-        const halfWidth = totalLogicalWidth / 2;
-        
-        let finalPosition = newLogicalPosition;
-        if (finalPosition < -halfWidth) {
-          finalPosition += totalLogicalWidth;
-        } else if (finalPosition > halfWidth) {
-          finalPosition -= totalLogicalWidth;
-        }
-        
-        setLogicalTranslateX(finalPosition);
-        
-        if (progress < 1) {
-          animationRef.current = requestAnimationFrame(animateDeceleration);
-        } else {
-          // Animation complete - ensure we land exactly on target
-          let exactFinalPosition = targetLogicalPosition;
-          
-          // Ensure final position is within bounds
-          if (exactFinalPosition < -halfWidth) {
-            exactFinalPosition += totalLogicalWidth;
-          } else if (exactFinalPosition > halfWidth) {
-            exactFinalPosition -= totalLogicalWidth;
-          }
-          
-          setLogicalTranslateX(exactFinalPosition);
-          
-          console.log('✅ DECELERATION COMPLETE:', {
-            serverWinningSlot: winningSlot,
-            finalLogicalPosition: exactFinalPosition,
-            targetLogicalPosition,
-            accuracy: Math.abs(exactFinalPosition - targetLogicalPosition)
-          });
-          
-          setAnimationPhase('stopped');
-          setIsAnimating(false);
-          verifyWinningTilePosition(exactFinalPosition);
-        }
-      };
-      
-      animateDeceleration();
-    }
-  }, [isSpinning, winningSlot, animationPhase, decelerationStartPosition, calculateAnimationPath]);
 
   // Debug animation state
   useEffect(() => {
