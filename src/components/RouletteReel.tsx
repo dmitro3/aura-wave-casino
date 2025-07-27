@@ -68,6 +68,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       verification: `Slot ${slot} should be at position ${targetPosition} to be centered`
     });
     
+    // Verify the calculation is correct
+    const verificationPosition = targetPosition + targetTileCenter;
+    console.log('🔍 Verification check:', {
+      calculatedPosition: targetPosition,
+      tileCenter: targetTileCenter,
+      verification: verificationPosition,
+      shouldEqualCenter: verificationPosition === CENTER_OFFSET
+    });
+    
     return targetPosition;
   }, []);
 
@@ -105,6 +114,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         goal: `Move reel to position ${targetPosition} so slot ${winningSlot} is centered`
       });
       
+      // Debug current position before animation
+      debugCurrentPosition();
+      
       const duration = 2500; // 2.5 seconds for smooth deceleration
       const startTime = Date.now();
       
@@ -140,6 +152,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           // Verify the result landed correctly
           console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final position:', newPosition);
           verifyWinningTilePosition(newPosition);
+          debugCurrentPosition();
         }
       };
       
@@ -262,6 +275,31 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log(`🎉 Perfect! Slot ${winningSlot} landed exactly under the center line!`);
     }
   }, [winningSlot]);
+
+  // Debug function to check current position
+  const debugCurrentPosition = useCallback(() => {
+    console.log('🔍 DEBUG: Current position analysis:', {
+      currentTranslateX: translateX,
+      centerOffset: CENTER_OFFSET,
+      tileWidth: TILE_WIDTH,
+      bufferMultiplier: BUFFER_MULTIPLIER,
+      wheelSlotsLength: WHEEL_SLOTS.length
+    });
+    
+    // Check what's currently at the center
+    for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
+      for (let i = 0; i < WHEEL_SLOTS.length; i++) {
+        const tileGlobalIndex = repeat * WHEEL_SLOTS.length + i;
+        const tileLeftEdge = translateX + (tileGlobalIndex * TILE_WIDTH);
+        const tileCenterPosition = tileLeftEdge + (TILE_WIDTH / 2);
+        const distanceFromCenter = Math.abs(tileCenterPosition - CENTER_OFFSET);
+        
+        if (distanceFromCenter < TILE_WIDTH / 2) {
+          console.log(`📍 Currently at center: Slot ${WHEEL_SLOTS[i].slot} (repeat ${repeat}, index ${i}) at distance ${distanceFromCenter.toFixed(2)}px`);
+        }
+      }
+    }
+  }, [translateX]);
 
   // Get tile color styling
   const getTileColor = (color: string) => {
