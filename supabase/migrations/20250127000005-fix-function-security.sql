@@ -254,9 +254,13 @@ END;
 $$;
 
 -- =====================================================
--- Fix trigger_track_chat_message function
+-- Fix trigger_track_chat_message function and trigger
 -- =====================================================
+-- Drop the trigger first, then the function
+DROP TRIGGER IF EXISTS track_chat_message_trigger ON public.chat_messages;
 DROP FUNCTION IF EXISTS public.trigger_track_chat_message();
+
+-- Recreate the function with proper search_path
 CREATE OR REPLACE FUNCTION public.trigger_track_chat_message()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -269,6 +273,12 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- Recreate the trigger
+CREATE TRIGGER track_chat_message_trigger
+  AFTER INSERT ON public.chat_messages
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trigger_track_chat_message();
 
 -- =====================================================
 -- Fix award_achievement_reward function
