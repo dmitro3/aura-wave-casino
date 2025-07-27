@@ -205,7 +205,7 @@ export function CaseNotification({ notification, onRefresh }: CaseNotificationPr
                 <Button
                   onClick={() => handleOpenCase(availableCases[0])}
                   size="sm"
-                  className="flex-1 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white"
+                  className="flex-1 bg-gradient-to-r from-primary/80 to-accent/80 hover:from-primary hover:to-accent text-white shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all duration-300"
                 >
                   <Gift className="w-4 h-4 mr-1" />
                   Open Case
@@ -217,7 +217,7 @@ export function CaseNotification({ notification, onRefresh }: CaseNotificationPr
                     size="sm"
                     variant="outline"
                     disabled={loading}
-                    className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                    className="border-primary/50 text-primary hover:bg-primary/10 hover:border-primary transition-all duration-300"
                   >
                     Open All ({availableCases.length})
                   </Button>

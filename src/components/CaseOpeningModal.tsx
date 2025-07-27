@@ -221,7 +221,7 @@ export const CaseOpeningModal = ({ isOpen, onClose, caseId, level, onCaseOpened 
                   </p>
                   <Button 
                     onClick={openCase}
-                    className="w-full bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white"
+                    className="w-full bg-gradient-to-r from-primary/80 to-accent/80 hover:from-primary hover:to-accent text-white shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all duration-300"
                   >
                     <Gift className="w-4 h-4 mr-2" />
                     Open Case

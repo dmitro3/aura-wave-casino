@@ -100,11 +100,11 @@ export function ProvablyFair() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-1">
-                    <span className="text-emerald-400 font-bold text-sm">4</span>
+                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-1">
+                    <span className="text-purple-400 font-bold text-sm">4</span>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-emerald-400">Public Verification</h4>
+                    <h4 className="font-semibold text-purple-400">Public Verification</h4>
                     <p className="text-sm text-muted-foreground">
                       After each round, the server seed is revealed. Anyone can verify the result 
                       using the same mathematical formula.
@@ -228,7 +228,7 @@ export function ProvablyFair() {
           <Card className="glass border-0">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-emerald-400" />
+                <Clock className="w-5 h-5 text-purple-400" />
                 Daily Seed System
               </CardTitle>
             </CardHeader>
@@ -258,11 +258,11 @@ export function ProvablyFair() {
                 </p>
               </div>
 
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <h4 className="font-semibold text-emerald-400 text-sm">Immutable Security</h4>
+                    <h4 className="font-semibold text-purple-400 text-sm">Immutable Security</h4>
                     <p className="text-xs text-muted-foreground mt-1">
                       Once a seed is published (hashed), it cannot be changed without breaking 
                       the cryptographic proof. This guarantees fairness.

@@ -221,7 +221,7 @@ export const LevelUpNotificationModal = ({
           {/* Continue Button */}
           <Button 
             onClick={handleClose}
-            className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white border-0"
+            className="w-full bg-gradient-to-r from-primary/90 to-accent/90 hover:from-primary hover:to-accent text-white border-0 shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all duration-300"
           >
             Continue Playing
           </Button>
