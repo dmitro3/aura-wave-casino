@@ -201,6 +201,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         console.log('🎯 TARGET CALCULATED:', { winningSlot, target });
       }
       
+      // Start animation immediately
+      setTimeout(() => {
+        console.log('🚀 Starting acceleration animation immediately');
+        animateAcceleration();
+      }, 10);
+      
     } else if (!isSpinning && isAnimating) {
       console.log('🛑 STOPPING ANIMATION - Round left spinning phase');
       setIsAnimating(false);
@@ -209,7 +215,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         cancelAnimationFrame(animationRef.current);
       }
     }
-  }, [isSpinning, winningSlot, isAnimating, calculateTargetLogicalPosition]);
+  }, [isSpinning, winningSlot, isAnimating, calculateTargetLogicalPosition, animateAcceleration]);
 
   // Handle deceleration when winning slot is received during spinning
   useEffect(() => {
@@ -233,6 +239,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Animation functions
   const animateAcceleration = useCallback(() => {
+    console.log('🎰 animateAcceleration called, phase:', animationPhase);
     if (animationPhase !== 'accelerating') return;
     
     const currentTime = Date.now();
@@ -243,14 +250,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const accelerationProgress = 1 - Math.pow(1 - progress, 2);
     const currentVelocity = FULL_SPEED_VELOCITY * accelerationProgress;
     
-    // Use frame timing for smooth movement
-    const deltaTime = currentTime - (animateAcceleration.lastTime || currentTime);
-    animateAcceleration.lastTime = currentTime;
-    const clampedDeltaTime = Math.min(deltaTime, 50); // Max 50ms between frames
+    console.log('🎰 Acceleration progress:', { progress, accelerationProgress, currentVelocity });
     
     setLogicalTranslateX(prev => {
-      const velocity = currentVelocity * (clampedDeltaTime / 16.67); // Normalize to 60fps
-      const newPosition = prev - velocity;
+      const newPosition = prev - currentVelocity;
       
       // Improved infinite scrolling logic to prevent disappearing
       const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
@@ -277,18 +280,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Full speed spinning animation with proper frame timing
   const animateFullSpeed = useCallback(() => {
+    console.log('🎰 animateFullSpeed called, phase:', animationPhase);
     if (animationPhase !== 'fullSpeed') return;
     
-    const currentTime = Date.now();
-    const deltaTime = currentTime - (animateFullSpeed.lastTime || currentTime);
-    animateFullSpeed.lastTime = currentTime;
-    
-    // Ensure minimum delta time to prevent jumps
-    const clampedDeltaTime = Math.min(deltaTime, 50); // Max 50ms between frames
-    
     setLogicalTranslateX(prev => {
-      const velocity = FULL_SPEED_VELOCITY * (clampedDeltaTime / 16.67); // Normalize to 60fps
-      const newPosition = prev - velocity;
+      const newPosition = prev - FULL_SPEED_VELOCITY;
       
       // Improved infinite scrolling logic to prevent disappearing
       const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
@@ -434,6 +430,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
 
   // Start animation when phase changes
   useEffect(() => {
+    console.log('🎰 Phase change detected:', animationPhase);
+    
     if (animationPhase === 'accelerating') {
       console.log('🚀 Starting acceleration animation');
       animateAcceleration();
