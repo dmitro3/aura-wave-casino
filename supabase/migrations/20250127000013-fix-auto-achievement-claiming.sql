@@ -95,7 +95,3 @@ CREATE TRIGGER check_ready_achievements_trigger
   AFTER UPDATE ON public.user_level_stats
   FOR EACH ROW
   EXECUTE FUNCTION public.trigger_check_ready_achievements();
-
-RAISE NOTICE '✅ Fixed auto-achievement claiming!';
-RAISE NOTICE '🎯 Achievements now stay in "Ready to Claim" until manually claimed';
-RAISE NOTICE '⚡ Automatic checking still works, but no auto-awarding';
