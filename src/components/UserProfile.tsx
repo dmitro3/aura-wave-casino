@@ -740,9 +740,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
 
   // Debug: Log the stats being passed
   useEffect(() => {
-    console.log('🔍 AchievementsSection received stats:', stats);
-    console.log('🔍 AchievementsSection isOwnProfile:', isOwnProfile);
-    console.log('🔍 AchievementsSection userId:', userId);
+    // Removed debugging to improve performance
   }, [stats, isOwnProfile, userId]);
 
   // Fetch user stats for achievement progress calculation
@@ -751,8 +749,6 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       if (!userId) return;
 
       try {
-        console.log('🔍 Fetching user stats for achievement progress:', userId);
-        
         const { data, error } = await supabase
           .from('user_level_stats')
           .select(`
@@ -815,21 +811,8 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
         }
 
         if (data) {
-          console.log('✅ Successfully fetched user stats for achievements:', data);
-          console.log('📊 Key stats for achievements:', {
-            total_games: data.total_games,
-            total_wins: data.total_wins,
-            current_level: data.current_level,
-            roulette_games: data.roulette_games,
-            roulette_wins: data.roulette_wins,
-            roulette_green_wins: data.roulette_green_wins,
-            chat_messages_count: data.chat_messages_count,
-            login_days_count: data.login_days_count,
-            account_created: data.account_created
-          });
           setUserStats(data);
         } else {
-          console.log('⚠️ No user stats found for user:', userId);
           setUserStats(null);
         }
       } catch (error) {
@@ -840,168 +823,203 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
     fetchUserStats();
   }, [userId]);
 
+  // Fetch achievements and user stats in parallel
   useEffect(() => {
-    fetchAchievements();
-  }, [userId]);
+    const fetchData = async () => {
+      if (!userId) return;
 
-  const fetchAchievements = async () => {
-    try {
-      console.log('🔍 Fetching achievements for user:', userId);
+      setLoading(true);
       
-      // Fetch all achievements
-      const { data: allAchievements, error: achievementsError } = await supabase
-        .from('achievements')
-        .select('*');
-
-      if (achievementsError) throw achievementsError;
-
-      console.log('📋 All achievements loaded:', allAchievements?.length || 0);
-      console.log('📋 Sample achievements:', allAchievements?.slice(0, 3).map(a => ({
-        name: a.name,
-        criteria: a.unlock_criteria
-      })));
-
-      // Fetch user's unlocked achievements
-      const { data: userAchievements, error: userError } = await supabase
-        .from('user_achievements')
-        .select(`
-          *,
-          achievements (*)
-        `)
-        .eq('user_id', userId);
-
-      if (userError) throw userError;
-
-      const unlockedAchievements = userAchievements || [];
-      console.log('🏆 User unlocked achievements:', unlockedAchievements.length);
-
-      setAchievements(allAchievements || []);
-      setUserAchievements(unlockedAchievements || []);
-
-      // Check for claimable achievements (requirements met but not claimed)
-      if (isOwnProfile && userStats) {
-        console.log('🔍 Checking for claimable achievements...');
-        const claimable = (allAchievements || []).filter(achievement => {
-          const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
-          if (isAlreadyUnlocked) return false;
+      try {
+        // Fetch both achievements and user stats in parallel
+        const [achievementsResult, userStatsResult] = await Promise.all([
+          // Fetch all achievements
+          supabase
+            .from('achievements')
+            .select('*'),
           
-          const progress = calculateProgressForAchievement(achievement, userStats);
-          console.log(`🎯 Achievement "${achievement.name}": ${progress}% progress`);
-          return progress >= 100;
-        });
-        console.log('🎁 Claimable achievements found:', claimable.length);
-        setClaimableAchievements(claimable);
+          // Fetch user stats
+          supabase
+            .from('user_level_stats')
+            .select(`
+              id,
+              user_id,
+              current_level,
+              lifetime_xp,
+              current_level_xp,
+              xp_to_next_level,
+              border_tier,
+              border_unlocked_at,
+              available_cases,
+              total_cases_opened,
+              total_case_value,
+              coinflip_games,
+              coinflip_wins,
+              coinflip_wagered,
+              coinflip_profit,
+              crash_games,
+              crash_wins,
+              crash_wagered,
+              crash_profit,
+              roulette_games,
+              roulette_wins,
+              roulette_wagered,
+              roulette_profit,
+              roulette_green_wins,
+              roulette_highest_win,
+              roulette_biggest_bet,
+              roulette_best_streak,
+              roulette_favorite_color,
+              tower_games,
+              tower_wins,
+              tower_wagered,
+              tower_profit,
+              tower_highest_level,
+              tower_perfect_games,
+              total_games,
+              total_wins,
+              total_wagered,
+              total_profit,
+              best_coinflip_streak,
+              current_coinflip_streak,
+              best_win_streak,
+              biggest_win,
+              biggest_loss,
+              biggest_single_bet,
+              chat_messages_count,
+              login_days_count,
+              account_created,
+              created_at,
+              updated_at
+            `)
+            .eq('user_id', userId)
+            .single()
+        ]);
+
+        // Handle achievements
+        if (achievementsResult.error) {
+          console.error('Error fetching achievements:', achievementsResult.error);
+        } else {
+          setAchievements(achievementsResult.data || []);
+        }
+
+        // Handle user stats
+        if (userStatsResult.error && userStatsResult.error.code !== 'PGRST116') {
+          console.error('Error fetching user stats:', userStatsResult.error);
+        } else {
+          setUserStats(userStatsResult.data);
+        }
+
+        // Fetch user's unlocked achievements
+        const { data: userAchievements, error: userError } = await supabase
+          .from('user_achievements')
+          .select(`
+            *,
+            achievements (*)
+          `)
+          .eq('user_id', userId);
+
+        if (userError) {
+          console.error('Error fetching user achievements:', userError);
+        } else {
+          const unlockedAchievements = userAchievements || [];
+          setUserAchievements(unlockedAchievements);
+
+          // Check for claimable achievements (requirements met but not claimed)
+          if (isOwnProfile && userStatsResult.data) {
+            const claimable = (achievementsResult.data || []).filter(achievement => {
+              const isAlreadyUnlocked = unlockedAchievements.some(ua => ua.achievement_id === achievement.id);
+              if (isAlreadyUnlocked) return false;
+              
+              const progress = calculateProgressForAchievement(achievement, userStatsResult.data);
+              return progress >= 100;
+            });
+            setClaimableAchievements(claimable);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching achievement data:', error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching achievements:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchData();
+  }, [userId, isOwnProfile]);
 
   const calculateProgressForAchievement = (achievement: any, userStats: any): number => {
     if (!userStats) {
-      console.log('❌ No userStats provided for achievement:', achievement.name);
       return 0;
     }
     
-    const criteria = achievement.unlock_criteria;
+    const criteria = achievement.criteria; // Use 'criteria' field from database
     const criteriaType = criteria?.type;
     const targetValue = criteria?.value || 0;
-
-    console.log(`🔍 Calculating progress for "${achievement.name}" (${criteriaType}):`, {
-      criteria,
-      targetValue,
-      userStatsKeys: Object.keys(userStats)
-    });
 
     let currentValue = 0;
     
     switch (criteriaType) {
       case 'total_games': 
         currentValue = userStats.total_games || 0; 
-        console.log(`📊 total_games: ${currentValue}/${targetValue}`);
         break;
       case 'total_wins': 
         currentValue = userStats.total_wins || 0; 
-        console.log(`📊 total_wins: ${currentValue}/${targetValue}`);
         break;
       case 'total_profit': 
         currentValue = userStats.total_profit || 0; 
-        console.log(`📊 total_profit: ${currentValue}/${targetValue}`);
         break;
       case 'total_wagered': 
         currentValue = userStats.total_wagered || 0; 
-        console.log(`📊 total_wagered: ${currentValue}/${targetValue}`);
         break;
       case 'roulette_games': 
         currentValue = userStats.roulette_games || 0; 
-        console.log(`📊 roulette_games: ${currentValue}/${targetValue}`);
         break;
       case 'roulette_wins': 
         currentValue = userStats.roulette_wins || 0; 
-        console.log(`📊 roulette_wins: ${currentValue}/${targetValue}`);
         break;
       case 'roulette_green_wins': 
         currentValue = userStats.roulette_green_wins || 0; 
-        console.log(`📊 roulette_green_wins: ${currentValue}/${targetValue}`);
         break;
       case 'roulette_biggest_win': 
-        currentValue = userStats.roulette_highest_win || 0; 
-        console.log(`📊 roulette_highest_win: ${currentValue}/${targetValue}`);
+        currentValue = userStats.roulette_highest_win || 0; // Map to correct field
         break;
       case 'tower_games': 
         currentValue = userStats.tower_games || 0; 
-        console.log(`📊 tower_games: ${currentValue}/${targetValue}`);
         break;
       case 'tower_highest_level': 
         currentValue = userStats.tower_highest_level || 0; 
-        console.log(`📊 tower_highest_level: ${currentValue}/${targetValue}`);
         break;
       case 'tower_perfect_games': 
         currentValue = userStats.tower_perfect_games || 0; 
-        console.log(`📊 tower_perfect_games: ${currentValue}/${targetValue}`);
         break;
       case 'coinflip_wins': 
         currentValue = userStats.coinflip_wins || 0; 
-        console.log(`📊 coinflip_wins: ${currentValue}/${targetValue}`);
         break;
       case 'total_cases_opened': 
         currentValue = userStats.total_cases_opened || 0; 
-        console.log(`📊 total_cases_opened: ${currentValue}/${targetValue}`);
         break;
       case 'account_created': 
         currentValue = userStats.account_created ? 1 : 0; 
-        console.log(`📊 account_created: ${currentValue}/${targetValue}`);
         break;
       case 'chat_messages': 
         currentValue = userStats.chat_messages_count || 0; 
-        console.log(`📊 chat_messages_count: ${currentValue}/${targetValue}`);
         break;
       case 'login_days': 
         currentValue = userStats.login_days_count || 0; 
-        console.log(`📊 login_days_count: ${currentValue}/${targetValue}`);
         break;
       case 'win_streak': 
         currentValue = userStats.best_win_streak || 0; 
-        console.log(`📊 best_win_streak: ${currentValue}/${targetValue}`);
         break;
       case 'biggest_single_bet': 
         currentValue = userStats.biggest_single_bet || 0; 
-        console.log(`📊 biggest_single_bet: ${currentValue}/${targetValue}`);
         break;
       case 'user_level': 
         currentValue = userStats.current_level || 0; 
-        console.log(`📊 current_level: ${currentValue}/${targetValue}`);
         break;
       default: 
-        console.log(`⚠️ Unknown criteria type: ${criteriaType}`);
         currentValue = 0; 
         break;
     }
-
-    const percentage = targetValue === 0 ? 0 : Math.min(100, (currentValue / targetValue) * 100);
-    console.log(`📊 Progress calculation: ${currentValue}/${targetValue} = ${percentage.toFixed(1)}%`);
 
     // Prevent division by zero and handle edge cases
     if (targetValue === 0) return 0;
@@ -1065,7 +1083,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       console.log(`🎉 Achievement unlocked: ${achievement.name}! Reward: ${achievement.reward_type === 'money' ? '$' : ''}${achievement.reward_amount}${achievement.reward_type === 'cases' ? ' cases' : achievement.reward_type === 'xp' ? ' XP' : ''}`);
 
       // Refresh achievements
-      fetchAchievements();
+      // fetchAchievements(); // This will be called by the useEffect hook
     } catch (error) {
       console.error('Error claiming achievement:', error);
     } finally {
