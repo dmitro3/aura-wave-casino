@@ -49,9 +49,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const animationRef = useRef<number>();
 
   // Animation configuration - SIMPLIFIED FOR SMOOTHNESS
-  const ACCELERATION_DURATION = 800; // Faster acceleration
-  const FULL_SPEED_DURATION = 1500; // Shorter full speed
-  const DECELERATION_DURATION = 2000; // Faster deceleration
+  const ANIMATION_DURATION = 4000; // 4 seconds total
   const WINNING_GLOW_DURATION = 2000; // 2 seconds
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, isAnimating, animationPhase });
@@ -107,71 +105,26 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return Math.round(targetPosition);
   }, []);
 
-  // SIMPLIFIED SMOOTH ANIMATION FUNCTIONS
-  const animateAcceleration = useCallback(() => {
+  // SINGLE SMOOTH ANIMATION FUNCTION
+  const animate = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
-    const progress = Math.min(elapsed / ACCELERATION_DURATION, 1);
+    const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
     
-    // Smooth ease-in acceleration
-    const easeProgress = 1 - Math.pow(1 - progress, 2);
+    // Smooth easing curve: start fast, slow down at the end
+    const easeProgress = 1 - Math.pow(1 - progress, 3);
     
-    // Move from 0 to acceleration end position
-    const accelerationEndPosition = -TILE_SIZE * 10;
-    const currentPosition = easeProgress * accelerationEndPosition;
+    // Calculate the total distance to travel
+    const totalDistance = targetPosition - 0; // From current position (0) to target
     
-    setTranslateX(currentPosition);
-
-    if (progress < 1) {
-      animationRef.current = requestAnimationFrame(animateAcceleration);
-    } else {
-      console.log('🌀 ACCELERATION COMPLETE - Position:', currentPosition);
-      setAnimationPhase('fullSpeed');
-    }
-  }, [animationPhase, startTime]);
-
-  const animateFullSpeed = useCallback(() => {
-    if (animationPhase !== 'fullSpeed') return;
-
-    const elapsed = Date.now() - startTime - ACCELERATION_DURATION;
-    const progress = Math.min(elapsed / FULL_SPEED_DURATION, 1);
-    
-    // Linear movement during full speed
-    const accelerationEndPosition = -TILE_SIZE * 10;
-    const fullSpeedDistance = -TILE_SIZE * 20;
-    const currentPosition = accelerationEndPosition + (fullSpeedDistance * progress);
+    // Apply easing to the distance
+    const currentPosition = easeProgress * totalDistance;
     
     setTranslateX(currentPosition);
 
     if (progress < 1) {
-      animationRef.current = requestAnimationFrame(animateFullSpeed);
-    } else {
-      const fullSpeedEndPosition = accelerationEndPosition + fullSpeedDistance;
-      console.log('🎯 FULL SPEED COMPLETE - Position:', fullSpeedEndPosition);
-      setAnimationPhase('decelerating');
-      setDecelerationStartTime(Date.now());
-    }
-  }, [animationPhase, startTime]);
-
-  const animateDeceleration = useCallback(() => {
-    if (animationPhase !== 'decelerating') return;
-
-    const elapsed = Date.now() - decelerationStartTime;
-    const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
-    
-    // Smooth ease-out deceleration
-    const easeProgress = 1 - Math.pow(progress, 3);
-    
-    // Move from full speed end to target position
-    const fullSpeedEndPosition = -TILE_SIZE * 30;
-    const remainingDistance = targetPosition - fullSpeedEndPosition;
-    const currentPosition = fullSpeedEndPosition + (remainingDistance * easeProgress);
-    
-    setTranslateX(currentPosition);
-
-    if (progress < 1) {
-      animationRef.current = requestAnimationFrame(animateDeceleration);
+      animationRef.current = requestAnimationFrame(animate);
     } else {
       // Animation complete - set exact target position
       setTranslateX(targetPosition);
@@ -206,7 +159,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setShowWinningGlow(true);
       setTimeout(() => setShowWinningGlow(false), WINNING_GLOW_DURATION);
     }
-  }, [animationPhase, decelerationStartTime, targetPosition, winningSlot]);
+  }, [animationPhase, startTime, targetPosition, winningSlot]);
 
   // Main animation trigger
   useEffect(() => {
@@ -239,17 +192,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Trigger animation phases
   useEffect(() => {
     if (animationPhase === 'accelerating') {
-      animateAcceleration();
-    } else if (animationPhase === 'fullSpeed') {
-      animateFullSpeed();
-    } else if (animationPhase === 'decelerating') {
-      animateDeceleration();
+      animate();
     } else if (animationPhase === 'idle' || animationPhase === 'stopped') {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     }
-  }, [animationPhase, animateAcceleration, animateFullSpeed, animateDeceleration]);
+  }, [animationPhase, animate]);
 
   // Server synchronization
   useEffect(() => {
