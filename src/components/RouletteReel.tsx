@@ -29,9 +29,9 @@ const WHEEL_SLOTS = [
 
 // Device-independent configuration - FIXED VALUES that never change
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
-const LOGICAL_TILE_WIDTH = 25; // Fixed logical tile width (device-independent)
+const LOGICAL_TILE_WIDTH = 35; // Fixed logical tile width (device-independent) - increased from 25
 const LOGICAL_CENTER_POSITION = 0; // Fixed logical center position
-const VISIBLE_TILES_COUNT = 14; // Fixed number of visible tiles
+const VISIBLE_TILES_COUNT = 12; // Fixed number of visible tiles - reduced from 14 to accommodate larger tiles
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [logicalTranslateX, setLogicalTranslateX] = useState(0); // Logical position (device-independent)
@@ -357,7 +357,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   return (
     <div className="relative w-full max-w-7xl mx-auto">
       {/* Reel container */}
-      <div ref={containerRef} className="relative h-24 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
+      <div ref={containerRef} className="relative h-32 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
         {/* Center indicator line - positioned at container center */}
         <div 
@@ -368,20 +368,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           }}
         >
           {/* Top arrow */}
-          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-emerald-400"></div>
-          </div>
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-emerald-400"></div>
           
           {/* Bottom arrow */}
-          <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-            <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-emerald-400"></div>
-          </div>
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-emerald-400"></div>
           
           {/* Center line */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-300 via-emerald-400 to-emerald-300 shadow-lg"></div>
+          <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-0.5 bg-emerald-400"></div>
           
           {/* Glow effect */}
-          <div className="absolute inset-0 bg-emerald-400 shadow-emerald-400/50 shadow-2xl blur-sm animate-pulse"></div>
+          <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-emerald-400/20 blur-sm"></div>
         </div>
 
         {/* Horizontal scrolling tiles */}
@@ -424,7 +420,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                   boxSizing: 'border-box !important'
                 }}
               >
-                <div className={`text-sm font-bold drop-shadow-lg ${
+                <div className={`text-base font-bold drop-shadow-lg ${
                   isWinningTile ? 'text-emerald-200 scale-125' : ''
                 }`}>
                   {tile.slot}
