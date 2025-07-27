@@ -116,6 +116,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const userBetsRef = useRef<Record<string, number>>({});
   const currentRoundRef = useRef<string>('');
   const balanceRef = useRef<number>(0);
+  const lastResultsFetchRef = useRef<number>(0);
 
   // Update balance ref when profile changes
   useEffect(() => {
@@ -281,9 +282,19 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   };
 
   // Fetch recent results
-  const fetchRecentResults = async () => {
+  const fetchRecentResults = async (forceRefresh = false) => {
     try {
+      const now = Date.now();
+      
+      // Prevent over-fetching (unless forced) - max once per 2 seconds
+      if (!forceRefresh && now - lastResultsFetchRef.current < 2000) {
+        console.log('⏭️ Skipping recent results fetch (too soon)');
+        return;
+      }
+      
       console.log('🔄 Fetching recent results...');
+      lastResultsFetchRef.current = now;
+      
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_recent_results' }
       });
@@ -469,15 +480,36 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             console.log('🏁 Round completed, fetching final results');
             fetchRoundBets(round.id);
             
-            // Only fetch recent results if this is a newly completed round
-            if (oldRound?.status === 'spinning' && round.status === 'completed') {
-              console.log('🎯 Round just completed, updating recent results');
-              setTimeout(() => fetchRecentResults(), 1000); // Slightly longer delay to ensure DB consistency
+            // IMPROVED: Always update recent results when ANY round becomes completed
+            // This handles all possible completion scenarios
+            if (round.status === 'completed') {
+              console.log('🎯 Completed round detected, updating recent results');
+              
+              // Immediate update for responsiveness (forced)
+              fetchRecentResults(true);
+              
+              // Also update after delay to ensure DB consistency
+              setTimeout(() => fetchRecentResults(true), 500);
             }
           } else {
             console.log('⏭️ Round update but keeping current state');
           }
         }
+      })
+      .subscribe();
+
+    // Additional subscription for newly inserted completed rounds (edge case handling)
+    const completedRoundsSubscription = supabase
+      .channel('completed_roulette_rounds')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'roulette_rounds',
+        filter: 'status=eq.completed'
+      }, (payload) => {
+        console.log('🎯 New completed round inserted:', payload.new);
+        // Immediate update for new completed rounds (forced)
+        fetchRecentResults(true);
       })
       .subscribe();
 
@@ -504,6 +536,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     
     return () => {
       roundSubscription.unsubscribe();
+      completedRoundsSubscription.unsubscribe();
       betSubscription.unsubscribe();
       // resultsSubscription.unsubscribe(); - REMOVED
     };
