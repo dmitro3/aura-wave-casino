@@ -137,6 +137,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         // Use the server-calculated position for perfect synchronization
         targetPosition = serverReelPosition;
         console.log('🌐 Using server-calculated position for synchronization:', targetPosition);
+        
+        // Validate that server position is reasonable (not too extreme)
+        const distance = Math.abs(targetPosition - startPosition);
+        const maxReasonableDistance = 100 * WHEEL_SLOTS.length * TILE_SIZE_PX; // 100 full rotations max
+        
+        if (distance > maxReasonableDistance) {
+          console.warn('⚠️ Server position seems too extreme, using client calculation instead');
+          targetPosition = calculateWinningPosition(winningSlot, startPosition);
+        }
       } else {
         // Fallback to client-side calculation
         targetPosition = calculateWinningPosition(winningSlot, startPosition);
@@ -145,13 +154,48 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       
       if (!reelRef.current) return;
       
-      // Apply smooth CSS transition with realistic easing
-      const reel = reelRef.current;
-      reel.style.transition = `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
-      reel.style.transform = `translateX(${targetPosition}px)`;
+      const animationDistance = Math.abs(targetPosition - startPosition);
+      const rotations = animationDistance / (WHEEL_SLOTS.length * TILE_SIZE_PX);
       
+      console.log('🎯 Animation Details:', {
+        startPosition: Math.round(startPosition),
+        targetPosition: Math.round(targetPosition),
+        distance: Math.round(animationDistance),
+        rotations: Math.round(rotations * 100) / 100,
+        duration: SPIN_DURATION_MS,
+        isReasonable: rotations >= 3 && rotations <= 100
+      });
+      
+      // Ensure minimum spin distance for realistic effect
+      if (animationDistance < 3 * WHEEL_SLOTS.length * TILE_SIZE_PX) {
+        console.log('🔄 Adjusting for minimum spin distance');
+        targetPosition -= 5 * WHEEL_SLOTS.length * TILE_SIZE_PX; // Add 5 full rotations
+      }
+      
+      // Set animation state FIRST
       setIsAnimating(true);
       setShowWinGlow(false);
+      
+      // Apply smooth CSS transition with realistic easing
+      const reel = reelRef.current;
+      
+      // Ensure we start from the current position
+      reel.style.transition = 'none';
+      reel.style.transform = `translateX(${startPosition}px)`;
+      
+      // Force a reflow to ensure the starting position is set
+      reel.offsetHeight;
+      
+      // Now set the transition and animate to target position
+      reel.style.transition = `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
+      
+      // Use requestAnimationFrame to ensure transition is applied before transform
+      requestAnimationFrame(() => {
+        if (reelRef.current) {
+          console.log('🎬 Starting transform animation to:', Math.round(targetPosition));
+          reelRef.current.style.transform = `translateX(${targetPosition}px)`;
+        }
+      });
       
       // Clear any existing timeout
       if (animationTimeoutRef.current) {
@@ -160,6 +204,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       
       // Complete animation after exactly 4 seconds
       animationTimeoutRef.current = setTimeout(() => {
+        // Update state position ONLY after animation completes
         setCurrentPosition(targetPosition);
         setIsAnimating(false);
         setShowWinGlow(true);
@@ -274,8 +319,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
           className="flex h-full will-change-transform"
           style={{ 
             width: `${TOTAL_REEL_WIDTH_PX}px`,
-            transform: `translateX(${currentPosition}px)`,
-            transition: isAnimating ? undefined : 'none' // CSS handles transition during animation
+            // Transform is handled by JavaScript during animation for smooth transitions
+            ...(isAnimating ? {} : { transform: `translateX(${currentPosition}px)` })
           }}
         >
           {allTiles.map((tile) => {
