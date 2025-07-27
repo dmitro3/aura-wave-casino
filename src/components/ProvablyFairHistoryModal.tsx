@@ -37,18 +37,29 @@ interface DailySeed {
 
 export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistoryModalProps) {
   const [rounds, setRounds] = useState<RoundHistory[]>([]);
+  const [totalRounds, setTotalRounds] = useState<number>(0);
   const [dailySeeds, setDailySeeds] = useState<DailySeed[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [loading, setLoading] = useState(false);
   const [selectedRound, setSelectedRound] = useState<RoundHistory | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
+  const ROUNDS_PER_PAGE = 100;
+
   useEffect(() => {
     if (isOpen) {
       fetchDailySeeds();
+      setCurrentPage(1); // Reset to first page when date changes
       fetchRoundsForDate(selectedDate);
     }
   }, [isOpen, selectedDate]);
+
+  useEffect(() => {
+    if (isOpen && selectedDate) {
+      fetchRoundsForDate(selectedDate);
+    }
+  }, [currentPage]);
 
   const fetchDailySeeds = async () => {
     try {
@@ -82,18 +93,32 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
       if (seedError || !dailySeedData) {
         console.log(`No daily seed found for ${date}`);
         setRounds([]);
+        setTotalRounds(0);
         setLoading(false);
         return;
       }
 
-      // Fetch rounds for this daily seed
+      // First, get total count for pagination
+      const { count, error: countError } = await supabase
+        .from('roulette_rounds')
+        .select('*', { count: 'exact', head: true })
+        .eq('daily_seed_id', dailySeedData.id)
+        .eq('status', 'completed');
+
+      if (countError) {
+        console.error('Error fetching total count:', countError);
+      } else {
+        setTotalRounds(count || 0);
+      }
+
+      // Fetch rounds for this daily seed with pagination
       const { data, error } = await supabase
         .from('roulette_rounds')
         .select('id, round_number, result_slot, result_color, server_seed_hash, nonce, created_at, status, daily_seed_id, nonce_id')
         .eq('daily_seed_id', dailySeedData.id)
         .eq('status', 'completed')
         .order('nonce_id', { ascending: false })
-        .limit(100); // Max 100 rounds per day
+        .range((currentPage - 1) * ROUNDS_PER_PAGE, currentPage * ROUNDS_PER_PAGE - 1);
 
       if (error) {
         console.error('Error fetching round history:', error);
@@ -104,6 +129,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
     } catch (error) {
       console.error('Error fetching rounds for date:', error);
       setRounds([]);
+      setTotalRounds(0);
     }
     setLoading(false);
   };
@@ -164,6 +190,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
   };
 
   const selectedDailySeed = dailySeeds.find(seed => seed.date === selectedDate);
+  const totalPages = Math.ceil(totalRounds / ROUNDS_PER_PAGE);
 
   return (
     <>
@@ -178,13 +205,13 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
 
           <div className="space-y-6">
             {/* Date Selection */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+            <div className="bg-gradient-to-r from-emerald-500/10 to-blue-500/10 p-4 rounded-lg border border-emerald-500/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <Calendar className="w-5 h-5 text-emerald-400" />
                   <div>
-                    <Label className="text-sm font-medium text-blue-900">Select Date</Label>
-                    <p className="text-xs text-blue-700">View games and verify results from any day</p>
+                    <Label className="text-sm font-medium text-foreground">Select Date</Label>
+                    <p className="text-xs text-muted-foreground">View games and verify results from any day</p>
                   </div>
                 </div>
                 
@@ -193,7 +220,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                     variant="ghost" 
                     size="sm"
                     onClick={() => changeDate('prev')}
-                    className="h-8 w-8 p-0 hover:bg-blue-100"
+                    className="h-8 w-8 p-0 hover:bg-emerald-500/20 text-emerald-400"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
@@ -204,9 +231,9 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                       value={selectedDate}
                       onChange={(e) => setSelectedDate(e.target.value)}
                       max={new Date().toISOString().split('T')[0]}
-                      className="h-8 text-sm"
+                      className="h-8 text-sm bg-background/50 border-emerald-500/30"
                     />
-                    <div className="text-sm font-medium text-blue-900 min-w-0">
+                    <div className="text-sm font-medium text-foreground min-w-0">
                       {formatDateDisplay(selectedDate)}
                     </div>
                   </div>
@@ -216,7 +243,7 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                     size="sm"
                     onClick={() => changeDate('next')}
                     disabled={selectedDate >= new Date().toISOString().split('T')[0]}
-                    className="h-8 w-8 p-0 hover:bg-blue-100 disabled:opacity-50"
+                    className="h-8 w-8 p-0 hover:bg-emerald-500/20 text-emerald-400 disabled:opacity-50"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </Button>
@@ -225,16 +252,16 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
 
               {/* Daily Seed Info */}
               {selectedDailySeed && (
-                <div className="mt-3 pt-3 border-t border-blue-200">
+                <div className="mt-3 pt-3 border-t border-emerald-500/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-900">Daily Seed Status</span>
+                      <Shield className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-foreground">Daily Seed Status</span>
                       <Badge variant={selectedDailySeed.is_revealed ? "default" : "secondary"} className="text-xs">
                         {selectedDailySeed.is_revealed ? 'Revealed' : 'Hidden'}
                       </Badge>
                     </div>
-                    <div className="text-xs font-mono text-blue-700">
+                    <div className="text-xs font-mono text-muted-foreground">
                       Hash: {selectedDailySeed.server_seed_hash.slice(0, 16)}...
                     </div>
                   </div>
@@ -248,10 +275,87 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                 <h3 className="text-lg font-semibold">
                   Games for {formatDateDisplay(selectedDate)}
                 </h3>
-                <Badge variant="outline" className="text-xs">
-                  {rounds.length} rounds
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {totalRounds} total rounds
+                  </Badge>
+                  {totalPages > 1 && (
+                    <Badge variant="outline" className="text-xs">
+                      Page {currentPage} of {totalPages}
+                    </Badge>
+                  )}
+                </div>
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="h-8 px-2 text-xs"
+                  >
+                    First
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="w-3 h-3" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="h-8 w-8 p-0 text-xs"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="h-8 px-2 text-xs"
+                  >
+                    Last
+                  </Button>
+                </div>
+              )}
 
               {loading ? (
                 <div className="flex justify-center py-12">
