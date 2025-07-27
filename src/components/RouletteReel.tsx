@@ -7,7 +7,7 @@ interface RouletteReelProps {
   extendedWinAnimation?: boolean;
 }
 
-// 🎰 ROULETTE WHEEL CONFIGURATION
+// 🎰 EXACT WHEEL CONFIGURATION - Must match backend provably fair system
 const WHEEL_SLOTS = [
   { slot: 0, color: 'green' },
   { slot: 11, color: 'black' },
@@ -26,27 +26,25 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// 🎯 FIXED DIMENSIONS - PIXEL PERFECT
-const TILE_SIZE_PX = 100;           // Each tile is exactly 100px × 100px
-const VISIBLE_TILES = 15;           // Always show exactly 15 tiles
-const REEL_WIDTH_PX = VISIBLE_TILES * TILE_SIZE_PX; // 1500px viewport
-const REEL_HEIGHT_PX = 120;         // Fixed height
-const CENTER_INDEX = Math.floor(VISIBLE_TILES / 2); // 7 (middle tile)
-const CENTER_MARKER_PX = CENTER_INDEX * TILE_SIZE_PX + (TILE_SIZE_PX / 2); // 750px
+// 🎯 FIXED DIMENSIONS - PIXEL PERFECT (Match backend calculations)
+const TILE_SIZE_PX = 100;                              // Each tile is exactly 100px × 100px  
+const VISIBLE_TILES = 15;                              // Always show exactly 15 tiles
+const REEL_WIDTH_PX = VISIBLE_TILES * TILE_SIZE_PX;    // 1500px viewport width
+const REEL_HEIGHT_PX = 120;                            // Fixed height
+const CENTER_MARKER_PX = REEL_WIDTH_PX / 2;            // 750px - fixed center marker
 
-// 🔄 TILE DUPLICATION - For seamless infinite looping
-const TILE_REPEATS = 50;            // Duplicate the 15-slot sequence 50 times
-const TOTAL_TILES = WHEEL_SLOTS.length * TILE_REPEATS; // 750 total tiles
-const TOTAL_REEL_WIDTH_PX = TOTAL_TILES * TILE_SIZE_PX; // 75,000px
+// 🔄 INFINITE LOOPING SYSTEM - Duplicated sequences for seamless scrolling
+const TILE_REPEATS = 100;                              // Generate 100 copies of the 15-slot sequence
+const TOTAL_TILES = WHEEL_SLOTS.length * TILE_REPEATS; // 1500 total tiles
+const TOTAL_REEL_WIDTH_PX = TOTAL_TILES * TILE_SIZE_PX; // 150,000px total width
 
-// ⏱️ ANIMATION CONFIGURATION
-const SPIN_DURATION_MS = 4000;      // Exactly 4 seconds
-const MIN_SPIN_DISTANCE = 40 * WHEEL_SLOTS.length * TILE_SIZE_PX; // Minimum 40 full rotations
+// ⏱️ ANIMATION CONFIGURATION - Exactly 4 seconds
+const SPIN_DURATION_MS = 4000;
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extendedWinAnimation }: RouletteReelProps) {
-  const [currentTranslateX, setCurrentTranslateX] = useState(() => {
-    // Load initial position from localStorage or start at 0
-    const saved = localStorage.getItem('roulettePosition');
+  // 🎲 Reel position state - starts from localStorage or 0
+  const [currentPosition, setCurrentPosition] = useState(() => {
+    const saved = localStorage.getItem('rouletteReelPosition');
     return saved ? parseFloat(saved) : 0;
   });
   
@@ -59,73 +57,82 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
   const getTileStyle = (color: string): string => {
     switch (color) {
       case 'green': 
-        return 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-400 text-white shadow-emerald-500/30';
+        return 'bg-gradient-to-br from-emerald-500 to-emerald-600 border-emerald-400 text-white shadow-lg';
       case 'red': 
-        return 'bg-gradient-to-br from-red-500 to-red-600 border-red-400 text-white shadow-red-500/30';
+        return 'bg-gradient-to-br from-red-500 to-red-600 border-red-400 text-white shadow-lg';
       case 'black': 
-        return 'bg-gradient-to-br from-gray-700 to-gray-800 border-gray-500 text-white shadow-gray-700/30';
+        return 'bg-gradient-to-br from-gray-700 to-gray-800 border-gray-500 text-white shadow-lg';
       default: 
         return 'bg-gray-500 border-gray-400 text-white';
     }
   };
 
-  // 🧮 Calculate final position for winning slot
+  // 🧮 Calculate winning position using PROVABLY FAIR system algorithm
   const calculateWinningPosition = (winningNumber: number, startPosition: number): number => {
-    // Find the slot index in our 15-slot wheel
-    const slotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningNumber);
-    if (slotIndex === -1) {
-      console.error('Invalid winning number:', winningNumber);
+    console.log('🎯 Calculating provably fair winning position...');
+    
+    // Find the index of the winning slot in our WHEEL_SLOTS array (PROVABLY FAIR STEP 1)
+    const winningSlotIndex = WHEEL_SLOTS.findIndex(slot => slot.slot === winningNumber);
+    if (winningSlotIndex === -1) {
+      console.error('❌ Invalid winning slot:', winningNumber);
       return startPosition;
     }
-
-    // Calculate minimum spin distance from current position
-    const minFinalPosition = startPosition - MIN_SPIN_DISTANCE;
     
-    // Find the best winning tile position near our target area
-    let bestPosition = minFinalPosition;
-    let bestDistance = Infinity;
+    console.log(`📍 Winning slot ${winningNumber} found at index ${winningSlotIndex} in wheel`);
     
-    // Check all duplicated instances of the winning slot
-    for (let repeat = 0; repeat < TILE_REPEATS; repeat++) {
-      const tileIndex = repeat * WHEEL_SLOTS.length + slotIndex;
-      const tileLeftEdge = tileIndex * TILE_SIZE_PX;
-      const tileCenterX = tileLeftEdge + (TILE_SIZE_PX / 2);
-      
-      // Calculate the translateX needed to center this tile under the marker
-      const requiredTranslateX = CENTER_MARKER_PX - tileCenterX;
-      
-      // Only consider positions that are to the left (negative direction)
-      if (requiredTranslateX <= minFinalPosition) {
-        const distance = Math.abs(requiredTranslateX - minFinalPosition);
-        if (distance < bestDistance) {
-          bestDistance = distance;
-          bestPosition = requiredTranslateX;
-        }
-      }
+    // PROVABLY FAIR CALCULATION (matches backend exactly):
+    // Goal: Make winning slot center align with CENTER_MARKER_PX (750px)
+    // Formula: position = CENTER_MARKER_PX - (winningSlotIndex * TILE_SIZE_PX + TILE_SIZE_PX/2)
+    const idealPosition = CENTER_MARKER_PX - (winningSlotIndex * TILE_SIZE_PX + TILE_SIZE_PX / 2);
+    
+    console.log(`🧮 Ideal position calculation: ${CENTER_MARKER_PX} - (${winningSlotIndex} * ${TILE_SIZE_PX} + ${TILE_SIZE_PX/2}) = ${idealPosition}`);
+    
+    // Ensure we spin left (negative direction) with sufficient distance
+    const minSpinDistance = 50 * WHEEL_SLOTS.length * TILE_SIZE_PX; // 50 full wheel rotations minimum
+    const minFinalPosition = startPosition - minSpinDistance;
+    
+    // Find the best position that satisfies both ideal alignment AND minimum spin distance
+    let bestPosition = idealPosition;
+    
+    // If ideal position doesn't spin far enough, adjust by full wheel cycles
+    while (bestPosition > minFinalPosition) {
+      bestPosition -= WHEEL_SLOTS.length * TILE_SIZE_PX; // Move back by one full wheel cycle (1500px)
     }
-
-    console.log('🎯 Winning Position Calculated:', {
-      winningNumber,
+    
+    // Verification: Where will the winning slot center actually be?
+    const verificationSlotCenter = bestPosition + (winningSlotIndex * TILE_SIZE_PX + TILE_SIZE_PX / 2);
+    const alignmentAccuracy = Math.abs(verificationSlotCenter - CENTER_MARKER_PX);
+    
+    console.log('✅ PROVABLY FAIR Position Calculated:', {
+      winningSlot: winningNumber,
+      winningSlotIndex,
       startPosition: Math.round(startPosition),
+      idealPosition: Math.round(idealPosition),
       finalPosition: Math.round(bestPosition),
       spinDistance: Math.round(Math.abs(bestPosition - startPosition)),
-      fullRotations: Math.round(Math.abs(bestPosition - startPosition) / (WHEEL_SLOTS.length * TILE_SIZE_PX))
+      fullWheelRotations: Math.round(Math.abs(bestPosition - startPosition) / (WHEEL_SLOTS.length * TILE_SIZE_PX)),
+      verification: {
+        winningSlotCenterWillBeAt: Math.round(verificationSlotCenter),
+        shouldBeAt: CENTER_MARKER_PX,
+        pixelAccuracy: Math.round(alignmentAccuracy),
+        isPerfect: alignmentAccuracy < 1
+      }
     });
-
+    
     return bestPosition;
   };
 
-  // 🎬 Start spin animation
+  // 🎬 Start CSS transition animation when spinning begins
   useEffect(() => {
     if (isSpinning && winningSlot !== null && !isAnimating) {
-      console.log('🚀 Starting CSS Transition Roulette Spin');
+      console.log('🚀 Starting PROVABLY FAIR Roulette Animation');
       
-      const startPosition = currentTranslateX;
+      const startPosition = currentPosition;
       const targetPosition = calculateWinningPosition(winningSlot, startPosition);
       
       if (!reelRef.current) return;
       
-      // Apply CSS transition for smooth 4-second animation
+      // Apply smooth CSS transition with realistic easing
       const reel = reelRef.current;
       reel.style.transition = `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
       reel.style.transform = `translateX(${targetPosition}px)`;
@@ -138,24 +145,25 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         clearTimeout(animationTimeoutRef.current);
       }
       
-      // Set timeout to complete animation after exactly 4 seconds
+      // Complete animation after exactly 4 seconds
       animationTimeoutRef.current = setTimeout(() => {
-        setCurrentTranslateX(targetPosition);
+        setCurrentPosition(targetPosition);
         setIsAnimating(false);
         setShowWinGlow(true);
         
-        // Save final position
-        localStorage.setItem('roulettePosition', targetPosition.toString());
+        // Save final position for next round
+        localStorage.setItem('rouletteReelPosition', targetPosition.toString());
         
-        // Remove transition for instant position updates
+        // Remove transition for instant updates after animation
         if (reelRef.current) {
           reelRef.current.style.transition = 'none';
         }
         
-        console.log('✅ Animation Complete - Position Locked:', {
+        console.log('✅ PROVABLY FAIR Animation Complete:', {
           finalPosition: Math.round(targetPosition),
-          duration: SPIN_DURATION_MS,
-          winningNumber: winningSlot
+          duration: `${SPIN_DURATION_MS}ms`,
+          winningSlot,
+          positionSaved: true
         });
         
         // Hide win glow after 2 seconds
@@ -163,14 +171,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
       }, SPIN_DURATION_MS);
       
       console.log('🎯 CSS Animation Started:', {
-        startPosition: Math.round(startPosition),
-        targetPosition: Math.round(targetPosition),
+        from: Math.round(startPosition),
+        to: Math.round(targetPosition),
         distance: Math.round(Math.abs(targetPosition - startPosition)),
         duration: `${SPIN_DURATION_MS}ms`,
-        winningNumber: winningSlot
+        winningSlot
       });
     }
-  }, [isSpinning, winningSlot, currentTranslateX, isAnimating]);
+  }, [isSpinning, winningSlot, currentPosition, isAnimating]);
 
   // 🧹 Cleanup on unmount
   useEffect(() => {
@@ -181,7 +189,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
     };
   }, []);
 
-  // 🎲 Generate all tiles (duplicated sequences for infinite loop)
+  // 🎲 Generate all tiles (duplicated sequences for infinite scrolling)
   const allTiles = [];
   for (let repeat = 0; repeat < TILE_REPEATS; repeat++) {
     for (let slotIndex = 0; slotIndex < WHEEL_SLOTS.length; slotIndex++) {
@@ -192,14 +200,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
         id: `tile-${globalIndex}`,
         slot: slot.slot,
         color: slot.color,
-        index: globalIndex
+        index: globalIndex,
+        leftPosition: globalIndex * TILE_SIZE_PX
       });
     }
   }
 
   return (
     <div className="flex justify-center w-full">
-      {/* 🎰 ROULETTE CONTAINER - Fixed 1500px width */}
+      {/* 🎰 ROULETTE CONTAINER - Fixed 1500px width, 120px height */}
       <div 
         className="relative bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 rounded-xl shadow-2xl overflow-hidden"
         style={{ 
@@ -207,43 +216,39 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
           height: `${REEL_HEIGHT_PX}px`
         }}
       >
-        {/* 🎯 FIXED CENTER MARKER */}
+        {/* 🎯 FIXED CENTER MARKER - Never moves, always at 750px */}
         <div 
           className={`absolute inset-y-0 z-30 pointer-events-none transition-all duration-300 ${
-            showWinGlow ? 'bg-yellow-400 shadow-yellow-400/50' : 'bg-emerald-400'
+            showWinGlow ? 'bg-yellow-400 shadow-yellow-400/60' : 'bg-emerald-400 shadow-emerald-400/40'
           }`}
           style={{ 
             left: `${CENTER_MARKER_PX}px`,
-            width: '3px',
-            transform: 'translateX(-1.5px)',
-            boxShadow: showWinGlow ? '0 0 20px rgba(255, 255, 0, 0.8)' : '0 0 10px rgba(16, 185, 129, 0.5)'
+            width: '4px',
+            transform: 'translateX(-2px)',
+            boxShadow: showWinGlow ? '0 0 20px rgba(255, 255, 0, 0.8)' : '0 0 15px rgba(16, 185, 129, 0.6)'
           }}
         >
-          {/* Top Triangle */}
+          {/* Top triangle pointer */}
           <div 
-            className={`absolute -top-2 left-1/2 transform -translate-x-1/2 transition-colors duration-300 ${
-              showWinGlow ? 'border-yellow-400' : 'border-emerald-400'
-            }`}
+            className={`absolute -top-3 left-1/2 transform -translate-x-1/2 transition-colors duration-300`}
             style={{
               width: 0,
               height: 0,
-              borderLeft: '8px solid transparent',
-              borderRight: '8px solid transparent',
-              borderBottom: '8px solid currentColor'
+              borderLeft: '10px solid transparent',
+              borderRight: '10px solid transparent',
+              borderBottom: `10px solid ${showWinGlow ? '#fbbf24' : '#10b981'}`
             }}
           />
           
-          {/* Bottom Triangle */}
+          {/* Bottom triangle pointer */}
           <div 
-            className={`absolute -bottom-2 left-1/2 transform -translate-x-1/2 transition-colors duration-300 ${
-              showWinGlow ? 'border-yellow-400' : 'border-emerald-400'
-            }`}
+            className={`absolute -bottom-3 left-1/2 transform -translate-x-1/2 transition-colors duration-300`}
             style={{
               width: 0,
               height: 0,
-              borderLeft: '8px solid transparent',
-              borderRight: '8px solid transparent',
-              borderTop: '8px solid currentColor'
+              borderLeft: '10px solid transparent',
+              borderRight: '10px solid transparent',
+              borderTop: `10px solid ${showWinGlow ? '#fbbf24' : '#10b981'}`
             }}
           />
         </div>
@@ -254,54 +259,67 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, extend
           className="flex h-full will-change-transform"
           style={{ 
             width: `${TOTAL_REEL_WIDTH_PX}px`,
-            transform: `translateX(${currentTranslateX}px)`,
+            transform: `translateX(${currentPosition}px)`,
             transition: isAnimating ? undefined : 'none' // CSS handles transition during animation
           }}
         >
-          {allTiles.map((tile, index) => {
-            // Check if this tile is currently under the center marker
-            const tileLeftEdge = index * TILE_SIZE_PX;
-            const tileRightEdge = tileLeftEdge + TILE_SIZE_PX;
-            const tileScreenLeft = tileLeftEdge + currentTranslateX;
-            const tileScreenRight = tileRightEdge + currentTranslateX;
+          {allTiles.map((tile) => {
+            // Calculate if this tile is currently under the center marker
+            const tileScreenLeft = tile.leftPosition + currentPosition;
+            const tileScreenRight = tileScreenLeft + TILE_SIZE_PX;
             const isUnderMarker = tileScreenLeft <= CENTER_MARKER_PX && tileScreenRight >= CENTER_MARKER_PX;
+            const isWinningTile = isUnderMarker && tile.slot === winningSlot && showWinGlow;
             
             return (
               <div
                 key={tile.id}
                 className={`
                   flex-shrink-0 flex items-center justify-center text-xl font-bold border-2 
-                  transition-all duration-200 relative
+                  transition-all duration-200 relative select-none
                   ${getTileStyle(tile.color)}
-                  ${isUnderMarker && showWinGlow ? 'ring-4 ring-yellow-400 ring-opacity-75 scale-105' : ''}
-                  ${isUnderMarker ? 'border-white border-opacity-80' : ''}
+                  ${isUnderMarker ? 'border-white border-opacity-90 z-20' : 'border-opacity-60 z-10'}
+                  ${isWinningTile ? 'ring-4 ring-yellow-400 ring-opacity-80 scale-105' : ''}
                 `}
                 style={{ 
                   width: `${TILE_SIZE_PX}px`,
-                  height: `${TILE_SIZE_PX}px`,
-                  zIndex: isUnderMarker ? 20 : 10
+                  height: `${TILE_SIZE_PX}px`
                 }}
               >
                 {tile.slot}
                 
-                {/* Win effect overlay */}
-                {isUnderMarker && showWinGlow && (
-                  <div className="absolute inset-0 bg-yellow-400 bg-opacity-20 animate-pulse rounded" />
+                {/* Winning effect overlay */}
+                {isWinningTile && (
+                  <div className="absolute inset-0 bg-yellow-400 bg-opacity-25 animate-pulse rounded-sm" />
                 )}
               </div>
             );
           })}
         </div>
 
-        {/* 🎮 Debug Info */}
+        {/* 🎮 DEBUG INFO - Development only */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="absolute top-2 left-2 text-xs text-white bg-black bg-opacity-50 p-2 rounded z-40">
-            <div>Position: {Math.round(currentTranslateX)}px</div>
+          <div className="absolute top-2 left-2 text-xs text-white bg-black bg-opacity-70 p-2 rounded-md z-40 font-mono">
+            <div>Position: {Math.round(currentPosition)}px</div>
             <div>Animating: {isAnimating ? 'YES' : 'NO'}</div>
             <div>Spinning: {isSpinning ? 'YES' : 'NO'}</div>
-            {winningSlot !== null && <div>Winning: {winningSlot}</div>}
+            {winningSlot !== null && <div>Winning Slot: {winningSlot}</div>}
+            <div>Full Rotations: {Math.round(Math.abs(currentPosition) / (WHEEL_SLOTS.length * TILE_SIZE_PX))}</div>
           </div>
         )}
+
+        {/* 📊 STATUS INDICATOR */}
+        <div className="absolute top-2 right-2 z-40">
+          {isSpinning && isAnimating && (
+            <div className="bg-red-500/20 border border-red-400 text-red-400 px-3 py-1 rounded-md text-sm font-bold animate-pulse">
+              SPINNING...
+            </div>
+          )}
+          {!isSpinning && !isAnimating && (
+            <div className="bg-green-500/20 border border-green-400 text-green-400 px-3 py-1 rounded-md text-sm font-bold">
+              READY
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
