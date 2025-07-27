@@ -1039,6 +1039,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 showWinAnimation={currentRound.status === 'completed'}
                 synchronizedPosition={currentRound.reel_position || null}
                 extendedWinAnimation={extendedWinAnimation}
+                roundId={currentRound.id}
               />
             </CardContent>
           </Card>
