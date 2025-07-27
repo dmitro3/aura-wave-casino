@@ -287,6 +287,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       } else if (hasCompletedAnimation.current) {
         console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
         return;
+      } else if (isSpinning) {
+        console.log('🚫 BLOCKING SERVER SYNC - Still in spinning phase, keeping current position');
+        return;
       } else {
         console.log('🔄 Server sync:', synchronizedPosition);
         setTranslateX(synchronizedPosition);
