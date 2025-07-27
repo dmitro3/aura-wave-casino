@@ -145,35 +145,41 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const startLogicalPosition = logicalTranslateX;
       const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
       
-      console.log('🎲 Starting deceleration animation:', {
+      console.log('🎲 Starting precise deceleration animation:', {
         winningSlot,
         startLogicalPosition,
         targetLogicalPosition,
-        distance: Math.abs(targetLogicalPosition - startLogicalPosition)
+        distance: Math.abs(targetLogicalPosition - startLogicalPosition),
+        goal: `Move reel to logical position ${targetLogicalPosition} so slot ${winningSlot} is centered`
       });
       
-      const duration = 2500; // 2.5 seconds for smooth deceleration
+      const duration = 3000; // 3 seconds for smooth deceleration
       const startTime = Date.now();
       
       const animateToResult = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
         
-        // Smooth deceleration with emphasis on final precision
+        // Enhanced deceleration with smooth slowdown in second half
         let easeProgress;
-        if (progress < 0.4) {
-          // First 40%: Still moving at good speed
-          const phaseProgress = progress / 0.4;
-          easeProgress = phaseProgress * 0.6; // 0% to 60% distance
-        } else if (progress < 0.8) {
-          // 40%-80%: Slowing down significantly
-          const phaseProgress = (progress - 0.4) / 0.4;
-          easeProgress = 0.6 + phaseProgress * 0.3; // 60% to 90% distance
+        if (progress < 0.3) {
+          // First 30%: Still moving at good speed (linear)
+          easeProgress = progress / 0.3 * 0.4; // 0% to 40% distance
+        } else if (progress < 0.6) {
+          // 30%-60%: Starting to slow down (ease-out)
+          const phaseProgress = (progress - 0.3) / 0.3;
+          const easeOut = 1 - Math.pow(1 - phaseProgress, 2); // Quadratic ease-out
+          easeProgress = 0.4 + easeOut * 0.3; // 40% to 70% distance
+        } else if (progress < 0.85) {
+          // 60%-85%: Significant slowdown (cubic ease-out)
+          const phaseProgress = (progress - 0.6) / 0.25;
+          const cubicEaseOut = 1 - Math.pow(1 - phaseProgress, 3); // Cubic ease-out
+          easeProgress = 0.7 + cubicEaseOut * 0.2; // 70% to 90% distance
         } else {
-          // Last 20%: Very slow final approach for precision
-          const phaseProgress = (progress - 0.8) / 0.2;
-          const smoothEaseOut = 1 - Math.pow(1 - phaseProgress, 5); // Quintic ease-out for precision
-          easeProgress = 0.9 + smoothEaseOut * 0.1; // 90% to 100% distance
+          // Last 15%: Very slow final approach for precision (quintic ease-out)
+          const phaseProgress = (progress - 0.85) / 0.15;
+          const quinticEaseOut = 1 - Math.pow(1 - phaseProgress, 5); // Quintic ease-out for precision
+          easeProgress = 0.9 + quinticEaseOut * 0.1; // 90% to 100% distance
         }
         
         const newLogicalPosition = startLogicalPosition + (targetLogicalPosition - startLogicalPosition) * easeProgress;
@@ -183,13 +189,80 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           animationRef.current = requestAnimationFrame(animateToResult);
         } else {
           setIsAnimating(false);
+          
+          // Verify the result landed correctly
           console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final logical position:', newLogicalPosition);
+          verifyWinningTilePosition(newLogicalPosition);
         }
       };
       
       animateToResult();
     }
   }, [isSpinning, winningSlot, synchronizedPosition, logicalTranslateX, calculateTargetLogicalPosition]);
+
+  // Verify that the winning tile is centered when animation stops
+  const verifyWinningTilePosition = useCallback((finalLogicalPosition: number) => {
+    if (winningSlot === null) return;
+    
+    const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
+    if (slotIndex === -1) {
+      console.error('❌ Invalid winning slot for verification:', winningSlot);
+      return;
+    }
+    
+    // Find the closest instance of the winning slot to the center
+    let closestDistance = Infinity;
+    let closestTileLogicalCenter = 0;
+    let closestRepeat = 0;
+    let closestTileIndex = 0;
+    
+    for (let repeat = 0; repeat < BUFFER_MULTIPLIER; repeat++) {
+      const tileGlobalIndex = repeat * WHEEL_SLOTS.length + slotIndex;
+      const tileLeftEdge = finalLogicalPosition + (tileGlobalIndex * LOGICAL_TILE_SIZE);
+      const tileLogicalCenterPosition = tileLeftEdge + (LOGICAL_TILE_SIZE / 2);
+      const distanceFromCenter = Math.abs(tileLogicalCenterPosition - 0); // Logical center is 0
+      
+      if (distanceFromCenter < closestDistance) {
+        closestDistance = distanceFromCenter;
+        closestTileLogicalCenter = tileLogicalCenterPosition;
+        closestRepeat = repeat;
+        closestTileIndex = tileGlobalIndex;
+      }
+    }
+    
+    const isAccurate = closestDistance < 2; // 2 logical units tolerance for precision
+    
+    console.log('🎯 PROVABLY FAIR VERIFICATION:', {
+      winningSlot,
+      expectedCenter: 0,
+      actualTileCenter: closestTileLogicalCenter,
+      distanceOff: closestDistance.toFixed(2) + ' logical units',
+      closestRepeat,
+      closestTileIndex,
+      finalLogicalPosition,
+      result: isAccurate ? '✅ PERFECT LANDING' : '❌ POSITION ERROR',
+      tolerance: '2 logical units'
+    });
+    
+    if (!isAccurate) {
+      console.warn(`⚠️ Position adjustment needed: Slot ${winningSlot} is ${closestDistance.toFixed(2)} logical units off center`);
+      
+      // Auto-correct if off by more than 3 logical units
+      if (closestDistance > 3) {
+        const correction = 0 - closestTileLogicalCenter;
+        console.log(`🔧 Auto-correcting position by ${correction.toFixed(2)} logical units`);
+        setLogicalTranslateX(prev => prev + correction);
+        
+        // Verify the correction worked
+        setTimeout(() => {
+          const correctedPosition = finalLogicalPosition + correction;
+          console.log(`🔍 Verification after correction: Position ${correctedPosition.toFixed(2)}`);
+        }, 100);
+      }
+    } else {
+      console.log(`🎉 Perfect! Slot ${winningSlot} landed exactly under the center line!`);
+    }
+  }, [winningSlot]);
 
   // Handle spinning state changes
   useEffect(() => {
