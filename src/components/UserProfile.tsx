@@ -745,6 +745,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
   const [claimableAchievements, setClaimableAchievements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
+  const [newlyClaimed, setNewlyClaimed] = useState<string[]>([]);
   const [userStats, setUserStats] = useState<any>(null);
 
   // Debug: Log the stats being passed
@@ -1078,8 +1079,17 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
       // Show success notification
       console.log(`🎉 Achievement unlocked: ${achievement.name}! Reward: ${achievement.reward_type === 'money' ? '$' : ''}${achievement.reward_amount}${achievement.reward_type === 'cases' ? ' cases' : achievement.reward_type === 'xp' ? ' XP' : ''}`);
 
-      // Refresh achievements
-      // fetchAchievements(); // This will be called by the useEffect hook
+      // Track newly claimed achievement for smooth transition
+      setNewlyClaimed(prev => [...prev, achievement.id]);
+
+      // Refresh achievements data to update the UI
+      await fetchData();
+      
+      // Clear the newly claimed status after a delay
+      setTimeout(() => {
+        setNewlyClaimed(prev => prev.filter(id => id !== achievement.id));
+      }, 2000);
+      
     } catch (error) {
       console.error('Error claiming achievement:', error);
     } finally {
@@ -1155,10 +1165,10 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
               const IconComponent = getIconComponent(achievement.icon);
               
               return (
-                <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:scale-105 animate-pulse`}>
+                <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 hover:border-green-400/50 transition-all duration-300 hover:scale-105 animate-pulse`} style={{ animationDuration: '2s' }}>
                   <CardContent className="p-4 text-center">
                     <div className="mb-3">
-                      <div className="w-8 h-8 mx-auto bg-green-500/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                      <div className="w-8 h-8 mx-auto bg-green-500/20 rounded-full flex items-center justify-center backdrop-blur-sm animate-pulse" style={{ animationDuration: '3s' }}>
                         <IconComponent className="w-4 h-4 text-green-400" />
                       </div>
                     </div>
@@ -1183,7 +1193,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
                       <Button
                         onClick={() => claimAchievement(achievement)}
                         disabled={claiming === achievement.id}
-                        className="w-full h-7 text-xs bg-green-500 hover:bg-green-400 text-white border-0 transition-all duration-200"
+                        className="w-full h-7 text-xs bg-green-500 hover:bg-green-400 text-white border-0 transition-all duration-300 hover:scale-105"
                       >
                         {claiming === achievement.id ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -1213,7 +1223,7 @@ function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectio
               const unlockDate = getUnlockDate(achievement.id);
               
               return (
-                <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br ${rarityGradients[achievement.rarity]} opacity-90 hover:opacity-100 transition-all duration-300 hover:scale-105 border ${rarityColors[achievement.rarity]}`}>
+                <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br ${rarityGradients[achievement.rarity]} opacity-90 hover:opacity-100 transition-all duration-500 hover:scale-105 border ${rarityColors[achievement.rarity]} ${newlyClaimed.includes(achievement.id) ? 'animate-pulse bg-gradient-to-br from-green-500/30 to-emerald-500/30' : ''}`} style={newlyClaimed.includes(achievement.id) ? { animationDuration: '1s' } : {}}>
                   <CardContent className="p-4 text-center">
                     <div className="mb-3">
                       <div className="w-8 h-8 mx-auto bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
