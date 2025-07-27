@@ -23,6 +23,10 @@ export type Database = {
           id: string
           name: string
           unlock_criteria: Json
+          rarity: string
+          difficulty: string
+          reward_amount: number
+          reward_type: string
         }
         Insert: {
           category: string
@@ -32,6 +36,10 @@ export type Database = {
           id?: string
           name: string
           unlock_criteria: Json
+          rarity?: string
+          difficulty?: string
+          reward_amount?: number
+          reward_type?: string
         }
         Update: {
           category?: string
@@ -41,6 +49,10 @@ export type Database = {
           id?: string
           name?: string
           unlock_criteria?: Json
+          rarity?: string
+          difficulty?: string
+          reward_amount?: number
+          reward_type?: string
         }
         Relationships: []
       }
@@ -820,6 +832,12 @@ export type Database = {
           tower_profit: number
           tower_wagered: number
           tower_wins: number
+          tower_highest_level: number
+          tower_biggest_win: number
+          tower_biggest_loss: number
+          tower_best_streak: number
+          tower_current_streak: number
+          tower_perfect_games: number
           updated_at: string
           user_id: string
           xp_to_next_level: number
@@ -868,6 +886,12 @@ export type Database = {
           tower_profit?: number
           tower_wagered?: number
           tower_wins?: number
+          tower_highest_level?: number
+          tower_biggest_win?: number
+          tower_biggest_loss?: number
+          tower_best_streak?: number
+          tower_current_streak?: number
+          tower_perfect_games?: number
           updated_at?: string
           user_id: string
           xp_to_next_level?: number
@@ -916,6 +940,12 @@ export type Database = {
           tower_profit?: number
           tower_wagered?: number
           tower_wins?: number
+          tower_highest_level?: number
+          tower_biggest_win?: number
+          tower_biggest_loss?: number
+          tower_best_streak?: number
+          tower_current_streak?: number
+          tower_perfect_games?: number
           updated_at?: string
           user_id?: string
           xp_to_next_level?: number

@@ -10,7 +10,7 @@ import {
   Trophy, Target, TrendingUp, Calendar, Star, DollarSign, 
   Crown, Flame, Sparkles, Zap, Award, Medal, Gamepad2,
   BarChart3, Coins, X, Wallet, Gift, Globe, Users,
-  ChevronUp, ChevronDown, Eye, EyeOff, Loader2
+  ChevronUp, ChevronDown, Eye, EyeOff, Loader2, Building
 } from 'lucide-react';
 import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
 import { ProfileBorder } from './ProfileBorder';
@@ -25,22 +25,60 @@ interface UserProfileProps {
   username?: string;
 }
 
-const rarityGradients = {
-  common: 'from-gray-400 to-gray-600',
-  uncommon: 'from-green-400 to-green-600', 
-  rare: 'from-blue-400 to-blue-600',
-  epic: 'from-purple-400 to-purple-600',
-  legendary: 'from-yellow-400 to-orange-500',
-  mythical: 'from-pink-400 to-red-500'
+// Icon mapping for achievements
+const getIconComponent = (iconName: string) => {
+  const iconMap: Record<string, any> = {
+    'DollarSign': DollarSign,
+    'User': Users,
+    'MessageCircle': Users,
+    'Calendar': Calendar,
+    'Trophy': Trophy,
+    'RotateCcw': Coins,
+    'Building': Building,
+    'Coins': Coins,
+    'Sparkles': Sparkles,
+    'Circle': Target,
+    'Crown': Crown,
+    'Banknote': DollarSign,
+    'TrendingUp': TrendingUp,
+    'Gamepad': Gamepad2,
+    'Target': Target,
+    'Star': Star,
+    'Flame': Flame,
+    'Diamond': Star,
+    'Zap': Zap,
+    'Package': Gift,
+    'MessageSquare': Users,
+    'Infinity': Crown,
+    'Medal': Medal,
+    'Users': Users,
+    'Gem': Star
+  };
+  return iconMap[iconName] || Trophy;
 };
 
-const achievementIcons: Record<string, { icon: any; name: string; description: string; rarity: keyof typeof rarityGradients }> = {
-  welcome: { icon: Sparkles, name: "Welcome Aboard", description: "Successfully joined the casino", rarity: 'common' },
-  firstWin: { icon: Trophy, name: "First Victory", description: "Won your very first game", rarity: 'uncommon' },
-  bigSpender: { icon: Crown, name: "High Roller", description: "Wagered over $1,000 total", rarity: 'rare' },
-  lucky: { icon: Flame, name: "Lucky Streak", description: "Won 5 games in a row", rarity: 'epic' },
-  veteran: { icon: Medal, name: "Casino Veteran", description: "Reached level 25", rarity: 'legendary' },
-  millionaire: { icon: Coins, name: "Millionaire", description: "Accumulated $1M+ lifetime", rarity: 'mythical' }
+// Rarity gradients for achievements
+const rarityGradients = {
+  common: 'from-gray-500/20 to-gray-600/20',
+  rare: 'from-blue-500/20 to-blue-600/20',
+  epic: 'from-purple-500/20 to-purple-600/20',
+  legendary: 'from-orange-500/20 to-orange-600/20'
+};
+
+// Rarity colors for borders and text
+const rarityColors = {
+  common: 'border-gray-500/30 text-gray-400',
+  rare: 'border-blue-500/30 text-blue-400',
+  epic: 'border-purple-500/30 text-purple-400',
+  legendary: 'border-orange-500/30 text-orange-400'
+};
+
+// Difficulty badges
+const difficultyColors = {
+  easy: 'bg-green-500/20 text-green-400 border-green-500/30',
+  medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  hard: 'bg-red-500/20 text-red-400 border-red-500/30',
+  extreme: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
 };
 
 export default function UserProfile({ isOpen, onClose, userData: propUserData, username }: UserProfileProps) {
@@ -530,6 +568,46 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                     </CardContent>
                   </Card>
 
+                  {/* Tower Stats */}
+                  <Card className="glass border-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+                    <CardHeader className="pb-4">
+                      <CardTitle className="flex items-center gap-2 text-amber-400">
+                        <Building className="w-5 h-5" />
+                        Tower
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Games</span>
+                        <span className="font-semibold">{(userData.gameStats.tower?.wins || 0) + (userData.gameStats.tower?.losses || 0)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Wins</span>
+                        <span className="font-semibold text-green-400">{userData.gameStats.tower?.wins || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Losses</span>
+                        <span className="font-semibold text-red-400">{userData.gameStats.tower?.losses || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Highest Level</span>
+                        <span className="font-semibold text-amber-400">{stats?.tower_highest_level || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Perfect Games</span>
+                        <span className="font-semibold text-purple-400">{stats?.tower_perfect_games || 0}</span>
+                      </div>
+                      <div className="pt-2 border-t border-white/10">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Profit</span>
+                          <span className={`font-bold ${(userData.gameStats.tower?.profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {(userData.gameStats.tower?.profit || 0) >= 0 ? '+' : ''}${(userData.gameStats.tower?.profit || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   {/* Crash Stats */}
                   <Card className="glass border-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
                     <CardHeader className="pb-4">
@@ -566,40 +644,11 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
 
               {/* Achievements Tab */}
               <TabsContent value="achievements" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {userData.badges?.map((badge) => {
-                    const achievement = achievementIcons[badge];
-                    if (!achievement) return null;
-                    
-                    const IconComponent = achievement.icon;
-                    
-                    return (
-                      <Card key={badge} className={`glass border-0 bg-gradient-to-br ${rarityGradients[achievement.rarity]} opacity-90 hover:opacity-100 transition-all duration-300 hover:scale-105 border border-white/20`}>
-                        <CardContent className="p-6 text-center text-white">
-                          <div className="mb-4">
-                            <div className="w-12 h-12 mx-auto bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                              <IconComponent className="w-6 h-6" />
-                            </div>
-                          </div>
-                          <h3 className="font-bold mb-2">{achievement.name}</h3>
-                          <p className="text-sm opacity-90">{achievement.description}</p>
-                          <Badge variant="secondary" className="mt-3 bg-white/20 text-white border-white/30 capitalize">
-                            {achievement.rarity}
-                          </Badge>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                  
-                  {/* Show empty state or locked achievements */}
-                  {(!userData.badges || userData.badges.length === 0) && (
-                    <div className="col-span-full text-center py-12">
-                      <Award className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <h3 className="text-lg font-semibold mb-2">No Achievements Yet</h3>
-                      <p className="text-muted-foreground">Start playing games to unlock achievements!</p>
-                    </div>
-                  )}
-                </div>
+                <AchievementsSection 
+                  isOwnProfile={isOwnProfile}
+                  userId={userData.id}
+                  stats={stats}
+                />
               </TabsContent>
 
               {/* Statistics Tab */}
@@ -664,5 +713,268 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Comprehensive Achievements Section Component
+interface AchievementsSectionProps {
+  isOwnProfile: boolean;
+  userId: string;
+  stats: any;
+}
+
+function AchievementsSection({ isOwnProfile, userId, stats }: AchievementsSectionProps) {
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [userAchievements, setUserAchievements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAchievements();
+  }, [userId]);
+
+  const fetchAchievements = async () => {
+    try {
+      // Fetch all achievements
+      const { data: allAchievements, error: achievementsError } = await supabase
+        .from('achievements')
+        .select('*')
+        .order('rarity', { ascending: true })
+        .order('difficulty', { ascending: true });
+
+      if (achievementsError) throw achievementsError;
+
+      // Fetch user's unlocked achievements
+      const { data: unlockedAchievements, error: userError } = await supabase
+        .from('user_achievements')
+        .select(`
+          *,
+          achievements (*)
+        `)
+        .eq('user_id', userId);
+
+      if (userError) throw userError;
+
+      setAchievements(allAchievements || []);
+      setUserAchievements(unlockedAchievements || []);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateProgress = (achievement: any): number => {
+    if (!stats) return 0;
+    
+    const criteria = achievement.unlock_criteria;
+    const criteriaType = criteria?.type;
+    const targetValue = criteria?.value || 0;
+
+    let currentValue = 0;
+    
+    switch (criteriaType) {
+      case 'total_games': currentValue = stats.total_games || 0; break;
+      case 'total_wins': currentValue = stats.total_wins || 0; break;
+      case 'total_profit': currentValue = stats.total_profit || 0; break;
+      case 'total_wagered': currentValue = stats.total_wagered || 0; break;
+      case 'roulette_games': currentValue = stats.roulette_games || 0; break;
+      case 'roulette_wins': currentValue = stats.roulette_wins || 0; break;
+      case 'roulette_green_wins': currentValue = stats.roulette_green_wins || 0; break;
+      case 'roulette_biggest_win': currentValue = stats.roulette_highest_win || 0; break;
+      case 'tower_games': currentValue = stats.tower_games || 0; break;
+      case 'tower_highest_level': currentValue = stats.tower_highest_level || 0; break;
+      case 'tower_perfect_games': currentValue = stats.tower_perfect_games || 0; break;
+      case 'coinflip_wins': currentValue = stats.coinflip_wins || 0; break;
+      case 'total_cases_opened': currentValue = stats.total_cases_opened || 0; break;
+      default: currentValue = 0;
+    }
+
+    return Math.min(100, (currentValue / targetValue) * 100);
+  };
+
+  const isUnlocked = (achievementId: string): boolean => {
+    return userAchievements.some(ua => ua.achievement_id === achievementId);
+  };
+
+  const getUnlockDate = (achievementId: string): string | null => {
+    const userAchievement = userAchievements.find(ua => ua.achievement_id === achievementId);
+    return userAchievement?.unlocked_at || null;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const unlockedAchievements = achievements.filter(a => isUnlocked(a.id));
+  const lockedAchievements = achievements.filter(a => !isUnlocked(a.id));
+
+  return (
+    <div className="space-y-6">
+      {/* Achievement Stats */}
+      <Card className="glass border-0">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            Achievement Progress
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary">{unlockedAchievements.length}</div>
+              <div className="text-sm text-muted-foreground">Unlocked</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-muted-foreground">{achievements.length}</div>
+              <div className="text-sm text-muted-foreground">Total</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-400">
+                {unlockedAchievements.filter(a => a.rarity === 'legendary').length}
+              </div>
+              <div className="text-sm text-muted-foreground">Legendary</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">
+                ${unlockedAchievements.reduce((sum, a) => sum + (a.reward_amount || 0), 0).toFixed(2)}
+              </div>
+              <div className="text-sm text-muted-foreground">Earned Rewards</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Unlocked Achievements */}
+      {unlockedAchievements.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Star className="w-5 h-5 text-yellow-400" />
+            Unlocked Achievements ({unlockedAchievements.length})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {unlockedAchievements.map((achievement) => {
+              const IconComponent = getIconComponent(achievement.icon);
+              const unlockDate = getUnlockDate(achievement.id);
+              
+              return (
+                <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br ${rarityGradients[achievement.rarity]} opacity-90 hover:opacity-100 transition-all duration-300 hover:scale-105 border ${rarityColors[achievement.rarity]}`}>
+                  <CardContent className="p-6 text-center">
+                    <div className="mb-4">
+                      <div className="w-12 h-12 mx-auto bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <IconComponent className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="font-bold mb-2 text-white">{achievement.name}</h3>
+                    <p className="text-sm opacity-90 text-white mb-3">{achievement.description}</p>
+                    
+                    <div className="flex justify-between items-center mb-3">
+                      <Badge variant="secondary" className={`capitalize text-xs ${difficultyColors[achievement.difficulty]}`}>
+                        {achievement.difficulty}
+                      </Badge>
+                      <Badge variant="secondary" className={`capitalize text-xs ${rarityColors[achievement.rarity]} bg-white/10`}>
+                        {achievement.rarity}
+                      </Badge>
+                    </div>
+                    
+                    <div className="text-sm space-y-1">
+                      <div className="flex items-center justify-center gap-1 text-green-400">
+                        <DollarSign className="w-3 h-3" />
+                        <span>+${achievement.reward_amount}</span>
+                      </div>
+                      {unlockDate && (
+                        <div className="text-xs text-white/70">
+                          Unlocked: {new Date(unlockDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Locked Achievements (Only for Own Profile) */}
+      {isOwnProfile && lockedAchievements.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Target className="w-5 h-5 text-muted-foreground" />
+            Locked Achievements ({lockedAchievements.length})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {lockedAchievements.map((achievement) => {
+              const IconComponent = getIconComponent(achievement.icon);
+              const progress = calculateProgress(achievement);
+              const isNearlyComplete = progress >= 75;
+              
+              return (
+                <Card key={achievement.id} className={`glass border-0 bg-gradient-to-br from-gray-800/30 to-gray-900/30 border border-gray-600/30 opacity-60 hover:opacity-80 transition-all duration-300 ${isNearlyComplete ? 'hover:scale-105 border-yellow-500/30' : ''}`}>
+                  <CardContent className="p-6 text-center">
+                    <div className="mb-4">
+                      <div className="w-12 h-12 mx-auto bg-gray-700/50 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <IconComponent className="w-6 h-6 text-gray-400" />
+                      </div>
+                    </div>
+                    <h3 className="font-bold mb-2 text-gray-300">{achievement.name}</h3>
+                    <p className="text-sm text-gray-400 mb-3">{achievement.description}</p>
+                    
+                    <div className="flex justify-between items-center mb-3">
+                      <Badge variant="secondary" className={`capitalize text-xs ${difficultyColors[achievement.difficulty]} opacity-70`}>
+                        {achievement.difficulty}
+                      </Badge>
+                      <Badge variant="secondary" className={`capitalize text-xs ${rarityColors[achievement.rarity]} bg-gray-700/30 opacity-70`}>
+                        {achievement.rarity}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-1 text-green-400/70">
+                        <DollarSign className="w-3 h-3" />
+                        <span>+${achievement.reward_amount}</span>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-400">Progress</span>
+                          <span className={progress >= 100 ? 'text-green-400' : 'text-gray-400'}>
+                            {progress.toFixed(0)}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={progress} 
+                          className={`h-2 ${isNearlyComplete ? 'bg-yellow-500/20' : 'bg-gray-700/50'}`} 
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {unlockedAchievements.length === 0 && !isOwnProfile && (
+        <div className="text-center py-12">
+          <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">No Achievements Yet</h3>
+          <p className="text-muted-foreground">This player hasn't unlocked any achievements yet.</p>
+        </div>
+      )}
+
+      {unlockedAchievements.length === 0 && isOwnProfile && (
+        <div className="text-center py-12">
+          <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+          <h3 className="text-lg font-semibold mb-2">Start Your Journey!</h3>
+          <p className="text-muted-foreground">Play games to unlock your first achievements and earn rewards!</p>
+        </div>
+      )}
+    </div>
   );
 }
