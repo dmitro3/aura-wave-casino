@@ -971,6 +971,15 @@ async function completeRound(supabase: any, round: any) {
       .eq('round_id', round.id);
 
     // Update user stats and level using the comprehensive function
+    console.log(`🎯 Calling update_user_stats_and_level for user ${bet.user_id}:`, {
+      game_type: 'roulette',
+      bet_amount: bet.bet_amount,
+      result: isWinner ? 'win' : 'loss',
+      profit: profit,
+      winning_color: round.result_color,
+      bet_color: bet.bet_color
+    });
+
     const { data: statsResult, error: statsError } = await supabase.rpc('update_user_stats_and_level', {
       p_user_id: bet.user_id,
       p_game_type: 'roulette',
@@ -984,15 +993,18 @@ async function completeRound(supabase: any, round: any) {
 
     if (statsError) {
       console.error('❌ Error updating user stats:', statsError);
+      console.error('❌ Error details:', JSON.stringify(statsError, null, 2));
     } else if (statsResult && statsResult.length > 0) {
       const result = statsResult[0];
-      console.log(`📊 Stats updated for ${bet.user_id}:`, {
+      console.log(`📊 Stats updated successfully for ${bet.user_id}:`, {
         leveledUp: result.leveled_up,
         newLevel: result.new_level,
         oldLevel: result.old_level,
         casesEarned: result.cases_earned,
         borderTierChanged: result.border_tier_changed
       });
+    } else {
+      console.warn('⚠️ Stats update returned no result for user:', bet.user_id);
     }
 
     // Process winnings (update balance with real-time trigger)
