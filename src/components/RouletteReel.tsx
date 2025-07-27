@@ -37,7 +37,11 @@ const BUFFER_TILES = 100; // Extra tiles for smooth scrolling
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   // State management
-  const [translateX, setTranslateX] = useState(0);
+  const [translateX, setTranslateX] = useState(() => {
+    // Initialize from localStorage or default to 0
+    const savedPosition = localStorage.getItem('rouletteReelPosition');
+    return savedPosition ? parseInt(savedPosition, 10) : 0;
+  });
   const [isAnimating, setIsAnimating] = useState(false);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'accelerating' | 'fullSpeed' | 'decelerating' | 'stopped'>('idle');
   const [startTime, setStartTime] = useState(0);
@@ -118,11 +122,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // Smooth easing curve: start fast, slow down at the end
     const easeProgress = 1 - Math.pow(1 - progress, 3);
     
-    // Calculate the total distance to travel
-    const totalDistance = targetPosition - 0; // From current position (0) to target
+    // Calculate the total distance to travel from current position to target
+    const totalDistance = targetPosition - translateX;
     
     // Apply easing to the distance
-    const currentPosition = easeProgress * totalDistance;
+    const currentPosition = translateX + (easeProgress * totalDistance);
     
     setTranslateX(currentPosition);
 
@@ -135,10 +139,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setIsAnimating(false);
       hasCompletedAnimation.current = true; // Mark animation as completed
       
+      // Save the final position to localStorage for persistence
+      localStorage.setItem('rouletteReelPosition', targetPosition.toString());
+      
       console.log('✅ ANIMATION COMPLETE:', {
         targetPosition,
         finalPosition: targetPosition,
-        winningSlot
+        winningSlot,
+        savedToStorage: true
       });
       
       // Verify the winning tile is centered
@@ -163,7 +171,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setShowWinningGlow(true);
       setTimeout(() => setShowWinningGlow(false), WINNING_GLOW_DURATION);
     }
-  }, [animationPhase, startTime, targetPosition, winningSlot]);
+  }, [animationPhase, startTime, targetPosition, winningSlot, translateX]);
 
   // Main animation trigger - FIXED TO PREVENT DOUBLE ANIMATION
   useEffect(() => {
@@ -221,10 +229,19 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating && !hasCompletedAnimation.current) {
       console.log('🔄 Server sync:', synchronizedPosition);
       setTranslateX(synchronizedPosition);
+      // Save server position to localStorage
+      localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
     } else if (synchronizedPosition !== null && synchronizedPosition !== undefined && hasCompletedAnimation.current) {
       console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
     }
   }, [synchronizedPosition, isAnimating]);
+
+  // Ensure position is saved whenever it changes (except during animation)
+  useEffect(() => {
+    if (!isAnimating && animationPhase !== 'accelerating') {
+      localStorage.setItem('rouletteReelPosition', translateX.toString());
+    }
+  }, [translateX, isAnimating, animationPhase]);
 
   // Get tile color class
   const getTileColor = (color: string) => {
