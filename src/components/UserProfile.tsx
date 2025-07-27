@@ -1088,6 +1088,14 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
         throw claimError;
       }
       console.log('✅ Achievement claimed successfully:', claimResult);
+      
+      // Check if the claim was successful
+      if (claimResult && claimResult.success) {
+        console.log('✅ Claim was successful:', claimResult);
+      } else {
+        console.error('❌ Claim was not successful:', claimResult);
+        throw new Error('Claim was not successful: ' + JSON.stringify(claimResult));
+      }
 
       // Reward is automatically awarded by the database function
       console.log('🎯 Reward automatically awarded by database function');
