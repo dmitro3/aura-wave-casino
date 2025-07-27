@@ -35,18 +35,18 @@ const REEL_HEIGHT_PX = 120; // Fixed height in px
 const CENTER_TILE_INDEX = Math.floor(VISIBLE_TILE_COUNT / 2); // 7th tile (0-indexed)
 const BUFFER_TILES_COUNT = 200; // Extra tiles for smooth scrolling
 
-// ⏱️ 3-PHASE ANIMATION TIMING (4000ms total)
-const TOTAL_ANIMATION_DURATION_MS = 4000;
+// ⏱️ EXACT 4-SECOND ANIMATION TIMING
+const TOTAL_ANIMATION_DURATION_MS = 4000; // Exactly 4 seconds
 const PHASE_1_ACCELERATION_MS = 800;
 const PHASE_2_CONSTANT_SPEED_MS = 1700;
 const PHASE_3_DECELERATION_MS = 1500;
 
-// Validate timing adds up to 4 seconds
+// Validate timing adds up to exactly 4 seconds
 if (PHASE_1_ACCELERATION_MS + PHASE_2_CONSTANT_SPEED_MS + PHASE_3_DECELERATION_MS !== TOTAL_ANIMATION_DURATION_MS) {
-  throw new Error('Animation phases must sum to 4000ms');
+  throw new Error('Animation phases must sum to exactly 4000ms');
 }
 
-// 🎯 Realistic easing functions for natural physics
+// 🎯 Easing functions for realistic physics
 const easeInCubic = (t: number): number => t * t * t;
 const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 
@@ -73,8 +73,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     winningSlot, 
     translateX: Math.round(translateX), 
     isAnimating, 
-    animationPhase,
-    hasStarted: hasStartedAnimation.current 
+    animationPhase
   });
 
   // Generate tiles array with buffer
@@ -90,7 +89,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     });
   }
 
-  // 🧱 Calculate target position for winning slot (RIGHT TO LEFT movement)
+  // 🧱 Calculate target position for RIGHT-TO-LEFT movement ONLY
   const calculateTargetPosition = useCallback((slot: number, currentPos: number): number => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
@@ -101,71 +100,73 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const viewportCenter = REEL_VIEWPORT_WIDTH_PX / 2; // 750px
     const wheelSize = WHEEL_SLOTS.length * TILE_SIZE_PX; // 1500px per wheel cycle
     
-    // We want to travel several wheel cycles to the left (negative direction)
-    // Find a target that's far enough to the left for a good spin
-    const minSpinCycles = 50; // Minimum 50 wheel cycles
-    const spinDistance = minSpinCycles * wheelSize; // How far to travel left
+    // FORCE RIGHT-TO-LEFT: Always move left (negative direction) from current position
+    const minSpinCycles = 30; // Minimum 30 wheel cycles to the left
+    const maxSpinCycles = 60; // Maximum 60 wheel cycles to the left
     
-    // Calculate where we want to end up after spinning left
-    const targetEndPosition = currentPos - spinDistance;
+    // Calculate how far LEFT we want to travel (negative direction)
+    const spinCycles = minSpinCycles + Math.random() * (maxSpinCycles - minSpinCycles);
+    const leftwardDistance = spinCycles * wheelSize;
     
-    // Find the nearest winning slot position at or beyond our target
-    let bestTargetPosition = targetEndPosition;
+    // Target area: currentPos - leftwardDistance (move left)
+    const targetArea = currentPos - leftwardDistance;
+    
+    // Find the winning slot closest to our target area (but still to the left)
+    let bestTargetPosition = targetArea;
     let closestDistance = Infinity;
     
-    // Check multiple instances of the winning slot around our target area
+    // Search for winning slot instances near our target area
     for (let cycle = 0; cycle < BUFFER_TILES_COUNT; cycle++) {
       const tileAbsoluteIndex = cycle * WHEEL_SLOTS.length + slotIndex;
       const tileCenter = tileAbsoluteIndex * TILE_SIZE_PX + (TILE_SIZE_PX / 2);
       const targetOffset = viewportCenter - tileCenter;
       
-      // Check if this position is in our target range
-      const distanceFromTarget = Math.abs(targetOffset - targetEndPosition);
-      
-      if (targetOffset <= targetEndPosition && distanceFromTarget < closestDistance) {
-        closestDistance = distanceFromTarget;
-        bestTargetPosition = targetOffset;
+      // Only consider positions that are to the LEFT of current position
+      if (targetOffset <= currentPos) {
+        const distanceFromTargetArea = Math.abs(targetOffset - targetArea);
+        
+        if (distanceFromTargetArea < closestDistance) {
+          closestDistance = distanceFromTargetArea;
+          bestTargetPosition = targetOffset;
+        }
       }
     }
 
-    console.log('🎯 Target Calculation (RIGHT to LEFT):', {
+    console.log('🎯 RIGHT-TO-LEFT Target Calculation:', {
       slot,
-      slotIndex,
       currentPosition: Math.round(currentPos),
       targetPosition: Math.round(bestTargetPosition),
-      spinDistance: Math.round(Math.abs(bestTargetPosition - currentPos)),
-      direction: 'RIGHT → LEFT',
+      leftwardDistance: Math.round(Math.abs(bestTargetPosition - currentPos)),
+      direction: 'RIGHT → LEFT ←',
       wheelCycles: Math.round(Math.abs(bestTargetPosition - currentPos) / wheelSize)
     });
 
     return bestTargetPosition;
   }, []);
 
-  // 🎞️ Realistic 3-phase animation with natural physics
+  // 🎞️ EXACT 4-SECOND animation with precise timing
   const animate = useCallback(() => {
     const currentTime = Date.now();
     const elapsed = currentTime - animationStartTime.current;
     
     let currentPosition = startPosition.current;
-    let newPhase = animationPhase;
 
-    // Phase 1: Rapid Acceleration (0-800ms)
+    // Phase 1: Rapid Acceleration (0-800ms) - 20% of total distance
     if (elapsed <= PHASE_1_ACCELERATION_MS) {
       if (animationPhase !== 'accelerating') {
         setAnimationPhase('accelerating');
       }
       
       const progress = elapsed / PHASE_1_ACCELERATION_MS;
-      const easedProgress = easeInCubic(progress); // Rapid acceleration
+      const easedProgress = easeInCubic(progress);
       
-      // Calculate how much to move during acceleration
       const totalDistance = targetPosition.current - startPosition.current;
-      const accelerationDistance = totalDistance * 0.2; // 20% of total distance in acceleration
+      const accelerationDistance = totalDistance * 0.2;
       
       currentPosition = startPosition.current + (easedProgress * accelerationDistance);
       
     }
-    // Phase 2: High Speed (800-2500ms)
+    // Phase 2: High Speed (800-2500ms) - 60% of total distance
     else if (elapsed <= PHASE_1_ACCELERATION_MS + PHASE_2_CONSTANT_SPEED_MS) {
       if (animationPhase !== 'spinning') {
         setAnimationPhase('spinning');
@@ -174,15 +175,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       const phase2Elapsed = elapsed - PHASE_1_ACCELERATION_MS;
       const progress = phase2Elapsed / PHASE_2_CONSTANT_SPEED_MS;
       
-      // Linear movement at high speed
       const totalDistance = targetPosition.current - startPosition.current;
       const accelerationDistance = totalDistance * 0.2;
-      const constantSpeedDistance = totalDistance * 0.6; // 60% of distance at constant speed
+      const constantSpeedDistance = totalDistance * 0.6;
       
       currentPosition = startPosition.current + accelerationDistance + (progress * constantSpeedDistance);
       
     }
-    // Phase 3: Smooth Deceleration (2500-4000ms)
+    // Phase 3: Smooth Deceleration (2500-4000ms) - final 20% of distance
     else if (elapsed <= TOTAL_ANIMATION_DURATION_MS) {
       if (animationPhase !== 'decelerating') {
         setAnimationPhase('decelerating');
@@ -190,9 +190,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       const phase3Elapsed = elapsed - PHASE_1_ACCELERATION_MS - PHASE_2_CONSTANT_SPEED_MS;
       const progress = phase3Elapsed / PHASE_3_DECELERATION_MS;
-      const easedProgress = easeOutCubic(progress); // Natural deceleration
+      const easedProgress = easeOutCubic(progress);
       
-      // Final 20% of distance with deceleration
       const totalDistance = targetPosition.current - startPosition.current;
       const accelerationDistance = totalDistance * 0.2;
       const constantSpeedDistance = totalDistance * 0.6;
@@ -201,22 +200,22 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       currentPosition = startPosition.current + accelerationDistance + constantSpeedDistance + (easedProgress * decelerationDistance);
       
     }
-    // Animation complete - STOP at exact target
+    // Animation complete - LOCK position and STOP completely
     else {
       currentPosition = targetPosition.current;
       setAnimationPhase('completed');
       setIsAnimating(false);
       hasStartedAnimation.current = false;
       
-      // Save final position for next round
+      // CRITICAL: Save final position and MAINTAIN it
       localStorage.setItem('rouletteReelPosition', currentPosition.toString());
       
-      console.log('✅ Animation Complete - Position Locked:', {
+      console.log('✅ Animation Complete - Position LOCKED:', {
         totalDuration: elapsed,
+        exactDuration: TOTAL_ANIMATION_DURATION_MS,
         finalPosition: Math.round(currentPosition),
-        targetPosition: Math.round(targetPosition.current),
-        accuracy: Math.abs(currentPosition - targetPosition.current),
-        nextRoundStartsFrom: Math.round(currentPosition)
+        positionSaved: true,
+        staysHereUntilNextSpin: true
       });
       
       // Show winning glow
@@ -230,25 +229,25 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       return;
     }
 
-    // Update position with smooth precision
+    // Update position smoothly
     setTranslateX(currentPosition);
 
-    // Continue animation
+    // Continue animation until exactly 4 seconds
     animationRef.current = requestAnimationFrame(animate);
   }, [animationPhase]);
 
-  // 🚀 Animation trigger - ONLY when spinning starts
+  // 🚀 Animation trigger - ONLY start when spinning begins
   useEffect(() => {
+    // ONLY start animation when spinning phase begins
     if (isSpinning && !isAnimating && winningSlot !== null && !hasStartedAnimation.current) {
-      console.log('🚀 Starting RIGHT-TO-LEFT Spin from Current Position');
+      console.log('🚀 Starting 4-Second RIGHT-TO-LEFT Spin');
       
-      // Calculate target from current position
       const target = calculateTargetPosition(winningSlot, translateX);
       targetPosition.current = target;
-      startPosition.current = translateX; // Start exactly where we are
+      startPosition.current = translateX; // Start from current position
       animationStartTime.current = Date.now();
       
-      // Set flags and start
+      // Set flags and start animation
       hasStartedAnimation.current = true;
       setIsAnimating(true);
       setAnimationPhase('accelerating');
@@ -257,39 +256,41 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Start animation loop
       animationRef.current = requestAnimationFrame(animate);
       
-      console.log('🎯 Spin Setup:', {
+      console.log('🎯 Spin Started:', {
         startPosition: Math.round(startPosition.current),
         targetPosition: Math.round(target),
         winningSlot,
         totalDistance: Math.round(Math.abs(target - startPosition.current)),
-        direction: target < startPosition.current ? 'LEFT' : 'RIGHT'
+        direction: 'RIGHT → LEFT ONLY'
       });
       
-    } else if (!isSpinning && isAnimating) {
-      // Spinning stopped but animation might still be running - let it complete naturally
-      console.log('🛑 Spin phase ended, letting animation complete');
-    } else if (!isSpinning && !isAnimating) {
-      // Completely idle - reset animation phase but keep position
+    }
+    // When spinning stops, let animation complete naturally but reset flags
+    else if (!isSpinning && hasStartedAnimation.current) {
+      console.log('🛑 Spinning phase ended - position will be maintained');
+      // Reset the animation flag so next round can start
+      setTimeout(() => {
+        hasStartedAnimation.current = false;
+      }, 100);
+    }
+    // When completely idle, just ensure we're in idle state
+    else if (!isSpinning && !isAnimating) {
       if (animationPhase !== 'idle' && animationPhase !== 'completed') {
         setAnimationPhase('idle');
-      }
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        animationRef.current = undefined;
       }
     }
   }, [isSpinning, winningSlot, isAnimating, calculateTargetPosition, animate, translateX, animationPhase]);
 
-  // 🔄 Server synchronization (only when completely idle)
+  // 🔄 Server synchronization - ONLY when completely idle and not spinning
   useEffect(() => {
     if (synchronizedPosition !== null && 
         synchronizedPosition !== undefined && 
         !isSpinning && 
         !isAnimating && 
-        animationPhase === 'idle' &&
+        (animationPhase === 'idle' || animationPhase === 'completed') &&
         !hasStartedAnimation.current) {
       
-      console.log('🔄 Server sync (when idle):', synchronizedPosition);
+      console.log('🔄 Server sync (only when idle):', synchronizedPosition);
       setTranslateX(synchronizedPosition);
       localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
     }
@@ -352,7 +353,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           <div className="absolute inset-y-0 w-1 bg-emerald-400/20 blur-sm" style={{ left: '-2px' }}></div>
         </div>
 
-        {/* 🎞️ Reel with tiles - RIGHT TO LEFT MOVEMENT */}
+        {/* 🎞️ Reel - ONLY MOVES RIGHT TO LEFT */}
         <div 
           className="flex h-full items-center"
           style={{
@@ -371,7 +372,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             const tileCenterOnScreen = tileCenter + translateX;
             const distanceFromCenter = Math.abs(tileCenterOnScreen - viewportCenter);
             const isUnderCenter = distanceFromCenter < TILE_SIZE_PX / 3;
-            const isWinningTile = tile.slot === winningSlot && isUnderCenter && animationPhase === 'completed';
+            const isWinningTile = tile.slot === winningSlot && isUnderCenter && (animationPhase === 'completed' || (!isSpinning && !isAnimating));
             const isWinningGlow = isWinningTile && showWinningGlow;
 
             return (
@@ -412,9 +413,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           <div className="absolute top-2 left-2 bg-black/50 text-white text-xs p-2 rounded">
             <div>Phase: {animationPhase}</div>
             <div>Position: {Math.round(translateX)}</div>
-            <div>Target: {Math.round(targetPosition.current)}</div>
+            <div>Spinning: {isSpinning ? 'YES' : 'NO'}</div>
+            <div>Animating: {isAnimating ? 'YES' : 'NO'}</div>
             <div>Winning: {winningSlot}</div>
-            <div>Direction: RIGHT → LEFT</div>
+            <div>Direction: RIGHT → LEFT ONLY</div>
           </div>
         )}
       </div>
