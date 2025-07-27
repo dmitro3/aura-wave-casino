@@ -133,98 +133,138 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return targetLogicalPosition;
   }, []);
 
+  // Animation state management
+  const [animationPhase, setAnimationPhase] = useState<'idle' | 'accelerating' | 'fullSpeed' | 'decelerating' | 'stopped'>('idle');
+  const [spinStartTime, setSpinStartTime] = useState(0);
+  const [decelerationStartTime, setDecelerationStartTime] = useState(0);
+  const [decelerationStartPosition, setDecelerationStartPosition] = useState(0);
+
+  // Animation configuration
+  const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
+  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.2; // Full speed velocity
+  const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
+  const DECELERATION_DISTANCE = LOGICAL_TILE_SIZE * 50; // Distance to decelerate over
+
   // Simple spinning animation using logical positioning
   const animate = useCallback(() => {
-    if (isSpinning) {
-      // Move the reel to the left (simulating spinning) using logical units
-      setLogicalTranslateX(prev => {
-        const newLogicalPosition = prev - (LOGICAL_TILE_SIZE * 0.125); // Fixed logical speed
+    if (isSpinning && animationPhase === 'idle') {
+      // Phase 1: Start acceleration
+      console.log('🚀 Starting roulette acceleration');
+      setAnimationPhase('accelerating');
+      setSpinStartTime(Date.now());
+      setDecelerationStartPosition(logicalTranslateX);
+      
+      const animateAcceleration = () => {
+        const elapsed = Date.now() - spinStartTime;
+        const progress = Math.min(elapsed / ACCELERATION_DURATION, 1);
         
-        // Reset position when we've moved too far left to maintain infinite scrolling
-        const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
-        if (Math.abs(newLogicalPosition) > totalLogicalWidth / 2) {
-          return newLogicalPosition + totalLogicalWidth / 2;
+        // Smooth acceleration curve (ease-in)
+        const accelerationProgress = 1 - Math.pow(1 - progress, 2);
+        const currentVelocity = FULL_SPEED_VELOCITY * accelerationProgress;
+        
+        setLogicalTranslateX(prev => {
+          const newPosition = prev - currentVelocity;
+          
+          // Reset position when we've moved too far left to maintain infinite scrolling
+          const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+          if (Math.abs(newPosition) > totalLogicalWidth / 2) {
+            return newPosition + totalLogicalWidth / 2;
+          }
+          
+          return newPosition;
+        });
+        
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animateAcceleration);
+        } else {
+          // Phase 2: Full speed spinning
+          console.log('🌀 Entering full-speed spinning phase');
+          setAnimationPhase('fullSpeed');
+          animateFullSpeed();
         }
-        
-        return newLogicalPosition;
-      });
+      };
       
-      animationRef.current = requestAnimationFrame(animate);
-    } else if (winningSlot !== null) {
-      // CRITICAL: Ensure the winning slot from server lands under the center line
-      console.log('🎯 SERVER PROVABLY FAIR RESULT RECEIVED:', {
-        serverWinningSlot: winningSlot,
-        currentLogicalPosition: logicalTranslateX,
-        goal: 'Calculate animation to land server result under center line'
-      });
+      animateAcceleration();
       
-      const startLogicalPosition = logicalTranslateX;
+    } else if (isSpinning && animationPhase === 'fullSpeed') {
+      // Phase 2: Full speed spinning (handled by animateFullSpeed)
+      animateFullSpeed();
+      
+    } else if (!isSpinning && winningSlot !== null && animationPhase === 'fullSpeed') {
+      // Phase 3: Start deceleration to provably fair result
+      console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Starting deceleration');
+      setAnimationPhase('decelerating');
+      setDecelerationStartTime(Date.now());
+      setDecelerationStartPosition(logicalTranslateX);
+      
       const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
       
-      console.log('🎲 STARTING PRECISE ANIMATION:', {
+      console.log('🎲 DECELERATION CALCULATION:', {
         serverWinningSlot: winningSlot,
-        startLogicalPosition,
+        decelerationStartPosition: logicalTranslateX,
         targetLogicalPosition,
-        distance: Math.abs(targetLogicalPosition - startLogicalPosition),
-        goal: `Move reel from ${startLogicalPosition} to ${targetLogicalPosition} so server result ${winningSlot} is centered`
+        distance: Math.abs(targetLogicalPosition - logicalTranslateX)
       });
       
-      const duration = 3000; // 3 seconds for smooth deceleration
-      const startTime = Date.now();
-      
-      const animateToResult = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
+      const animateDeceleration = () => {
+        const elapsed = Date.now() - decelerationStartTime;
+        const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
         
-        // Ultra-smooth deceleration with gradual slowdown for perfect roulette feel
-        let easeProgress;
-        if (progress < 0.25) {
-          // First 25%: Still moving at good speed (linear)
-          easeProgress = progress / 0.25 * 0.3; // 0% to 30% distance
-        } else if (progress < 0.5) {
-          // 25%-50%: Starting to slow down gently (ease-out)
-          const phaseProgress = (progress - 0.25) / 0.25;
-          const easeOut = 1 - Math.pow(1 - phaseProgress, 1.5); // Gentle ease-out
-          easeProgress = 0.3 + easeOut * 0.25; // 30% to 55% distance
-        } else if (progress < 0.75) {
-          // 50%-75%: More noticeable slowdown (cubic ease-out)
-          const phaseProgress = (progress - 0.5) / 0.25;
-          const cubicEaseOut = 1 - Math.pow(1 - phaseProgress, 3); // Cubic ease-out
-          easeProgress = 0.55 + cubicEaseOut * 0.25; // 55% to 80% distance
-        } else if (progress < 0.9) {
-          // 75%-90%: Significant slowdown (quintic ease-out)
-          const phaseProgress = (progress - 0.75) / 0.15;
-          const quinticEaseOut = 1 - Math.pow(1 - phaseProgress, 5); // Quintic ease-out
-          easeProgress = 0.8 + quinticEaseOut * 0.15; // 80% to 95% distance
+        // Realistic deceleration curve (ease-out with bounce)
+        let decelerationProgress;
+        if (progress < 0.7) {
+          // First 70%: Smooth deceleration
+          decelerationProgress = 1 - Math.pow(1 - progress / 0.7, 3);
         } else {
-          // Last 10%: Very slow final approach for precision (septic ease-out)
-          const phaseProgress = (progress - 0.9) / 0.1;
-          const septicEaseOut = 1 - Math.pow(1 - phaseProgress, 7); // Septic ease-out for ultra-smooth finish
-          easeProgress = 0.95 + septicEaseOut * 0.05; // 95% to 100% distance
+          // Last 30%: Very slow final approach with micro-bounce
+          const finalProgress = (progress - 0.7) / 0.3;
+          const smoothEase = 1 - Math.pow(1 - finalProgress, 5);
+          const microBounce = Math.sin(finalProgress * Math.PI * 2) * 0.02 * (1 - finalProgress);
+          decelerationProgress = 0.7 + smoothEase * 0.3 + microBounce;
         }
         
-        const newLogicalPosition = startLogicalPosition + (targetLogicalPosition - startLogicalPosition) * easeProgress;
+        const newLogicalPosition = decelerationStartPosition + (targetLogicalPosition - decelerationStartPosition) * decelerationProgress;
         setLogicalTranslateX(newLogicalPosition);
         
         if (progress < 1) {
-          animationRef.current = requestAnimationFrame(animateToResult);
+          animationRef.current = requestAnimationFrame(animateDeceleration);
         } else {
-          setIsAnimating(false);
-          
-          // Verify the result landed correctly
-          console.log('✅ ANIMATION COMPLETE:', {
+          // Animation complete
+          console.log('✅ DECELERATION COMPLETE:', {
             serverWinningSlot: winningSlot,
             finalLogicalPosition: newLogicalPosition,
             targetLogicalPosition,
             accuracy: Math.abs(newLogicalPosition - targetLogicalPosition)
           });
+          
+          setAnimationPhase('stopped');
+          setIsAnimating(false);
           verifyWinningTilePosition(newLogicalPosition);
         }
       };
       
-      animateToResult();
+      animateDeceleration();
     }
-  }, [isSpinning, winningSlot, synchronizedPosition, logicalTranslateX, calculateTargetLogicalPosition]);
+  }, [isSpinning, winningSlot, animationPhase, logicalTranslateX, calculateTargetLogicalPosition, decelerationStartPosition]);
+
+  // Full speed spinning animation
+  const animateFullSpeed = useCallback(() => {
+    if (animationPhase !== 'fullSpeed') return;
+    
+    setLogicalTranslateX(prev => {
+      const newPosition = prev - FULL_SPEED_VELOCITY;
+      
+      // Reset position when we've moved too far left to maintain infinite scrolling
+      const totalLogicalWidth = WHEEL_SLOTS.length * LOGICAL_TILE_SIZE * BUFFER_MULTIPLIER;
+      if (Math.abs(newPosition) > totalLogicalWidth / 2) {
+        return newPosition + totalLogicalWidth / 2;
+      }
+      
+      return newPosition;
+    });
+    
+    animationRef.current = requestAnimationFrame(animateFullSpeed);
+  }, [animationPhase]);
 
   // Verify that the winning tile is centered when animation stops
   const verifyWinningTilePosition = useCallback((finalLogicalPosition: number) => {
@@ -297,6 +337,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       if (isSpinning) {
         setIsAnimating(true);
+        setAnimationPhase('idle');
         animate();
       } else {
         if (animationRef.current) {
@@ -306,10 +347,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [isSpinning, animate]);
 
-  // Reset position when round changes
+  // Reset animation state when round changes
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
       setLogicalTranslateX(synchronizedPosition);
+      setAnimationPhase('idle');
     }
   }, [synchronizedPosition]);
 
