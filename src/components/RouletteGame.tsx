@@ -1036,7 +1036,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading roulette game...</p>
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-muted-foreground font-medium">Loading</span>
+            <div className="flex gap-1">
+              <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          </div>
         </div>
       </div>
     );
