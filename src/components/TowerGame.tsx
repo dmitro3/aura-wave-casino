@@ -672,7 +672,7 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
                           <Button 
                             onClick={cashOut} 
                             disabled={loading} 
-                            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold shadow-lg shadow-emerald-400/30 h-9"
+                            className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out h-9"
                             size="sm"
                           >
                             <Coins className="mr-1 h-3 w-3" />

@@ -283,7 +283,7 @@ export function ProvablyFair() {
               Join thousands of players who trust our cryptographically secure platform.
             </p>
             <Link to="/">
-              <Button className="bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-600 hover:to-blue-600">
+              <Button className="bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-600 hover:to-blue-600 hover:shadow-xl hover:shadow-emerald-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out">
                 Start Playing Now
                 <Shield className="w-4 h-4 ml-2" />
               </Button>

@@ -1077,7 +1077,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                 onClick={openProvablyFairModal}
                 variant="outline" 
                 size="sm"
-                className="glass border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 transition-all duration-200"
+                className="glass border-emerald-500/50 bg-emerald-500/10 hover:bg-emerald-500/20 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
                 title="Provably Fair Verification"
               >
                 <Shield className="w-4 h-4 sm:mr-1" />
@@ -1301,7 +1301,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                           size="sm"
                           onClick={() => setBetAmount(Math.min(profile?.balance || 0, Number(betAmount) * 2))}
                           disabled={currentRound.status !== 'betting'}
-                          className="h-9 w-14 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 text-emerald-400 font-bold text-sm transition-all duration-200 hover:scale-105"
+                          className="h-9 w-14 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 hover:border-emerald-400 text-emerald-400 font-bold text-sm hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
                         >
                           ×2
                         </Button>
