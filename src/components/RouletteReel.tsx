@@ -27,19 +27,53 @@ const WHEEL_SLOTS = [
   { slot: 4, color: 'red' }
 ];
 
-// Fixed configuration
+// Fixed configuration for device-independent positioning
 const REEL_HEIGHT = 120; // Fixed reel height in pixels
+const VISIBLE_TILES_COUNT = 9; // Fixed number of visible tiles (must be odd for center alignment)
 const BUFFER_MULTIPLIER = 10; // 10x buffer for seamless looping
 
 export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchronizedPosition, extendedWinAnimation }: RouletteReelProps) {
   const [translateX, setTranslateX] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [tileSize, setTileSize] = useState(REEL_HEIGHT); // Tile size equals reel height for perfect squares
+  const [viewportWidth, setViewportWidth] = useState(0);
   const animationRef = useRef<number>();
   const containerRef = useRef<HTMLDivElement>(null);
   const lastSpinningState = useRef<boolean>(false);
 
-  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating, tileSize });
+  console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, synchronizedPosition, isAnimating, tileSize, viewportWidth });
+
+  // Update viewport width on mount and resize
+  useEffect(() => {
+    const updateViewportWidth = () => {
+      setViewportWidth(window.innerWidth);
+    };
+    
+    updateViewportWidth();
+    window.addEventListener('resize', updateViewportWidth);
+    return () => window.removeEventListener('resize', updateViewportWidth);
+  }, []);
+
+  // Calculate tile size based on viewport width to ensure consistent positioning
+  useEffect(() => {
+    if (viewportWidth > 0) {
+      // Calculate tile size based on viewport width and visible tiles count
+      const calculatedTileSize = viewportWidth / VISIBLE_TILES_COUNT;
+      
+      // Use the smaller of calculated size or reel height to maintain square tiles
+      const newTileSize = Math.min(calculatedTileSize, REEL_HEIGHT);
+      setTileSize(newTileSize);
+      
+      console.log('📱 Tile size calculation:', {
+        viewportWidth,
+        visibleTilesCount: VISIBLE_TILES_COUNT,
+        calculatedTileSize,
+        reelHeight: REEL_HEIGHT,
+        newTileSize,
+        device: viewportWidth < 768 ? 'mobile' : viewportWidth < 1024 ? 'tablet' : 'desktop'
+      });
+    }
+  }, [viewportWidth]);
 
   // Generate tiles array with buffer for seamless looping
   const tiles = useMemo(() => {
@@ -57,7 +91,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return tilesArray;
   }, []);
 
-  // Calculate target position for winning slot to be centered
+  // Calculate target position for winning slot to be centered using viewport-based positioning
   const calculateTargetPosition = useCallback((slot: number) => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
@@ -70,23 +104,25 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
     const targetTileCenter = targetTileIndex * tileSize + tileSize / 2;
     
-    // Calculate position so that the tile center aligns with the container center
-    const containerCenter = (containerRef.current?.offsetWidth || 0) / 2;
-    const targetPosition = containerCenter - targetTileCenter;
+    // Calculate position so that the tile center aligns with the viewport center
+    const viewportCenter = viewportWidth / 2;
+    const targetPosition = viewportCenter - targetTileCenter;
     
-    console.log('🎯 Target position calculation:', {
+    console.log('🎯 Target position calculation (viewport-based):', {
       winningSlot: slot,
       slotIndex,
       centerRepeat,
       targetTileIndex,
       targetTileCenter,
-      containerCenter,
+      viewportCenter,
+      viewportWidth,
       targetPosition,
-      tileSize
+      tileSize,
+      visibleTilesCount: VISIBLE_TILES_COUNT
     });
     
     return targetPosition;
-  }, [tileSize]);
+  }, [tileSize, viewportWidth]);
 
   // Simple spinning animation
   const animate = useCallback(() => {
@@ -225,8 +261,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         >
           {tiles.map((tile) => {
             const tileCenter = translateX + (tile.index * tileSize + tileSize / 2);
-            const containerCenter = (containerRef.current?.offsetWidth || 0) / 2;
-            const distanceFromCenter = Math.abs(tileCenter - containerCenter);
+            const viewportCenter = viewportWidth / 2;
+            const distanceFromCenter = Math.abs(tileCenter - viewportCenter);
             const isNearCenter = distanceFromCenter < tileSize / 2;
             const isWinningTile = !isAnimating && tile.slot === winningSlot && distanceFromCenter < tileSize / 3;
 
