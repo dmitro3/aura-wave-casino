@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Wallet, Trophy, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot } from 'lucide-react';
+import { User, Wallet, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
@@ -413,51 +413,7 @@ export default function Index({ initialGame }: IndexProps) {
         <div className="lg:col-span-1 space-y-4">
           {user && <RewardsPanel userData={userData} onUpdateUser={updateUserProfile} />}
           
-          <Card className="glass border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Trophy className="w-4 h-4 text-accent" />
-                <span>{user ? 'Your Stats' : 'Game Stats'}</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {user && userData ? (
-                <>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Wagered</span>
-                    <span className="font-semibold">${userData.total_wagered.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total P&L</span>
-                    <span className={`font-semibold ${userData.total_profit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {userData.total_profit >= 0 ? '+' : ''}${userData.total_profit.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Games Played</span>
-                    <span className="font-semibold">
-                      {userData.gameStats.coinflip.wins + userData.gameStats.coinflip.losses + 
-                       userData.gameStats.crash.wins + userData.gameStats.crash.losses}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-4">
-                  <div className="text-4xl mb-2">🎯</div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Track your gaming performance
-                  </p>
-                  <Button 
-                    size="sm" 
-                    onClick={() => setShowAuthModal(true)}
-                    className="w-full gradient-primary hover:glow-primary"
-                  >
-                    Sign In to View Stats
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
         </div>
 
         {/* Games Area */}
