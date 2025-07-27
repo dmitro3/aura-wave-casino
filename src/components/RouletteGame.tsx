@@ -289,8 +289,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       });
 
       if (error) throw error;
-      console.log('✅ Recent results fetched:', data?.length || 0, 'results');
-      setRecentResults(data || []);
+      
+      // 🛡️ DEDUPLICATION: Remove duplicates by round_number (same as Provably Fair History)
+      const uniqueResults = data ? data.filter((result: RouletteResult, index: number, self: RouletteResult[]) => 
+        index === self.findIndex(r => r.round_number === result.round_number)
+      ) : [];
+      
+      console.log('✅ Recent results fetched:', uniqueResults.length, 'unique results');
+      setRecentResults(uniqueResults);
     } catch (error: any) {
       console.error('Failed to fetch recent results:', error);
     }
@@ -462,8 +468,12 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           } else if (round.status === 'completed') {
             console.log('🏁 Round completed, fetching final results');
             fetchRoundBets(round.id);
-            // Also fetch recent results to ensure sync (with small delay for DB insert)
-            setTimeout(() => fetchRecentResults(), 500);
+            
+            // Only fetch recent results if this is a newly completed round
+            if (oldRound?.status === 'spinning' && round.status === 'completed') {
+              console.log('🎯 Round just completed, updating recent results');
+              setTimeout(() => fetchRecentResults(), 1000); // Slightly longer delay to ensure DB consistency
+            }
           } else {
             console.log('⏭️ Round update but keeping current state');
           }
@@ -489,25 +499,29 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       })
       .subscribe();
 
-    // Subscribe to results updates
-    const resultsSubscription = supabase
-      .channel('roulette_results')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'roulette_results'
-      }, (payload) => {
-        console.log('🎯 New result:', payload);
-        fetchRecentResults();
-      })
-      .subscribe();
-
+    // Subscribe to results updates - REMOVED: No longer needed since we use roulette_rounds
+    // The round subscription already handles result updates
+    
     return () => {
       roundSubscription.unsubscribe();
       betSubscription.unsubscribe();
-      resultsSubscription.unsubscribe();
+      // resultsSubscription.unsubscribe(); - REMOVED
     };
   }, [user, currentRound?.id]);
+
+  // 🛡️ DEDUPLICATE RECENT RESULTS - Ensure no duplicate bubbles in UI
+  useEffect(() => {
+    if (recentResults.length > 0) {
+      const uniqueResults = recentResults.filter((result, index, self) => 
+        index === self.findIndex(r => r.round_number === result.round_number)
+      );
+      
+      if (uniqueResults.length !== recentResults.length) {
+        console.log('🧹 Removed duplicate results:', recentResults.length - uniqueResults.length, 'duplicates');
+        setRecentResults(uniqueResults);
+      }
+    }
+  }, [recentResults]);
 
   // Initial data fetch
   useEffect(() => {
