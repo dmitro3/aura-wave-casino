@@ -182,15 +182,17 @@ export const RealtimeChat = () => {
                 const isOwnMessage = msg.user_id === user?.id;
                 
                 return (
-                  <div key={msg.id} className={`flex gap-3 animate-fade-in ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
-                    <ProfileBorder level={msg.user_level} size="sm">
-                      <Avatar className="w-full h-full">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
-                        <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-blue-500 text-white">
-                          {msg.username.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </ProfileBorder>
+                  <div key={msg.id} className={`flex gap-3 items-start animate-fade-in ${isOwnMessage ? 'flex-row-reverse' : ''}`}>
+                    <div className="flex-shrink-0 mt-0.5">
+                      <ProfileBorder level={msg.user_level} size="sm">
+                        <Avatar className="w-full h-full">
+                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
+                          <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-blue-500 text-white">
+                            {msg.username.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </ProfileBorder>
+                    </div>
                     
                      <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} min-w-0 max-w-full`}>
                         <div className={`flex items-center gap-1 mb-1 ${isOwnMessage ? 'justify-end' : ''} flex-wrap`}>
