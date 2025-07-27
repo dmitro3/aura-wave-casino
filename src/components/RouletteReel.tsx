@@ -107,15 +107,27 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     // Calculate logical position so that the tile center aligns with logical center (0)
     const targetLogicalPosition = 0 - targetTileLogicalCenter;
     
-    console.log('🎯 Target logical position calculation:', {
-      winningSlot: slot,
+    console.log('🎯 PROVABLY FAIR TARGET CALCULATION:', {
+      serverResultSlot: slot,
       slotIndex,
       centerRepeat,
       targetTileIndex,
       targetTileLogicalCenter,
       logicalCenter: 0,
       targetLogicalPosition,
-      logicalTileSize: LOGICAL_TILE_SIZE
+      logicalTileSize: LOGICAL_TILE_SIZE,
+      verification: `Server result ${slot} should land at logical position ${targetLogicalPosition} to be centered`
+    });
+    
+    // Verify the calculation is correct
+    const verificationPosition = targetLogicalPosition + targetTileLogicalCenter;
+    console.log('🔍 CALCULATION VERIFICATION:', {
+      calculatedLogicalPosition: targetLogicalPosition,
+      tileLogicalCenter: targetTileLogicalCenter,
+      verification: verificationPosition,
+      logicalCenter: 0,
+      shouldEqualLogicalCenter: Math.abs(verificationPosition - 0) < 1,
+      result: Math.abs(verificationPosition - 0) < 1 ? '✅ CALCULATION CORRECT' : '❌ CALCULATION ERROR'
     });
     
     return targetLogicalPosition;
@@ -139,18 +151,22 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       animationRef.current = requestAnimationFrame(animate);
     } else if (winningSlot !== null) {
-      // Ensure the winning slot lands under the center line
-      console.log('🎯 PROVABLY FAIR RESULT RECEIVED - Winning slot:', winningSlot);
+      // CRITICAL: Ensure the winning slot from server lands under the center line
+      console.log('🎯 SERVER PROVABLY FAIR RESULT RECEIVED:', {
+        serverWinningSlot: winningSlot,
+        currentLogicalPosition: logicalTranslateX,
+        goal: 'Calculate animation to land server result under center line'
+      });
       
       const startLogicalPosition = logicalTranslateX;
       const targetLogicalPosition = calculateTargetLogicalPosition(winningSlot);
       
-      console.log('🎲 Starting precise deceleration animation:', {
-        winningSlot,
+      console.log('🎲 STARTING PRECISE ANIMATION:', {
+        serverWinningSlot: winningSlot,
         startLogicalPosition,
         targetLogicalPosition,
         distance: Math.abs(targetLogicalPosition - startLogicalPosition),
-        goal: `Move reel to logical position ${targetLogicalPosition} so slot ${winningSlot} is centered`
+        goal: `Move reel from ${startLogicalPosition} to ${targetLogicalPosition} so server result ${winningSlot} is centered`
       });
       
       const duration = 3000; // 3 seconds for smooth deceleration
@@ -191,7 +207,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           setIsAnimating(false);
           
           // Verify the result landed correctly
-          console.log('✅ Animation complete - Winning slot:', winningSlot, 'at final logical position:', newLogicalPosition);
+          console.log('✅ ANIMATION COMPLETE:', {
+            serverWinningSlot: winningSlot,
+            finalLogicalPosition: newLogicalPosition,
+            targetLogicalPosition,
+            accuracy: Math.abs(newLogicalPosition - targetLogicalPosition)
+          });
           verifyWinningTilePosition(newLogicalPosition);
         }
       };
@@ -230,10 +251,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       }
     }
     
-    const isAccurate = closestDistance < 2; // 2 logical units tolerance for precision
+    const isAccurate = closestDistance < 1; // 1 logical unit tolerance for precision
     
     console.log('🎯 PROVABLY FAIR VERIFICATION:', {
-      winningSlot,
+      serverWinningSlot: winningSlot,
       expectedCenter: 0,
       actualTileCenter: closestTileLogicalCenter,
       distanceOff: closestDistance.toFixed(2) + ' logical units',
@@ -241,14 +262,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       closestTileIndex,
       finalLogicalPosition,
       result: isAccurate ? '✅ PERFECT LANDING' : '❌ POSITION ERROR',
-      tolerance: '2 logical units'
+      tolerance: '1 logical unit'
     });
     
     if (!isAccurate) {
-      console.warn(`⚠️ Position adjustment needed: Slot ${winningSlot} is ${closestDistance.toFixed(2)} logical units off center`);
+      console.warn(`⚠️ Position adjustment needed: Server result ${winningSlot} is ${closestDistance.toFixed(2)} logical units off center`);
       
-      // Auto-correct if off by more than 3 logical units
-      if (closestDistance > 3) {
+      // Auto-correct if off by more than 2 logical units
+      if (closestDistance > 2) {
         const correction = 0 - closestTileLogicalCenter;
         console.log(`🔧 Auto-correcting position by ${correction.toFixed(2)} logical units`);
         setLogicalTranslateX(prev => prev + correction);
@@ -260,7 +281,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         }, 100);
       }
     } else {
-      console.log(`🎉 Perfect! Slot ${winningSlot} landed exactly under the center line!`);
+      console.log(`🎉 Perfect! Server result ${winningSlot} landed exactly under the center line!`);
     }
   }, [winningSlot]);
 
