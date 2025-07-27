@@ -403,14 +403,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
                 key={tile.key}
                 className={`
                   flex-shrink-0 flex items-center justify-center relative
-                  border-2 shadow-lg transition-all duration-200
+                  border-2 shadow-lg transition-all duration-200 aspect-square
                   ${getTileColor(tile.color)}
                   ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : ''}
                   ${isNearCenter && isAnimating ? 'scale-105 z-10' : ''}
                 `}
                 style={{ 
                   width: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
-                  height: `${LOGICAL_TILE_WIDTH * scaleFactor}px` // Make tiles square
+                  minWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
+                  maxWidth: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
+                  height: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
+                  minHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
+                  maxHeight: `${LOGICAL_TILE_WIDTH * scaleFactor}px`
                 }}
               >
                 <div className={`text-lg font-bold drop-shadow-lg ${
