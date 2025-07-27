@@ -316,15 +316,10 @@ export function ProvablyFairHistoryModal({ isOpen, onClose }: ProvablyFairHistor
                       </div>
                     </div>
                   ))}
-
-                  {rounds.length === 0 && !loading && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No completed rounds found
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            )}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
 
             <div className="flex justify-end pt-4 border-t border-white/10">
               <Button onClick={onClose} variant="outline" className="glass">
