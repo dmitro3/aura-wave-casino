@@ -49,6 +49,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const animationRef = useRef<number>();
   const hasStartedAnimation = useRef<boolean>(false);
   const currentSpinningPhase = useRef<string>('');
+  const hasCompletedAnimation = useRef<boolean>(false);
 
   // Animation configuration - SIMPLIFIED FOR SMOOTHNESS
   const ANIMATION_DURATION = 4000; // 4 seconds total
@@ -132,6 +133,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       setTranslateX(targetPosition);
       setAnimationPhase('stopped');
       setIsAnimating(false);
+      hasCompletedAnimation.current = true; // Mark animation as completed
       
       console.log('✅ ANIMATION COMPLETE:', {
         targetPosition,
@@ -173,6 +175,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       
       // Mark that we've started animation for this phase
       hasStartedAnimation.current = true;
+      hasCompletedAnimation.current = false; // Reset completion flag
       currentSpinningPhase.current = spinningPhaseId;
       
       const target = calculateTargetPosition(winningSlot);
@@ -194,6 +197,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     } else if (!isSpinning && !isAnimating) {
       setAnimationPhase('idle');
       hasStartedAnimation.current = false; // Reset for next phase
+      hasCompletedAnimation.current = false; // Reset completion flag
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -211,11 +215,14 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
   }, [animationPhase, animate]);
 
-  // Server synchronization
+  // Server synchronization - PREVENT TELEPORTATION AFTER SUCCESSFUL ANIMATION
   useEffect(() => {
-    if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating) {
+    // Only sync if we haven't completed a successful animation
+    if (synchronizedPosition !== null && synchronizedPosition !== undefined && !isAnimating && !hasCompletedAnimation.current) {
       console.log('🔄 Server sync:', synchronizedPosition);
       setTranslateX(synchronizedPosition);
+    } else if (synchronizedPosition !== null && synchronizedPosition !== undefined && hasCompletedAnimation.current) {
+      console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
     }
   }, [synchronizedPosition, isAnimating]);
 
