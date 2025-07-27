@@ -28,7 +28,7 @@ const WHEEL_SLOTS = [
 ];
 
 // IMMUTABLE PIXEL-PERFECT DIMENSIONS - NEVER CHANGE
-const TILE_SIZE = 80; // Fixed 80px tiles (smaller for better fit)
+const TILE_SIZE = 80; // Fixed 80px tiles
 const VISIBLE_TILES = 11; // Always show exactly 11 tiles
 const REEL_VIEWPORT_WIDTH = TILE_SIZE * VISIBLE_TILES; // 880px fixed viewport
 const REEL_HEIGHT = 100; // Fixed height
@@ -48,10 +48,10 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Refs
   const animationRef = useRef<number>();
 
-  // Animation configuration
-  const ACCELERATION_DURATION = 1000; // 1 second
-  const FULL_SPEED_DURATION = 2000; // 2 seconds
-  const DECELERATION_DURATION = 3000; // 3 seconds
+  // Animation configuration - SIMPLIFIED FOR SMOOTHNESS
+  const ACCELERATION_DURATION = 800; // Faster acceleration
+  const FULL_SPEED_DURATION = 1500; // Shorter full speed
+  const DECELERATION_DURATION = 2000; // Faster deceleration
   const WINNING_GLOW_DURATION = 2000; // 2 seconds
 
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, translateX, isAnimating, animationPhase });
@@ -69,7 +69,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     });
   }
 
-  // Calculate target position for winning slot
+  // SIMPLIFIED AND PRECISE target position calculation
   const calculateTargetPosition = useCallback((slot: number) => {
     const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === slot);
     if (slotIndex === -1) {
@@ -81,16 +81,19 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const centerRepeat = Math.floor(BUFFER_TILES / 2);
     const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
     
-    // Calculate position so that the tile center aligns exactly with the viewport center
-    const targetTileCenter = targetTileIndex * TILE_SIZE + TILE_SIZE / 2;
+    // Calculate the exact position where the winning tile center aligns with viewport center
+    const targetTileLeft = targetTileIndex * TILE_SIZE;
+    const targetTileCenter = targetTileLeft + TILE_SIZE / 2;
     const viewportCenter = REEL_VIEWPORT_WIDTH / 2;
+    
+    // The target position is the offset needed to move the tile center to viewport center
     const targetPosition = viewportCenter - targetTileCenter;
 
     console.log('🎯 PRECISE TARGET CALCULATION:', {
       slot,
       slotIndex,
-      centerRepeat,
       targetTileIndex,
+      targetTileLeft,
       targetTileCenter,
       viewportCenter,
       targetPosition: Math.round(targetPosition),
@@ -104,19 +107,19 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return Math.round(targetPosition);
   }, []);
 
-  // Animation functions
+  // SIMPLIFIED SMOOTH ANIMATION FUNCTIONS
   const animateAcceleration = useCallback(() => {
     if (animationPhase !== 'accelerating') return;
 
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / ACCELERATION_DURATION, 1);
     
-    // Ease-in cubic acceleration
-    const easeProgress = 1 - Math.pow(1 - progress, 3);
+    // Smooth ease-in acceleration
+    const easeProgress = 1 - Math.pow(1 - progress, 2);
     
-    // Move from current position to full speed position
-    const fullSpeedDistance = -TILE_SIZE * 15; // Move 15 tiles left during acceleration
-    const currentPosition = easeProgress * fullSpeedDistance;
+    // Move from 0 to acceleration end position
+    const accelerationEndPosition = -TILE_SIZE * 10;
+    const currentPosition = easeProgress * accelerationEndPosition;
     
     setTranslateX(currentPosition);
 
@@ -135,16 +138,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const progress = Math.min(elapsed / FULL_SPEED_DURATION, 1);
     
     // Linear movement during full speed
-    const accelerationDistance = -TILE_SIZE * 15;
-    const fullSpeedDistance = -TILE_SIZE * 30; // Move 30 more tiles left
-    const currentPosition = accelerationDistance + (fullSpeedDistance * progress);
+    const accelerationEndPosition = -TILE_SIZE * 10;
+    const fullSpeedDistance = -TILE_SIZE * 20;
+    const currentPosition = accelerationEndPosition + (fullSpeedDistance * progress);
     
     setTranslateX(currentPosition);
 
     if (progress < 1) {
       animationRef.current = requestAnimationFrame(animateFullSpeed);
     } else {
-      const fullSpeedEndPosition = accelerationDistance + fullSpeedDistance;
+      const fullSpeedEndPosition = accelerationEndPosition + fullSpeedDistance;
       console.log('🎯 FULL SPEED COMPLETE - Position:', fullSpeedEndPosition);
       setAnimationPhase('decelerating');
       setDecelerationStartTime(Date.now());
@@ -157,20 +160,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     const elapsed = Date.now() - decelerationStartTime;
     const progress = Math.min(elapsed / DECELERATION_DURATION, 1);
     
-    // Multi-phase deceleration curve
-    let easeProgress;
-    if (progress < 0.6) {
-      easeProgress = 1 - Math.pow(progress / 0.6, 2);
-    } else if (progress < 0.9) {
-      const phaseProgress = (progress - 0.6) / 0.3;
-      easeProgress = 0.4 * (1 - Math.pow(phaseProgress, 1.5));
-    } else {
-      const finalProgress = (progress - 0.9) / 0.1;
-      easeProgress = 0.4 * (1 - finalProgress) * 0.1;
-    }
+    // Smooth ease-out deceleration
+    const easeProgress = 1 - Math.pow(progress, 3);
     
-    // Calculate the exact path from full speed end to target position
-    const fullSpeedEndPosition = -TILE_SIZE * 45; // End of full speed
+    // Move from full speed end to target position
+    const fullSpeedEndPosition = -TILE_SIZE * 30;
     const remainingDistance = targetPosition - fullSpeedEndPosition;
     const currentPosition = fullSpeedEndPosition + (remainingDistance * easeProgress);
     
@@ -187,13 +181,15 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       console.log('✅ ANIMATION COMPLETE:', {
         targetPosition,
         finalPosition: targetPosition,
-        winningSlot,
-        viewportCenter: REEL_VIEWPORT_WIDTH / 2
+        winningSlot
       });
       
       // Verify the winning tile is centered
-      const targetTileIndex = Math.floor(BUFFER_TILES / 2) * WHEEL_SLOTS.length + WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
-      const targetTileCenter = targetTileIndex * TILE_SIZE + TILE_SIZE / 2;
+      const slotIndex = WHEEL_SLOTS.findIndex(s => s.slot === winningSlot);
+      const centerRepeat = Math.floor(BUFFER_TILES / 2);
+      const targetTileIndex = centerRepeat * WHEEL_SLOTS.length + slotIndex;
+      const targetTileLeft = targetTileIndex * TILE_SIZE;
+      const targetTileCenter = targetTileLeft + TILE_SIZE / 2;
       const actualCenter = targetPosition + targetTileCenter;
       const centerOffset = Math.abs(actualCenter - (REEL_VIEWPORT_WIDTH / 2));
       
