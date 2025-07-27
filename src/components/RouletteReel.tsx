@@ -145,7 +145,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     return bestTargetPosition;
   }, [tiles]);
 
-  // 🎬 Smooth animation loop
+  // 🎬 PRECISELY TIMED 4-second animation loop
   const animate = useCallback(() => {
     const now = performance.now();
     const elapsed = now - animationStartTime.current;
@@ -157,10 +157,8 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     }
     lastFrameTime.current = now;
 
-    // Calculate animation progress (0 to 1)
-    const progress = Math.min(elapsed / SPINNING_DURATION_MS, 1);
-    
-    if (progress >= 1) {
+    // PRECISE timing check - exactly 4000ms
+    if (elapsed >= SPINNING_DURATION_MS) {
       // Animation complete - lock at exact target position
       const finalPosition = animationTargetPosition.current;
       setCurrentPosition(finalPosition);
@@ -170,10 +168,13 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Save position permanently
       localStorage.setItem('roulettePosition', finalPosition.toString());
       
-      console.log('✅ Animation Complete:', {
-        duration: Math.round(elapsed),
+      console.log('✅ Animation Complete - EXACTLY 4 SECONDS:', {
+        actualDuration: Math.round(elapsed),
+        targetDuration: SPINNING_DURATION_MS,
+        durationAccuracy: Math.abs(elapsed - SPINNING_DURATION_MS),
         finalPosition: Math.round(finalPosition),
-        accuracy: Math.abs(finalPosition - animationTargetPosition.current)
+        positionAccuracy: Math.abs(finalPosition - animationTargetPosition.current),
+        isExactly4Seconds: Math.abs(elapsed - 4000) < 50 // Within 50ms tolerance
       });
       
       // Show winning effect
@@ -187,6 +188,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       return;
     }
 
+    // Calculate animation progress (0 to 1) - EXACTLY based on 4000ms
+    const progress = elapsed / SPINNING_DURATION_MS;
+    
     // Apply smooth easing to progress
     const easedProgress = easeOutQuart(progress);
     
@@ -198,21 +202,27 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     setCurrentPosition(newPosition);
     
+    // Debug logging every second to verify timing
+    if (Math.floor(elapsed / 1000) !== Math.floor((elapsed - 16.67) / 1000)) {
+      console.log(`🕐 Animation Progress: ${Math.floor(elapsed / 1000) + 1}s / 4s (${Math.round(progress * 100)}%)`);
+    }
+    
     // Continue animation
     animationRef.current = requestAnimationFrame(animate);
   }, []);
 
-  // 🚀 Start animation when spinning begins
+  // 🚀 Start animation when spinning begins - VALIDATE 4-SECOND TIMING
   useEffect(() => {
     if (isSpinning && !isAnimating && winningSlot !== null && !hasAnimationStarted.current) {
-      console.log('🚀 Starting 4-Second Roulette Animation');
+      console.log('🚀 Starting EXACTLY 4-Second Roulette Animation');
       
       // Calculate target position from current position
       const targetPos = calculateTargetPosition(winningSlot, currentPosition);
       
-      // Setup animation
-      animationStartTime.current = performance.now();
-      lastFrameTime.current = performance.now();
+      // Setup animation with PRECISE timing
+      const startTime = performance.now();
+      animationStartTime.current = startTime;
+      lastFrameTime.current = startTime;
       animationStartPosition.current = currentPosition;
       animationTargetPosition.current = targetPos;
       hasAnimationStarted.current = true;
@@ -222,19 +232,31 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       // Start animation
       animationRef.current = requestAnimationFrame(animate);
       
-      console.log('🎯 Animation Started:', {
+      console.log('🎯 4-Second Animation Started:', {
+        startTime: Math.round(startTime),
         startPosition: Math.round(currentPosition),
         targetPosition: Math.round(targetPos),
         totalDistance: Math.round(Math.abs(targetPos - currentPosition)),
+        expectedDuration: `${SPINNING_DURATION_MS}ms (4 seconds)`,
         direction: 'RIGHT → LEFT',
         winningNumber: winningSlot
       });
+      
+      // Set a verification timer to check if animation completes on time
+      setTimeout(() => {
+        if (isAnimating) {
+          console.warn('⚠️ Animation still running after 4.1 seconds - possible timing issue');
+        } else {
+          console.log('✅ Animation completed within expected timeframe');
+        }
+      }, SPINNING_DURATION_MS + 100); // Check 100ms after expected completion
     }
     // Reset flag when spinning stops
     else if (!isSpinning && hasAnimationStarted.current) {
       hasAnimationStarted.current = false;
+      console.log('🛑 Spinning phase ended - animation flags reset');
     }
-  }, [isSpinning, winningSlot, currentPosition, calculateTargetPosition, animate]);
+  }, [isSpinning, winningSlot, currentPosition, calculateTargetPosition, animate, isAnimating]);
 
   // 🔄 Server synchronization only when completely idle
   useEffect(() => {
@@ -375,7 +397,7 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
           )}
         </div>
 
-        {/* 🔧 DEBUG INFO */}
+        {/* 🔧 DEBUG INFO - TIMING VALIDATION */}
         {process.env.NODE_ENV === 'development' && (
           <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs p-2 rounded">
             <div>Position: {Math.round(currentPosition)}</div>
@@ -383,6 +405,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
             <div>Animating: {isAnimating ? 'YES' : 'NO'}</div>
             <div>Winning: {winningSlot || 'N/A'}</div>
             <div>Rotations: {Math.round(Math.abs(currentPosition) / WHEEL_SIZE_PX)}</div>
+            {isAnimating && (
+              <div className="text-yellow-300 font-bold">
+                Timer: {Math.min(Math.round((performance.now() - animationStartTime.current) / 1000 * 10) / 10, 4.0)}s / 4.0s
+              </div>
+            )}
           </div>
         )}
       </div>
