@@ -295,9 +295,9 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   // Server synchronization - COMPLETELY DISABLED DURING ANIMATION
   useEffect(() => {
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // SIMPLE BLOCKING: Never sync during any animation or spinning state
-      if (isSpinning || isAnimating || hasStartedAnimation.current || isCurrentlyAnimating.current) {
-        console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress');
+      // AGGRESSIVE BLOCKING: Never sync during any animation-related state
+      if (isSpinning || isAnimating || hasStartedAnimation.current || isCurrentlyAnimating.current || isInCriticalStartPhase.current) {
+        console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress or critical start phase');
         return;
       }
       
@@ -306,12 +306,18 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
         return;
       }
       
-      // Only sync when completely idle
+      // Additional safety check: if we're in any animation phase, block sync
+      if (animationPhase !== 'idle' && animationPhase !== 'stopped') {
+        console.log('🚫 BLOCKING SERVER SYNC - Animation phase active:', animationPhase);
+        return;
+      }
+      
+      // Only sync when completely idle and no animation flags are set
       console.log('🔄 Server sync:', synchronizedPosition);
       setTranslateX(synchronizedPosition);
       localStorage.setItem('rouletteReelPosition', synchronizedPosition.toString());
     }
-  }, [synchronizedPosition, isSpinning, isAnimating]);
+  }, [synchronizedPosition, isSpinning, isAnimating, animationPhase]);
 
   // Ensure position is saved whenever it changes (except during animation)
   useEffect(() => {
