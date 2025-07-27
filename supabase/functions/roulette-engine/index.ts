@@ -188,9 +188,60 @@ serve(async (req) => {
         });
       }
 
+      case 'test_live_feed': {
+        // Test endpoint to check live_bet_feed table and recent entries
+        try {
+          // Check table structure
+          const { data: columns, error: schemaError } = await supabase
+            .from('information_schema.columns')
+            .select('column_name, data_type, is_nullable')
+            .eq('table_schema', 'public')
+            .eq('table_name', 'live_bet_feed')
+            .order('ordinal_position');
 
+          // Check recent roulette entries
+          const { data: recentEntries, error: entriesError } = await supabase
+            .from('live_bet_feed')
+            .select('*')
+            .eq('game_type', 'roulette')
+            .order('created_at', { ascending: false })
+            .limit(5);
 
+          // Check ALL recent entries
+          const { data: allEntries, error: allError } = await supabase
+            .from('live_bet_feed')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(10);
 
+          return new Response(JSON.stringify({
+            table_schema: {
+              columns: columns || [],
+              schema_error: schemaError
+            },
+            roulette_entries: {
+              count: recentEntries?.length || 0,
+              entries: recentEntries || [],
+              entries_error: entriesError
+            },
+            all_entries: {
+              count: allEntries?.length || 0,
+              entries: allEntries || [],
+              all_error: allError
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          return new Response(JSON.stringify({ 
+            error: 'Test failed', 
+            details: error.message 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
 
       default:
         return new Response(JSON.stringify({ error: 'Invalid action' }), {
@@ -793,19 +844,42 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   }
 
   // Insert to live bet feed for real-time updates
-  await supabase
-    .from('live_bet_feed')
-    .insert({
+  try {
+    console.log('📡 Inserting bet into live_bet_feed:', {
       user_id: userId,
       username: userProfile?.username || `User${userId.slice(-4)}`,
-      avatar_url: userProfile?.avatar_url,
+      game_type: 'roulette',
       bet_amount: betAmount,
       bet_color: betColor,
-      game_type: 'roulette',
-      round_id: roundId,
-      result: 'pending', // Will be updated when round completes
-      profit: 0 // Will be updated when round completes
+      round_id: roundId
     });
+
+    const { data: liveFeedData, error: liveFeedError } = await supabase
+      .from('live_bet_feed')
+      .insert({
+        user_id: userId,
+        username: userProfile?.username || `User${userId.slice(-4)}`,
+        avatar_url: userProfile?.avatar_url,
+        bet_amount: betAmount,
+        bet_color: betColor,
+        game_type: 'roulette',
+        round_id: roundId,
+        result: 'pending', // Will be updated when round completes
+        profit: 0 // Will be updated when round completes
+      })
+      .select()
+      .single();
+
+    if (liveFeedError) {
+      console.error('❌ Failed to insert into live_bet_feed:', liveFeedError);
+      console.error('❌ Error details:', JSON.stringify(liveFeedError, null, 2));
+    } else {
+      console.log('✅ Successfully inserted into live_bet_feed:', liveFeedData?.id);
+    }
+  } catch (liveFeedInsertError) {
+    console.error('❌ Exception during live_bet_feed insertion:', liveFeedInsertError);
+    // Don't fail the bet if live feed insertion fails
+  }
 
   console.log(`✅ Bet placed successfully: ${betAmount} on ${betColor} for user ${userId}`);
   

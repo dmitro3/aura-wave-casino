@@ -131,6 +131,27 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     bet.round_id === currentRound?.id
   );
   
+  // 🔍 DETAILED DEBUG: Live bet feed analysis
+  useEffect(() => {
+    console.log('🔍 Live bet feed analysis:', {
+      totalLiveBets: liveBetFeed?.length || 0,
+      currentRoundId: currentRound?.id,
+      rouletteBetsCount: rouletteBets.length,
+      liveBetFeedSample: liveBetFeed?.slice(0, 3).map(bet => ({
+        id: bet.id,
+        game_type: bet.game_type,
+        round_id: bet.round_id,
+        round_id_type: typeof bet.round_id,
+        current_round_id_type: typeof currentRound?.id,
+        matches_game: bet.game_type === 'roulette',
+        matches_round: bet.round_id === currentRound?.id,
+        username: bet.username,
+        bet_color: bet.bet_color,
+        bet_amount: bet.bet_amount
+      }))
+    });
+  }, [liveBetFeed, currentRound?.id, rouletteBets.length]);
+  
   // Debug bet amounts
   useEffect(() => {
     if (rouletteBets.length > 0) {

@@ -7,14 +7,14 @@ export interface LiveBetFeed {
   user_id: string;
   username: string;
   avatar_url?: string;
-  game_type: 'crash' | 'coinflip' | 'roulette' | 'tower';
+  game_type: 'crash' | 'coinflip' | 'tower' | 'roulette';
   bet_amount: number;
   result: string;
   profit: number;
   multiplier?: number;
   game_data?: any;
-  bet_color?: string; // For roulette bets
-  round_id?: string; // For roulette round association
+  bet_color?: string; // For roulette: 'red', 'green', 'black'
+  round_id?: string; // For roulette: current round UUID
   created_at: string;
   streak_length?: number;
   action?: string;
