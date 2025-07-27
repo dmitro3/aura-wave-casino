@@ -357,11 +357,11 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
       {/* Reel container */}
       <div ref={containerRef} className="relative h-36 rounded-xl overflow-hidden shadow-2xl bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800">
         
-        {/* Center indicator line - positioned using JavaScript for consistency */}
+        {/* Center indicator line - positioned at container center */}
         <div 
           className="absolute inset-y-0 w-1 z-30 pointer-events-none"
           style={{ 
-            left: `${LOGICAL_CENTER_POSITION * scaleFactor}px`,
+            left: '50%',
             transform: 'translateX(-50%)'
           }}
         >
@@ -402,13 +402,16 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
               <div
                 key={tile.key}
                 className={`
-                  flex-shrink-0 h-28 flex items-center justify-center relative
+                  flex-shrink-0 flex items-center justify-center relative
                   border-2 shadow-lg transition-all duration-200
                   ${getTileColor(tile.color)}
                   ${isWinningTile ? 'scale-110 ring-4 ring-emerald-400 shadow-2xl shadow-emerald-400/50 z-20' : ''}
                   ${isNearCenter && isAnimating ? 'scale-105 z-10' : ''}
                 `}
-                style={{ width: `${LOGICAL_TILE_WIDTH * scaleFactor}px` }}
+                style={{ 
+                  width: `${LOGICAL_TILE_WIDTH * scaleFactor}px`,
+                  height: `${LOGICAL_TILE_WIDTH * scaleFactor}px` // Make tiles square
+                }}
               >
                 <div className={`text-2xl font-bold drop-shadow-lg ${
                   isWinningTile ? 'text-emerald-200 scale-125' : ''
