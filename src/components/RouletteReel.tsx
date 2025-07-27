@@ -40,6 +40,20 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   const containerRef = useRef<HTMLDivElement>(null);
   const lastSpinningState = useRef<boolean>(false);
 
+  // Animation configuration
+  const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
+  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.08; // Reduced for smoother animation
+  const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
+  const FULL_SPEED_DURATION = 2000; // 2 seconds of full speed spinning
+
+  // Simple animation state management
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [animationPhase, setAnimationPhase] = useState<'idle' | 'accelerating' | 'fullSpeed' | 'decelerating' | 'stopped'>('idle');
+  const [spinStartTime, setSpinStartTime] = useState(0);
+  const [decelerationStartTime, setDecelerationStartTime] = useState(0);
+  const [decelerationStartPosition, setDecelerationStartPosition] = useState(0);
+  const [targetPosition, setTargetPosition] = useState(0);
+
   console.log('🎰 RouletteReel:', { isSpinning, winningSlot, logicalTranslateX, synchronizedPosition, isAnimating, scaleFactor });
 
   // Calculate scale factor based on container width to maintain consistent logical positioning
@@ -163,20 +177,6 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
     
     return targetLogicalPosition;
   }, []);
-
-  // Animation configuration
-  const ACCELERATION_DURATION = 800; // 0.8 seconds to reach full speed
-  const FULL_SPEED_VELOCITY = LOGICAL_TILE_SIZE * 0.08; // Reduced for smoother animation
-  const DECELERATION_DURATION = 2500; // 2.5 seconds to stop
-  const FULL_SPEED_DURATION = 2000; // 2 seconds of full speed spinning
-
-  // Simple animation state management
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<'idle' | 'accelerating' | 'fullSpeed' | 'decelerating' | 'stopped'>('idle');
-  const [spinStartTime, setSpinStartTime] = useState(0);
-  const [decelerationStartTime, setDecelerationStartTime] = useState(0);
-  const [decelerationStartPosition, setDecelerationStartPosition] = useState(0);
-  const [targetPosition, setTargetPosition] = useState(0);
 
   // Handle spinning state changes
   useEffect(() => {
