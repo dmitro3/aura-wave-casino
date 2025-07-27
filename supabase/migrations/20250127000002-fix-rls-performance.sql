@@ -139,8 +139,8 @@ DROP POLICY IF EXISTS "Users can view tips they sent" ON public.tips;
 CREATE POLICY "tips_consolidated_access" ON public.tips
 FOR ALL USING (
   auth.role() = 'service_role' OR 
-  auth.uid() = sender_id OR 
-  auth.uid() = receiver_id
+  auth.uid() = from_user_id OR 
+  auth.uid() = to_user_id
 );
 
 -- =====================================================
