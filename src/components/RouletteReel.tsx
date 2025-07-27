@@ -280,15 +280,12 @@ export function RouletteReel({ isSpinning, winningSlot, showWinAnimation, synchr
   useEffect(() => {
     // BLOCK ALL SERVER SYNC during any animation phase or if animation was completed
     if (synchronizedPosition !== null && synchronizedPosition !== undefined) {
-      // STRICT BLOCKING: Never sync during any animation-related state
-      if (isAnimating || animationPhase === 'accelerating' || hasStartedAnimation.current || isSpinning) {
+      // ULTRA STRICT BLOCKING: Never sync during any animation-related state
+      if (isAnimating || animationPhase === 'accelerating' || hasStartedAnimation.current || isSpinning || animationRef.current) {
         console.log('🚫 BLOCKING SERVER SYNC - Animation/spinning in progress, keeping current position');
         return;
       } else if (hasCompletedAnimation.current) {
         console.log('🚫 PREVENTING SERVER SYNC - Animation completed successfully, keeping winning position');
-        return;
-      } else if (animationRef.current) {
-        console.log('🚫 BLOCKING SERVER SYNC - Animation frame active, keeping current position');
         return;
       } else {
         console.log('🔄 Server sync:', synchronizedPosition);
