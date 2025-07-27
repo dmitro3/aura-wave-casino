@@ -36,11 +36,18 @@ export interface UserLevelStats {
   roulette_wins: number;
   roulette_wagered: number;
   roulette_profit: number;
+  roulette_green_wins: number;
+  roulette_highest_win: number;
+  roulette_biggest_bet: number;
+  roulette_best_streak: number;
+  roulette_favorite_color: string;
   
   tower_games: number;
   tower_wins: number;
   tower_wagered: number;
   tower_profit: number;
+  tower_highest_level: number;
+  tower_perfect_games: number;
   
   // Overall statistics
   total_games: number;
@@ -51,8 +58,15 @@ export interface UserLevelStats {
   // Streaks and achievements
   best_coinflip_streak: number;
   current_coinflip_streak: number;
+  best_win_streak: number;
   biggest_win: number;
   biggest_loss: number;
+  biggest_single_bet: number;
+  
+  // User activity tracking
+  chat_messages_count: number;
+  login_days_count: number;
+  account_created: string | null;
   
   // Timestamps
   created_at: string;
@@ -101,7 +115,57 @@ export function useUserLevelStats() {
     try {
       const { data, error } = await supabase
         .from('user_level_stats')
-        .select('*')
+        .select(`
+          id,
+          user_id,
+          current_level,
+          lifetime_xp,
+          current_level_xp,
+          xp_to_next_level,
+          border_tier,
+          border_unlocked_at,
+          available_cases,
+          total_cases_opened,
+          total_case_value,
+          coinflip_games,
+          coinflip_wins,
+          coinflip_wagered,
+          coinflip_profit,
+          crash_games,
+          crash_wins,
+          crash_wagered,
+          crash_profit,
+          roulette_games,
+          roulette_wins,
+          roulette_wagered,
+          roulette_profit,
+          roulette_green_wins,
+          roulette_highest_win,
+          roulette_biggest_bet,
+          roulette_best_streak,
+          roulette_favorite_color,
+          tower_games,
+          tower_wins,
+          tower_wagered,
+          tower_profit,
+          tower_highest_level,
+          tower_perfect_games,
+          total_games,
+          total_wins,
+          total_wagered,
+          total_profit,
+          best_coinflip_streak,
+          current_coinflip_streak,
+          best_win_streak,
+          biggest_win,
+          biggest_loss,
+          biggest_single_bet,
+          chat_messages_count,
+          login_days_count,
+          account_created,
+          created_at,
+          updated_at
+        `)
         .eq('user_id', user.id)
         .single();
 
