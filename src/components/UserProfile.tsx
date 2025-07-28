@@ -1263,7 +1263,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       </Card>
 
       {/* Claimable Achievements */}
-      {(isOwnProfile || shouldShowOwnProfile) && claimableAchievements.length > 0 && (
+      {isOwnProfile && claimableAchievements.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Gift className="w-5 h-5 text-green-400 animate-pulse" />
@@ -1374,7 +1374,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       )}
 
       {/* Locked Achievements (Only for Own Profile) */}
-      {(isOwnProfile || shouldShowOwnProfile) && lockedAchievements.length > 0 && (
+      {isOwnProfile && lockedAchievements.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Target className="w-5 h-5 text-muted-foreground" />
@@ -1434,7 +1434,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       )}
 
       {/* Empty State */}
-      {unlockedAchievements.length === 0 && !isOwnProfile && !shouldShowOwnProfile && (
+      {unlockedAchievements.length === 0 && !isOwnProfile && (
         <div className="text-center py-12">
           <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
           <h3 className="text-lg font-semibold mb-2">No Achievements Yet</h3>
@@ -1442,7 +1442,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
         </div>
       )}
 
-      {unlockedAchievements.length === 0 && (isOwnProfile || shouldShowOwnProfile) && (
+      {unlockedAchievements.length === 0 && isOwnProfile && (
         <div className="text-center py-12">
           <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
           <h3 className="text-lg font-semibold mb-2">Start Your Journey!</h3>
