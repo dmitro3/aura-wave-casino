@@ -40,10 +40,20 @@ export function PushNotificationForm({ onClose }: PushNotificationFormProps) {
       if (usersError) {
         console.error('Error fetching users:', usersError);
         toast({
-          title: "Error",
-          description: "Failed to fetch users. Please try again.",
+          title: "Error fetching users",
+          description: usersError.message || String(usersError),
           variant: "destructive",
         });
+        setLoading(false);
+        return;
+      }
+      if (!users || users.length === 0) {
+        toast({
+          title: "No users found",
+          description: "No users were found in the profiles table.",
+          variant: "destructive",
+        });
+        setLoading(false);
         return;
       }
 
@@ -70,7 +80,13 @@ export function PushNotificationForm({ onClose }: PushNotificationFormProps) {
 
         if (insertError) {
           console.error('Error inserting notifications:', insertError);
-          throw new Error('Failed to send notifications');
+          toast({
+            title: "Error inserting notifications",
+            description: insertError.message || String(insertError),
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
         }
       }
 
@@ -90,6 +106,13 @@ export function PushNotificationForm({ onClose }: PushNotificationFormProps) {
 
       if (logError) {
         console.error('Error logging broadcast:', logError);
+        toast({
+          title: "Error logging broadcast",
+          description: logError.message || String(logError),
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
 
       toast({
@@ -103,11 +126,11 @@ export function PushNotificationForm({ onClose }: PushNotificationFormProps) {
       setMessage('');
       setShowConfirm(false);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending notification:', error);
       toast({
-        title: "Error",
-        description: "Failed to send notification. Please try again.",
+        title: "Error sending notification",
+        description: error.message || String(error),
         variant: "destructive",
       });
     } finally {
