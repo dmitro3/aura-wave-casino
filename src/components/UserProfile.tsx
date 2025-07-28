@@ -104,11 +104,23 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   const isOwnProfile = user && userData && user.id === userData.id;
   
   // Check if this should be treated as the user's own profile (no username provided, opening from header)
-  const shouldShowOwnProfile = user && !username && !propUserData;
+  const shouldShowOwnProfile = user && !username;
+  
+  // Debug logging
+  console.log('🔍 UserProfile Debug:', {
+    user: user?.id,
+    username,
+    propUserData: propUserData?.id,
+    fetchedUserData: fetchedUserData?.id,
+    userData: userData?.id,
+    isOwnProfile,
+    shouldShowOwnProfile,
+    isOpen
+  });
 
-  // Fetch user data when only username is provided or when userData is null but user is authenticated
+  // Fetch user data when only username is provided or when opening from header (no username)
   useEffect(() => {
-    if (isOpen && ((username && !propUserData) || (!username && !propUserData && user))) {
+    if (isOpen && ((username && !propUserData) || (!username && user))) {
       const fetchUserData = async () => {
         setLoading(true);
         try {
