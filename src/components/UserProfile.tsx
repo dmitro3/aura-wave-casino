@@ -694,7 +694,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                 ) : (
                   <AchievementsSection 
                     isOwnProfile={isOwnProfile || shouldShowOwnProfile}
-                    userId={userData.id}
+                    userId={(isOwnProfile || shouldShowOwnProfile) ? user?.id : userData?.id}
                     stats={stats}
                     propUserData={propUserData}
                     onUserDataUpdate={onUserDataUpdate}
@@ -787,8 +787,14 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
 
   // Debug: Log the stats being passed
   useEffect(() => {
-    // Removed debugging to improve performance
-  }, [stats, isOwnProfile, userId]);
+    console.log('🔍 AchievementsSection Debug:', {
+      userId,
+      isOwnProfile,
+      stats: stats?.user_id,
+      userStats: userStats?.user_id,
+      loading
+    });
+  }, [stats, isOwnProfile, userId, userStats, loading]);
 
   // Fetch user stats for achievement progress calculation
   useEffect(() => {
