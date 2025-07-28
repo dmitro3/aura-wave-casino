@@ -127,11 +127,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [profile?.balance]);
   
-  // Filter roulette bets from live feed (only current round and only during betting phase)
+  // Filter roulette bets from live feed (only current round, show until round is completed)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
     bet.game_type === 'roulette' && 
     bet.round_id === currentRound?.id &&
-    currentRound?.status === 'betting'
+    currentRound?.status !== 'completed'
   );
   
   // 🔍 DETAILED DEBUG: Live bet feed analysis
