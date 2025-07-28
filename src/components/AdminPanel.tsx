@@ -36,7 +36,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
           // Fallback to direct table access
           const { data, error } = await supabase
             .from('admin_users')
-            .select('*')
+            .select('user_id, permissions, created_at')
             .eq('user_id', user.id)
             .single();
 
