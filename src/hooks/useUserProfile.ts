@@ -218,7 +218,10 @@ export function useUserProfile() {
 
       if (profileError) {
         console.error('❌ Error fetching profile:', profileError);
-        throw new Error(`Database error finding user profile: ${profileError.message}`);
+        // Don't throw error, just return null to prevent crashes
+        setUserData(null);
+        setLoading(false);
+        return;
       }
 
       // Fetch comprehensive level stats from user_level_stats (primary source of truth)
@@ -284,7 +287,8 @@ export function useUserProfile() {
 
       if (levelStatsError) {
         console.error('❌ Error fetching level stats:', levelStatsError);
-        throw new Error(`Database error finding user level stats: ${levelStatsError.message}`);
+        // Don't throw error, just continue with profile data only
+        console.log('⚠️ Continuing with profile data only');
       }
 
       // Combine profile data with level stats (level stats takes precedence)
