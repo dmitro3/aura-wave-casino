@@ -127,10 +127,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [profile?.balance]);
   
-  // Filter roulette bets from live feed (only current round)
+  // Filter roulette bets from live feed (show ALL roulette bets, not just current round)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
-    bet.game_type === 'roulette' && 
-    bet.round_id === currentRound?.id
+    bet.game_type === 'roulette'
   );
   
   // 🔍 DETAILED DEBUG: Live bet feed analysis
@@ -143,13 +142,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         id: bet.id,
         game_type: bet.game_type,
         round_id: bet.round_id,
-        round_id_type: typeof bet.round_id,
-        current_round_id_type: typeof currentRound?.id,
-        matches_game: bet.game_type === 'roulette',
-        matches_round: bet.round_id === currentRound?.id,
         username: bet.username,
         bet_color: bet.bet_color,
-        bet_amount: bet.bet_amount
+        bet_amount: bet.bet_amount,
+        is_roulette: bet.game_type === 'roulette'
       }))
     });
   }, [liveBetFeed, currentRound?.id, rouletteBets.length]);
@@ -168,9 +164,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [rouletteBets]);
   
-  const greenBets = rouletteBets.filter(bet => bet.bet_color === 'green');
-  const redBets = rouletteBets.filter(bet => bet.bet_color === 'red');
-  const blackBets = rouletteBets.filter(bet => bet.bet_color === 'black');
+  // Sort bets by most recent first
+  const sortedRouletteBets = rouletteBets.sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  
+  const greenBets = sortedRouletteBets.filter(bet => bet.bet_color === 'green');
+  const redBets = sortedRouletteBets.filter(bet => bet.bet_color === 'red');
+  const blackBets = sortedRouletteBets.filter(bet => bet.bet_color === 'black');
 
   // Clear user bets when round changes
   useEffect(() => {
