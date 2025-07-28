@@ -553,7 +553,7 @@ export default function Index({ initialGame }: IndexProps) {
         {/* Games Area */}
         <div className="lg:col-span-7">
           <div className="space-y-4">
-            {currentGame === 'coinflip' && (
+            <div style={{ display: currentGame === 'coinflip' ? 'block' : 'none' }}>
               <MaintenanceAwareGame gameName="Coinflip">
                 {user && userData ? (
                   <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
@@ -561,9 +561,9 @@ export default function Index({ initialGame }: IndexProps) {
                   <CoinflipGame userData={null} onUpdateUser={() => Promise.resolve()} />
                 )}
               </MaintenanceAwareGame>
-            )}
+            </div>
 
-            {currentGame === 'roulette' && (
+            <div style={{ display: currentGame === 'roulette' ? 'block' : 'none' }}>
               <MaintenanceAwareGame gameName="Roulette">
                 {user && userData ? (
                   <RouletteGame userData={userData} onUpdateUser={updateUserProfile} />
@@ -571,9 +571,9 @@ export default function Index({ initialGame }: IndexProps) {
                   <RouletteGame userData={null} onUpdateUser={() => Promise.resolve()} />
                 )}
               </MaintenanceAwareGame>
-            )}
+            </div>
 
-            {currentGame === 'tower' && (
+            <div style={{ display: currentGame === 'tower' ? 'block' : 'none' }}>
               <MaintenanceAwareGame gameName="Tower">
                 {user && userData ? (
                   <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
@@ -581,9 +581,9 @@ export default function Index({ initialGame }: IndexProps) {
                   <TowerGame userData={null} onUpdateUser={() => Promise.resolve()} />
                 )}
               </MaintenanceAwareGame>
-            )}
+            </div>
 
-            {currentGame === 'crash' && (
+            <div style={{ display: currentGame === 'crash' ? 'block' : 'none' }}>
               <MaintenanceAwareGame gameName="Crash">
                 <Card className="glass border-0 p-12 text-center">
                   <div className="space-y-4">
@@ -595,7 +595,7 @@ export default function Index({ initialGame }: IndexProps) {
                   </div>
                 </Card>
               </MaintenanceAwareGame>
-            )}
+            </div>
           </div>
         </div>
 
