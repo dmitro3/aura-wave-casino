@@ -101,7 +101,10 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   const userData = propUserData || fetchedUserData;
   
   // Check if this is the current user's own profile
-  const isOwnProfile = user && (userData ? user.id === userData.id : true);
+  const isOwnProfile = user && userData && user.id === userData.id;
+  
+  // Check if this should be treated as the user's own profile (no username provided, opening from header)
+  const shouldShowOwnProfile = user && !username && !propUserData;
 
   // Fetch user data when only username is provided or when userData is null but user is authenticated
   useEffect(() => {
@@ -392,7 +395,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                 </div>
 
                                  {/* Balance Card - Only show for own profile */}
-                 {isOwnProfile && (
+                 {(isOwnProfile || shouldShowOwnProfile) && (
                    <Card className="glass border-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
                      <CardContent className="p-6 text-center">
                        <div className="flex items-center justify-center gap-2 mb-2">
@@ -415,7 +418,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                  )}
                  
                  {/* Player Info Card for Other Users */}
-                 {!isOwnProfile && (
+                 {!isOwnProfile && !shouldShowOwnProfile && (
                    <Card className="glass border-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20">
                      <CardContent className="p-6 text-center">
                        <div className="flex items-center justify-center gap-2 mb-2">
@@ -448,7 +451,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                 <TabsTrigger value="achievements" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
                   <Award className="w-4 h-4 mr-2" />
                   Achievements
-                  {isOwnProfile && notificationClaimable.length > 0 && (
+                  {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
                       {notificationClaimable.length}
                     </div>
@@ -678,7 +681,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                   </div>
                 ) : (
                   <AchievementsSection 
-                    isOwnProfile={isOwnProfile}
+                    isOwnProfile={isOwnProfile || shouldShowOwnProfile}
                     userId={userData.id}
                     stats={stats}
                     propUserData={propUserData}
@@ -1260,7 +1263,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       </Card>
 
       {/* Claimable Achievements */}
-      {isOwnProfile && claimableAchievements.length > 0 && (
+      {(isOwnProfile || shouldShowOwnProfile) && claimableAchievements.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Gift className="w-5 h-5 text-green-400 animate-pulse" />
@@ -1371,7 +1374,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       )}
 
       {/* Locked Achievements (Only for Own Profile) */}
-      {isOwnProfile && lockedAchievements.length > 0 && (
+      {(isOwnProfile || shouldShowOwnProfile) && lockedAchievements.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Target className="w-5 h-5 text-muted-foreground" />
@@ -1431,7 +1434,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
       )}
 
       {/* Empty State */}
-      {unlockedAchievements.length === 0 && !isOwnProfile && (
+      {unlockedAchievements.length === 0 && !isOwnProfile && !shouldShowOwnProfile && (
         <div className="text-center py-12">
           <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
           <h3 className="text-lg font-semibold mb-2">No Achievements Yet</h3>
@@ -1439,7 +1442,7 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
         </div>
       )}
 
-      {unlockedAchievements.length === 0 && isOwnProfile && (
+      {unlockedAchievements.length === 0 && (isOwnProfile || shouldShowOwnProfile) && (
         <div className="text-center py-12">
           <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
           <h3 className="text-lg font-semibold mb-2">Start Your Journey!</h3>
