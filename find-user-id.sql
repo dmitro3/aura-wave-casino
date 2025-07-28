@@ -1,22 +1,40 @@
--- Find Your Correct User ID
--- Run this to get your proper UUID
+-- Find Your User ID
+-- This will show all users so you can find your user ID
 
--- Show all users with their IDs
+-- 1. Show all users in the database
 SELECT 
-  id,
-  email,
-  created_at,
-  raw_user_meta_data
-FROM auth.users 
-ORDER BY created_at DESC;
+  'All Users' as info,
+  u.id::text as user_id,
+  u.email as email,
+  u.created_at as created_at
+FROM auth.users u
+ORDER BY u.created_at DESC;
 
--- If you know your email, you can filter by it:
--- SELECT 
---   id,
---   email,
---   created_at
--- FROM auth.users 
--- WHERE email = 'your-email@example.com';
+-- 2. Show users with profiles (these are the ones who have signed up)
+SELECT 
+  'Users with Profiles' as info,
+  p.id::text as user_id,
+  p.username as username,
+  u.email as email,
+  p.created_at as created_at
+FROM public.profiles p
+JOIN auth.users u ON p.id = u.id
+ORDER BY p.created_at DESC;
 
--- Example of a valid UUID format:
--- 123e4567-e89b-12d3-a456-426614174000
+-- 3. Show recent users (last 10)
+SELECT 
+  'Recent Users' as info,
+  u.id::text as user_id,
+  u.email as email,
+  u.created_at as created_at
+FROM auth.users u
+ORDER BY u.created_at DESC
+LIMIT 10;
+
+-- 4. Check if you're already in admin_users
+SELECT 
+  'Current Admin Users' as info,
+  au.user_id::text as user_id,
+  au.permissions as permissions,
+  au.created_at as created_at
+FROM public.admin_users au;
