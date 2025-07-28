@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMaintenance } from '@/contexts/MaintenanceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Wrench, Clock, Shield, Settings } from 'lucide-react';
+import { Loader2, Wrench, Clock, Shield, Settings, RefreshCw } from 'lucide-react';
 import AdminPanel from './AdminPanel';
 
 export default function MaintenanceOverlay() {
@@ -68,67 +68,78 @@ export default function MaintenanceOverlay() {
   return (
     <>
       <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl border border-gray-200 dark:border-gray-700 relative">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 max-w-lg w-full text-center shadow-2xl border border-gray-200 dark:border-gray-700 relative overflow-hidden">
+          {/* Animated background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 animate-pulse"></div>
+          
           {/* Admin Access Button - Only show for admin users */}
           {user && !adminLoading && isAdmin && (
             <button
               onClick={() => setShowAdminPanel(true)}
-              className="absolute top-4 right-4 p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 flex items-center space-x-2"
+              className="absolute top-4 right-4 p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 z-10"
             >
               <Shield className="h-4 w-4" />
               <span className="text-sm font-medium">Admin</span>
             </button>
           )}
-        {/* Icon */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-yellow-100 dark:bg-yellow-900/20 p-4 rounded-full">
-            <Wrench className="h-12 w-12 text-yellow-600 dark:text-yellow-400" />
-          </div>
-        </div>
+          
+          {/* Main content */}
+          <div className="relative z-10">
+            {/* Icon with animated background */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full blur-xl opacity-30 animate-pulse"></div>
+                <div className="relative bg-gradient-to-r from-yellow-400 to-orange-500 p-4 rounded-full shadow-lg">
+                  <Wrench className="h-12 w-12 text-white" />
+                </div>
+              </div>
+            </div>
 
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-          {maintenanceStatus?.maintenance_title || 'Under Maintenance'}
-        </h1>
+            {/* Title with gradient text */}
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              {maintenanceStatus?.maintenance_title || 'Under Maintenance'}
+            </h1>
 
-        {/* Message */}
-        <p className="text-gray-600 dark:text-gray-400 text-lg mb-6 leading-relaxed">
-          {maintenanceStatus?.maintenance_message || 'Website is currently under maintenance. Please check back soon.'}
-        </p>
-
-        {/* Status Info */}
-        {maintenanceStatus?.started_at && (
-          <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
-            <Clock className="h-4 w-4" />
-            <span>
-              Started: {new Date(maintenanceStatus.started_at).toLocaleString()}
-            </span>
-          </div>
-        )}
-
-        {/* Animated dots */}
-        <div className="flex justify-center space-x-1">
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-        </div>
-
-        {/* Auto-refresh notice */}
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-6">
-          This page will automatically refresh when maintenance is complete.
-        </p>
-
-        {/* Admin notice for admin users */}
-        {user && !adminLoading && isAdmin && (
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-600 dark:text-blue-400">
-              <Shield className="h-4 w-4 inline mr-1" />
-              Admin access available - Click the Admin button to control maintenance mode.
+            {/* Message */}
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-6 leading-relaxed">
+              {maintenanceStatus?.maintenance_message || 'Website is currently under maintenance. Please check back soon.'}
             </p>
+
+            {/* Status Info */}
+            {maintenanceStatus?.started_at && (
+              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-6 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
+                <Clock className="h-4 w-4 text-blue-500" />
+                <span>
+                  Started: {new Date(maintenanceStatus.started_at).toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {/* Animated dots */}
+            <div className="flex justify-center space-x-2 mb-6">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+
+            {/* Auto-refresh notice */}
+            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <span>This page will automatically refresh when maintenance is complete.</span>
+            </div>
+
+            {/* Admin notice for admin users */}
+            {user && !adminLoading && isAdmin && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin access available - Click the Admin button to control maintenance mode.
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
 
     {/* Admin Panel Modal */}
     {showAdminPanel && (
