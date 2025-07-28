@@ -7,6 +7,7 @@ import { Coins, DollarSign, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { UserProfile } from '@/hooks/useUserProfile';
+import { useMaintenance } from '@/contexts/MaintenanceContext';
 import { supabase } from '@/integrations/supabase/client';
 import CoinFlipAnimation from './CoinflipStreak/CoinFlipAnimation';
 import StreakTracker from './CoinflipStreak/StreakTracker';
@@ -63,8 +64,18 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const [betInput, setBetInput] = useState('');
   const { addGameRecord } = useGameHistory('coinflip', 10);
   const { toast } = useToast();
+  const { isMaintenanceMode } = useMaintenance();
 
   const handlePlaceBet = async () => {
+    if (isMaintenanceMode) {
+      toast({
+        title: "Game Paused",
+        description: "This game is temporarily unavailable during maintenance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!userData) {
       toast({
         title: "Sign In Required",
