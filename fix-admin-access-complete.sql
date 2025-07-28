@@ -44,8 +44,7 @@ SELECT
   au.user_id,
   au.permissions,
   au.created_at,
-  p.username,
-  p.email
+  p.username
 FROM public.admin_users au
 JOIN public.profiles p ON au.user_id = p.id
 WHERE au.user_id = auth.uid();
