@@ -10,6 +10,7 @@ import { Building, Trophy, Zap, AlertTriangle, Coins, Sword, Shield, Crown } fro
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { UserProfile } from '@/hooks/useUserProfile';
+import { useMaintenance } from '@/contexts/MaintenanceContext';
 import ClickableUsername from './ClickableUsername';
 
 interface TowerGameProps {
@@ -142,6 +143,15 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
   };
 
   const startGame = async () => {
+    if (isMaintenanceMode) {
+      toast({
+        title: "Game Paused",
+        description: "This game is temporarily unavailable during maintenance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!userData) {
       toast({
         title: "Sign In Required",
@@ -231,6 +241,15 @@ export const TowerGame = ({ userData, onUpdateUser }: TowerGameProps) => {
   };
 
   const selectTile = async (tileIndex: number) => {
+    if (isMaintenanceMode) {
+      toast({
+        title: "Game Paused",
+        description: "This game is temporarily unavailable during maintenance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!game || selectedTile !== null || loading || !userData) return;
 
     try {

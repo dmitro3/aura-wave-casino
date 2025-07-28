@@ -27,6 +27,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useBalanceAnimation } from '@/hooks/useBalanceAnimation';
 import { FloatingBalanceIncrease } from '@/components/FloatingBalanceIncrease';
 import { AnimatedBalance } from '@/components/AnimatedBalance';
+import { MaintenanceAwareGame } from '@/components/MaintenanceAwareGame';
 
 interface Notification {
   id: string;
@@ -553,39 +554,47 @@ export default function Index({ initialGame }: IndexProps) {
         <div className="lg:col-span-7">
           <div className="space-y-4">
             {currentGame === 'coinflip' && (
-              user && userData ? (
-                <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
-              ) : (
-                <CoinflipGame userData={null} onUpdateUser={() => Promise.resolve()} />
-              )
+              <MaintenanceAwareGame gameName="Coinflip">
+                {user && userData ? (
+                  <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
+                ) : (
+                  <CoinflipGame userData={null} onUpdateUser={() => Promise.resolve()} />
+                )}
+              </MaintenanceAwareGame>
             )}
 
             {currentGame === 'roulette' && (
-              user && userData ? (
-                <RouletteGame userData={userData} onUpdateUser={updateUserProfile} />
-              ) : (
-                <RouletteGame userData={null} onUpdateUser={() => Promise.resolve()} />
-              )
+              <MaintenanceAwareGame gameName="Roulette">
+                {user && userData ? (
+                  <RouletteGame userData={userData} onUpdateUser={updateUserProfile} />
+                ) : (
+                  <RouletteGame userData={null} onUpdateUser={() => Promise.resolve()} />
+                )}
+              </MaintenanceAwareGame>
             )}
 
             {currentGame === 'tower' && (
-              user && userData ? (
-                <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
-              ) : (
-                <TowerGame userData={null} onUpdateUser={() => Promise.resolve()} />
-              )
+              <MaintenanceAwareGame gameName="Tower">
+                {user && userData ? (
+                  <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
+                ) : (
+                  <TowerGame userData={null} onUpdateUser={() => Promise.resolve()} />
+                )}
+              </MaintenanceAwareGame>
             )}
 
             {currentGame === 'crash' && (
-              <Card className="glass border-0 p-12 text-center">
-                <div className="space-y-4">
-                  <div className="text-4xl">🚀</div>
-                  <h3 className="text-xl font-semibold">Crash Game Coming Soon!</h3>
-                  <p className="text-muted-foreground">
-                    We're working on an exciting crash game with live multipliers and real-time action.
-                  </p>
-                </div>
-              </Card>
+              <MaintenanceAwareGame gameName="Crash">
+                <Card className="glass border-0 p-12 text-center">
+                  <div className="space-y-4">
+                    <div className="text-4xl">🚀</div>
+                    <h3 className="text-xl font-semibold">Crash Game Coming Soon!</h3>
+                    <p className="text-muted-foreground">
+                      We're working on an exciting crash game with live multipliers and real-time action.
+                    </p>
+                  </div>
+                </Card>
+              </MaintenanceAwareGame>
             )}
           </div>
         </div>

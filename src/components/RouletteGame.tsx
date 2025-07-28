@@ -11,6 +11,7 @@ import { UserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
+import { useMaintenance } from '@/contexts/MaintenanceContext';
 import { RouletteReel } from './RouletteReel';
 import { ProvablyFairModal } from './ProvablyFairModal';
 import { ProvablyFairHistoryModal } from './ProvablyFairHistoryModal';
@@ -73,6 +74,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const profile = userData;
   const { toast } = useToast();
   const { liveBetFeed, isConnected } = useRealtimeFeeds();
+  const { isMaintenanceMode } = useMaintenance();
 
   // Game state
   const [currentRound, setCurrentRound] = useState<RouletteRound | null>(null);
@@ -731,6 +733,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
   // Place bet
   const placeBet = async (color: string) => {
+    // MAINTENANCE CHECK: Prevent betting during maintenance
+    if (isMaintenanceMode) {
+      toast({
+        title: "Game Paused",
+        description: "This game is temporarily unavailable during maintenance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // SECURITY 1: Comprehensive validation checks
     if (!user || !profile || !currentRound) {
       toast({
