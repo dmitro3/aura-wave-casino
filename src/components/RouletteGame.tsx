@@ -127,9 +127,10 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [profile?.balance]);
   
-  // Filter roulette bets from live feed (show ALL roulette bets, not just current round)
+  // Filter roulette bets from live feed (only current round)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
-    bet.game_type === 'roulette'
+    bet.game_type === 'roulette' && 
+    bet.round_id === currentRound?.id
   );
   
   // 🔍 DETAILED DEBUG: Live bet feed analysis
@@ -145,7 +146,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         username: bet.username,
         bet_color: bet.bet_color,
         bet_amount: bet.bet_amount,
-        is_roulette: bet.game_type === 'roulette'
+        is_roulette: bet.game_type === 'roulette',
+        matches_current_round: bet.round_id === currentRound?.id
+      })),
+      allRouletteBets: liveBetFeed?.filter(bet => bet.game_type === 'roulette').map(bet => ({
+        round_id: bet.round_id,
+        current_round_id: currentRound?.id,
+        matches: bet.round_id === currentRound?.id
       }))
     });
   }, [liveBetFeed, currentRound?.id, rouletteBets.length]);
@@ -164,14 +171,9 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [rouletteBets]);
   
-  // Sort bets by most recent first
-  const sortedRouletteBets = rouletteBets.sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
-  
-  const greenBets = sortedRouletteBets.filter(bet => bet.bet_color === 'green');
-  const redBets = sortedRouletteBets.filter(bet => bet.bet_color === 'red');
-  const blackBets = sortedRouletteBets.filter(bet => bet.bet_color === 'black');
+  const greenBets = rouletteBets.filter(bet => bet.bet_color === 'green');
+  const redBets = rouletteBets.filter(bet => bet.bet_color === 'red');
+  const blackBets = rouletteBets.filter(bet => bet.bet_color === 'black');
 
   // Clear user bets when round changes
   useEffect(() => {
