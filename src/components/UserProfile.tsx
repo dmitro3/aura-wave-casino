@@ -141,7 +141,8 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
           const gameStats = {
             coinflip: { wins: levelStats?.coinflip_wins || 0, losses: Math.max(0, (levelStats?.coinflip_games || 0) - (levelStats?.coinflip_wins || 0)), profit: levelStats?.coinflip_profit || 0 },
             crash: { wins: levelStats?.crash_wins || 0, losses: Math.max(0, (levelStats?.crash_games || 0) - (levelStats?.crash_wins || 0)), profit: levelStats?.crash_profit || 0 },
-            roulette: { wins: levelStats?.roulette_wins || 0, losses: Math.max(0, (levelStats?.roulette_games || 0) - (levelStats?.roulette_wins || 0)), profit: levelStats?.roulette_profit || 0 }
+            roulette: { wins: levelStats?.roulette_wins || 0, losses: Math.max(0, (levelStats?.roulette_games || 0) - (levelStats?.roulette_wins || 0)), profit: levelStats?.roulette_profit || 0 },
+            tower: { wins: levelStats?.tower_wins || 0, losses: Math.max(0, (levelStats?.tower_games || 0) - (levelStats?.tower_wins || 0)), profit: levelStats?.tower_profit || 0 }
           };
 
           // Build user data object

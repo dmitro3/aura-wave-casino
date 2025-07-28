@@ -69,28 +69,28 @@ export function useUserProfile() {
                 lifetime_xp: newStats.lifetime_xp,
                 total_wagered: newStats.total_wagered,
                 total_profit: newStats.total_profit,
-                gameStats: {
-                  coinflip: {
-                    wins: newStats.coinflip_wins,
-                    losses: Math.max(0, newStats.coinflip_games - newStats.coinflip_wins),
-                    profit: newStats.coinflip_profit,
-                  },
-                  crash: {
-                    wins: newStats.crash_wins,
-                    losses: Math.max(0, newStats.crash_games - newStats.crash_wins),
-                    profit: newStats.crash_profit,
-                  },
-                  roulette: {
-                    wins: newStats.roulette_wins,
-                    losses: Math.max(0, newStats.roulette_games - newStats.roulette_wins),
-                    profit: newStats.roulette_profit,
-                  },
-                  tower: {
-                    wins: newStats.tower_wins,
-                    losses: Math.max(0, newStats.tower_games - newStats.tower_wins),
-                    profit: newStats.tower_profit,
-                  },
-                },
+        gameStats: {
+          coinflip: {
+            wins: newStats.coinflip_wins || 0,
+            losses: Math.max(0, (newStats.coinflip_games || 0) - (newStats.coinflip_wins || 0)),
+            profit: newStats.coinflip_profit || 0,
+          },
+          crash: {
+            wins: newStats.crash_wins || 0,
+            losses: Math.max(0, (newStats.crash_games || 0) - (newStats.crash_wins || 0)),
+            profit: newStats.crash_profit || 0,
+          },
+          roulette: {
+            wins: newStats.roulette_wins || 0,
+            losses: Math.max(0, (newStats.roulette_games || 0) - (newStats.roulette_wins || 0)),
+            profit: newStats.roulette_profit || 0,
+          },
+          tower: {
+            wins: newStats.tower_wins || 0,
+            losses: Math.max(0, (newStats.tower_games || 0) - (newStats.tower_wins || 0)),
+            profit: newStats.tower_profit || 0,
+          },
+        },
               };
             });
           }
@@ -252,21 +252,82 @@ export function useUserProfile() {
           return;
         }
 
-        setUserData({ ...profile, ...newLevelStats });
+        const combinedData = {
+          ...profile,
+          ...newLevelStats,
+          gameStats: {
+            coinflip: {
+              wins: newLevelStats?.coinflip_wins || 0,
+              losses: Math.max(0, (newLevelStats?.coinflip_games || 0) - (newLevelStats?.coinflip_wins || 0)),
+              profit: newLevelStats?.coinflip_profit || 0,
+            },
+            crash: {
+              wins: newLevelStats?.crash_wins || 0,
+              losses: Math.max(0, (newLevelStats?.crash_games || 0) - (newLevelStats?.crash_wins || 0)),
+              profit: newLevelStats?.crash_profit || 0,
+            },
+            roulette: {
+              wins: newLevelStats?.roulette_wins || 0,
+              losses: Math.max(0, (newLevelStats?.roulette_games || 0) - (newLevelStats?.roulette_wins || 0)),
+              profit: newLevelStats?.roulette_profit || 0,
+            },
+            tower: {
+              wins: newLevelStats?.tower_wins || 0,
+              losses: Math.max(0, (newLevelStats?.tower_games || 0) - (newLevelStats?.tower_wins || 0)),
+              profit: newLevelStats?.tower_profit || 0,
+            },
+          }
+        };
+        setUserData(combinedData);
         setLoading(false);
-        console.log('[useUserProfile] User data set (profile + newLevelStats):', { ...profile, ...newLevelStats });
+        console.log('[useUserProfile] User data set (profile + newLevelStats):', combinedData);
         return;
       }
 
       if (levelStatsError) {
         console.error('[useUserProfile] Error fetching level stats:', levelStatsError);
-        setUserData(profile);
+        const profileWithGameStats = {
+          ...profile,
+          gameStats: {
+            coinflip: { wins: 0, losses: 0, profit: 0 },
+            crash: { wins: 0, losses: 0, profit: 0 },
+            roulette: { wins: 0, losses: 0, profit: 0 },
+            tower: { wins: 0, losses: 0, profit: 0 },
+          }
+        };
+        setUserData(profileWithGameStats);
         setLoading(false);
-        console.log('[useUserProfile] User data set (profile only, stats error):', profile);
+        console.log('[useUserProfile] User data set (profile only, stats error):', profileWithGameStats);
         return;
       }
 
-      setUserData({ ...profile, ...levelStats });
+      const combinedData = {
+        ...profile,
+        ...levelStats,
+        gameStats: {
+          coinflip: {
+            wins: levelStats?.coinflip_wins || 0,
+            losses: Math.max(0, (levelStats?.coinflip_games || 0) - (levelStats?.coinflip_wins || 0)),
+            profit: levelStats?.coinflip_profit || 0,
+          },
+          crash: {
+            wins: levelStats?.crash_wins || 0,
+            losses: Math.max(0, (levelStats?.crash_games || 0) - (levelStats?.crash_wins || 0)),
+            profit: levelStats?.crash_profit || 0,
+          },
+          roulette: {
+            wins: levelStats?.roulette_wins || 0,
+            losses: Math.max(0, (levelStats?.roulette_games || 0) - (levelStats?.roulette_wins || 0)),
+            profit: levelStats?.roulette_profit || 0,
+          },
+          tower: {
+            wins: levelStats?.tower_wins || 0,
+            losses: Math.max(0, (levelStats?.tower_games || 0) - (levelStats?.tower_wins || 0)),
+            profit: levelStats?.tower_profit || 0,
+          },
+        }
+      };
+      setUserData(combinedData);
       setLoading(false);
       console.log('[useUserProfile] User data set (profile + levelStats):', { ...profile, ...levelStats });
     } catch (err) {
