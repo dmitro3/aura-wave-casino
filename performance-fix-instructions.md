@@ -1,10 +1,18 @@
--- Fix Performance Warnings in Supabase
--- This script addresses 55 performance warnings related to RLS policies
+# Fix Performance Warnings in Supabase
 
--- =====================================================
--- STEP 1: Drop all existing problematic policies
--- =====================================================
+This guide will help you fix all 55 performance warnings in your Supabase project.
 
+## Step 1: Access Supabase Dashboard
+
+1. Go to your Supabase project dashboard
+2. Navigate to **SQL Editor**
+3. Copy and paste the following SQL commands one by one
+
+## Step 2: Drop Problematic Policies
+
+Run this first to remove all problematic policies:
+
+```sql
 -- Drop policies from profiles table
 DROP POLICY IF EXISTS "Service role can insert profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Service role can update profiles" ON public.profiles;
@@ -39,11 +47,13 @@ DROP POLICY IF EXISTS "Service role full access to unlocked achievements" ON pub
 DROP POLICY IF EXISTS "Allow authenticated users to view admin_users" ON public.admin_users;
 DROP POLICY IF EXISTS "Allow service role to manage admin_users" ON public.admin_users;
 DROP POLICY IF EXISTS "Only admins can view admin users" ON public.admin_users;
+```
 
--- =====================================================
--- STEP 2: Create optimized policies with proper auth function calls
--- =====================================================
+## Step 3: Create Optimized Policies
 
+Run this to create the new optimized policies:
+
+```sql
 -- Profiles table - optimized policies
 CREATE POLICY "profiles_service_role_access" ON public.profiles
     FOR ALL USING (
@@ -131,11 +141,14 @@ CREATE POLICY "admin_users_authenticated_view" ON public.admin_users
     FOR SELECT USING (
         (SELECT auth.uid()) IS NOT NULL
     );
+```
 
--- =====================================================
--- STEP 3: Enable RLS on all tables (if not already enabled)
--- =====================================================
+## Step 4: Enable RLS and Grant Permissions
 
+Run this to ensure RLS is enabled and permissions are set:
+
+```sql
+-- Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_level_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
@@ -143,10 +156,6 @@ ALTER TABLE public.case_rewards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.unlocked_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
-
--- =====================================================
--- STEP 4: Grant necessary permissions
--- =====================================================
 
 -- Grant permissions to service role
 GRANT ALL ON public.profiles TO service_role;
@@ -166,7 +175,7 @@ GRANT SELECT ON public.maintenance_settings TO authenticated;
 GRANT SELECT, INSERT, DELETE ON public.unlocked_achievements TO authenticated;
 GRANT SELECT ON public.admin_users TO authenticated;
 
--- Grant permissions to anon users (for public access where needed)
+-- Grant permissions to anon users
 GRANT SELECT ON public.profiles TO anon;
 GRANT SELECT ON public.user_level_stats TO anon;
 GRANT SELECT ON public.notifications TO anon;
@@ -174,59 +183,55 @@ GRANT SELECT ON public.case_rewards TO anon;
 GRANT SELECT ON public.maintenance_settings TO anon;
 GRANT SELECT ON public.unlocked_achievements TO anon;
 GRANT SELECT ON public.admin_users TO anon;
+```
 
--- =====================================================
--- STEP 5: Verify the fixes
--- =====================================================
+## Step 5: Verify the Fixes
 
--- Test queries to verify policies work correctly
-DO $$
-BEGIN
-    -- Test service role access
-    RAISE NOTICE 'Testing service role access...';
-    
-    -- Test authenticated user access
-    RAISE NOTICE 'Testing authenticated user access...';
-    
-    -- Test admin access
-    RAISE NOTICE 'Testing admin access...';
-    
-    RAISE NOTICE 'Performance warnings should now be resolved!';
-END $$;
+After running all the above commands, check your Supabase dashboard:
 
--- =====================================================
--- SUMMARY OF CHANGES
--- =====================================================
-/*
-This script fixes 55 performance warnings by:
+1. Go to **Database** → **Linter**
+2. You should see that the 55 performance warnings are now resolved
+3. Test your application to ensure everything still works correctly
 
-1. **Auth RLS Initialization Plan Warnings (15 warnings)**: 
-   - Replaced direct `auth.<function>()` calls with `(SELECT auth.<function>())` 
-   - This prevents unnecessary re-evaluation for each row
+## What This Fixes
 
-2. **Multiple Permissive Policies Warnings (40 warnings)**:
-   - Removed duplicate policies that were causing conflicts
-   - Consolidated policies into single, optimized versions
-   - Eliminated redundant policy checks
+### Auth RLS Initialization Plan Warnings (15 warnings)
+- **Problem**: `auth.uid()` and `auth.role()` were being called directly in policies
+- **Solution**: Wrapped them in `(SELECT auth.function())` to prevent re-evaluation for each row
 
-3. **Tables Fixed**:
-   - public.profiles
-   - public.user_level_stats  
-   - public.notifications
-   - public.case_rewards
-   - public.maintenance_settings
-   - public.unlocked_achievements
-   - public.admin_users
+### Multiple Permissive Policies Warnings (40 warnings)
+- **Problem**: Multiple policies for the same role/action were causing performance issues
+- **Solution**: Consolidated policies into single, optimized versions
 
-4. **Performance Improvements**:
-   - Reduced policy evaluation overhead
-   - Eliminated duplicate policy checks
-   - Optimized auth function calls
-   - Streamlined access control logic
+## Tables Fixed
+- `public.profiles`
+- `public.user_level_stats`
+- `public.notifications`
+- `public.case_rewards`
+- `public.maintenance_settings`
+- `public.unlocked_achievements`
+- `public.admin_users`
 
-5. **Maintained Functionality**:
-   - Service role still has full access
-   - Users can still access their own data
-   - Admins retain their privileges
-   - All existing security is preserved
-*/
+## Performance Improvements
+- ✅ Reduced policy evaluation overhead
+- ✅ Eliminated duplicate policy checks
+- ✅ Optimized auth function calls
+- ✅ Streamlined access control logic
+
+## Maintained Functionality
+- ✅ Service role still has full access
+- ✅ Users can still access their own data
+- ✅ Admins retain their privileges
+- ✅ All existing security is preserved
+
+## Testing
+After applying these fixes, test the following functionality:
+1. User registration and login
+2. Admin panel access
+3. Maintenance mode toggle
+4. Push notifications
+5. Game functionality (roulette, coinflip, tower)
+6. Profile updates
+7. Achievement system
+
+If any issues arise, you can revert by running the original setup scripts.
