@@ -202,136 +202,79 @@ export function useUserProfile() {
   }, [user])
 
   const fetchUserProfile = async () => {
-    if (!user) return
+    if (!user) {
+      console.warn('[useUserProfile] No user found, skipping fetch');
+      return;
+    }
 
-    console.log('🔍 Fetching user profile for user ID:', user.id);
+    console.log('[useUserProfile] Fetching profile for user:', user.id);
 
     try {
-      // Fetch profile for basic info and balance
+      // Fetch profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
+        .single();
 
-      console.log('📊 Profile fetch result:', { profile, profileError });
+      console.log('[useUserProfile] Profile fetch result:', { profile, profileError });
 
       if (profileError) {
-        console.error('❌ Error fetching profile:', profileError);
-        // Don't throw error, just return null to prevent crashes
+        console.error('[useUserProfile] Error fetching profile:', profileError);
         setUserData(null);
         setLoading(false);
         return;
       }
 
-      // Fetch comprehensive level stats from user_level_stats (primary source of truth)
+      // Fetch level stats
       const { data: levelStats, error: levelStatsError } = await supabase
         .from('user_level_stats')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .single();
 
-      console.log('📈 Level stats fetch result:', { levelStats, levelStatsError });
+      console.log('[useUserProfile] Level stats fetch result:', { levelStats, levelStatsError });
 
-      // If no level stats exist, create them
       if (levelStatsError && levelStatsError.code === 'PGRST116') {
-        console.log('🆕 Creating initial user level stats for user:', user.id);
+        console.log('[useUserProfile] No level stats found, creating initial stats for user:', user.id);
         const { data: newLevelStats, error: createError } = await supabase
           .from('user_level_stats')
           .insert({ user_id: user.id })
           .select('*')
           .single();
-        
+
+        console.log('[useUserProfile] Created new level stats:', { newLevelStats, createError });
+
         if (createError) {
-          console.error('Error creating level stats:', createError);
-          throw createError;
+          console.error('[useUserProfile] Error creating level stats:', createError);
+          setUserData(null);
+          setLoading(false);
+          return;
         }
-        
-        // Use the newly created stats
-        const userProfile: UserProfile = {
-          ...profile,
-          // Use level stats as primary source for level/XP data
-          current_level: newLevelStats.current_level,
-          current_xp: newLevelStats.current_level_xp,
-          xp_to_next_level: newLevelStats.xp_to_next_level,
-          lifetime_xp: newLevelStats.lifetime_xp,
-          total_wagered: newLevelStats.total_wagered,
-          total_profit: newLevelStats.total_profit,
-          gameStats: {
-            coinflip: {
-              wins: newLevelStats.coinflip_wins,
-              losses: Math.max(0, newLevelStats.coinflip_games - newLevelStats.coinflip_wins),
-              profit: newLevelStats.coinflip_profit,
-            },
-            crash: {
-              wins: newLevelStats.crash_wins,
-              losses: Math.max(0, newLevelStats.crash_games - newLevelStats.crash_wins),
-              profit: newLevelStats.crash_profit,
-            },
-            roulette: {
-              wins: newLevelStats.roulette_wins,
-              losses: Math.max(0, newLevelStats.roulette_games - newLevelStats.roulette_wins),
-              profit: newLevelStats.roulette_profit,
-            },
-            tower: {
-              wins: newLevelStats.tower_wins,
-              losses: Math.max(0, newLevelStats.tower_games - newLevelStats.tower_wins),
-              profit: newLevelStats.tower_profit,
-            },
-          },
-        };
-        
-        setUserData(userProfile);
+
+        setUserData({ ...profile, ...newLevelStats });
+        setLoading(false);
+        console.log('[useUserProfile] User data set (profile + newLevelStats):', { ...profile, ...newLevelStats });
         return;
       }
 
       if (levelStatsError) {
-        console.error('❌ Error fetching level stats:', levelStatsError);
-        // Don't throw error, just continue with profile data only
-        console.log('⚠️ Continuing with profile data only');
+        console.error('[useUserProfile] Error fetching level stats:', levelStatsError);
+        setUserData(profile);
+        setLoading(false);
+        console.log('[useUserProfile] User data set (profile only, stats error):', profile);
+        return;
       }
 
-      // Combine profile data with level stats (level stats takes precedence)
-      const userProfile: UserProfile = {
-        ...profile,
-        // Use level stats as primary source for level/XP data
-        current_level: levelStats.current_level,
-        current_xp: levelStats.current_level_xp,
-        xp_to_next_level: levelStats.xp_to_next_level,
-        lifetime_xp: levelStats.lifetime_xp,
-        total_wagered: levelStats.total_wagered,
-        total_profit: levelStats.total_profit,
-        gameStats: {
-          coinflip: {
-            wins: levelStats.coinflip_wins,
-            losses: Math.max(0, levelStats.coinflip_games - levelStats.coinflip_wins),
-            profit: levelStats.coinflip_profit,
-          },
-          crash: {
-            wins: levelStats.crash_wins,
-            losses: Math.max(0, levelStats.crash_games - levelStats.crash_wins),
-            profit: levelStats.crash_profit,
-          },
-          roulette: {
-            wins: levelStats.roulette_wins,
-            losses: Math.max(0, levelStats.roulette_games - levelStats.roulette_wins),
-            profit: levelStats.roulette_profit,
-          },
-          tower: {
-            wins: levelStats.tower_wins,
-            losses: Math.max(0, levelStats.tower_games - levelStats.tower_wins),
-            profit: levelStats.tower_profit,
-          },
-        },
-      };
-
-      setUserData(userProfile);
-    } catch (error) {
-      console.error('Error fetching user profile:', error)
-    } finally {
-      setLoading(false)
+      setUserData({ ...profile, ...levelStats });
+      setLoading(false);
+      console.log('[useUserProfile] User data set (profile + levelStats):', { ...profile, ...levelStats });
+    } catch (err) {
+      console.error('[useUserProfile] Unexpected error:', err);
+      setUserData(null);
+      setLoading(false);
     }
-  }
+  };
 
   const updateUserProfile = async (updates: Partial<UserProfile>) => {
     if (!user || !userData) return
