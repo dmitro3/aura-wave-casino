@@ -61,6 +61,7 @@ export const useRealtimeFeeds = () => {
     const setupRealtimeSubscriptions = async () => {
       try {
         // Initial data fetch
+        console.log('🔍 Fetching initial live bet feed data...');
         const [liveFeedData, crashRoundData, crashBetsData] = await Promise.all([
           supabase
             .from('live_bet_feed')
@@ -80,7 +81,20 @@ export const useRealtimeFeeds = () => {
             .limit(100)
         ]);
 
-        if (liveFeedData.data) setLiveBetFeed(liveFeedData.data as LiveBetFeed[]);
+        console.log('📊 Initial data fetch results:', {
+          liveFeedCount: liveFeedData.data?.length || 0,
+          liveFeedError: liveFeedData.error,
+          crashRoundCount: crashRoundData.data?.length || 0,
+          crashBetsCount: crashBetsData.data?.length || 0
+        });
+
+        if (liveFeedData.data) {
+          console.log('✅ Setting initial live bet feed:', liveFeedData.data.length, 'entries');
+          setLiveBetFeed(liveFeedData.data as LiveBetFeed[]);
+        } else if (liveFeedData.error) {
+          console.error('❌ Error fetching live bet feed:', liveFeedData.error);
+        }
+        
         if (crashRoundData.data?.[0]) setCurrentCrashRound(crashRoundData.data[0] as CrashRound);
         if (crashBetsData.data) setCrashBets(crashBetsData.data as CrashBet[]);
 
