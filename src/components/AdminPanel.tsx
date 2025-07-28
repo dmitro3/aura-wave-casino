@@ -6,7 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import MaintenanceToggle from './MaintenanceToggle';
-import { Shield, Settings, Users, Activity } from 'lucide-react';
+import { Shield, Settings, Users, Activity, Bell, AlertTriangle } from 'lucide-react';
+import { PushNotificationForm } from './PushNotificationForm';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const { user } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showPushNotification, setShowPushNotification] = useState(false);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -148,6 +150,44 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Push Notifications */}
+          {showPushNotification ? (
+            <div className="md:col-span-2">
+              <PushNotificationForm onClose={() => setShowPushNotification(false)} />
+            </div>
+          ) : (
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Bell className="h-5 w-5" />
+                  <span>Push Notifications</span>
+                  <Badge variant="secondary" className="ml-2">Broadcast</Badge>
+                </CardTitle>
+                <CardDescription>
+                  Send notifications to all users on the platform
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2 p-3 bg-warning/10 rounded-lg border border-warning/20">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <span className="text-sm text-warning-foreground">
+                      Broadcast notifications will be sent to ALL users on the platform.
+                    </span>
+                  </div>
+                  
+                  <Button
+                    onClick={() => setShowPushNotification(true)}
+                    className="gradient-primary text-white"
+                  >
+                    <Bell className="h-4 w-4 mr-2" />
+                    Send Push Notification
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Admin Actions */}
           <Card className="md:col-span-2">
