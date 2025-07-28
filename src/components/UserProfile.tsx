@@ -101,22 +101,38 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   const userData = propUserData || fetchedUserData;
   
   // Check if this is the current user's own profile
-  const isOwnProfile = user && userData && user.id === userData.id;
+  const isOwnProfile = user && (userData ? user.id === userData.id : true);
 
-  // Fetch user data when only username is provided
+  // Fetch user data when only username is provided or when userData is null but user is authenticated
   useEffect(() => {
-    if (isOpen && username && !propUserData) {
+    if (isOpen && ((username && !propUserData) || (!username && !propUserData && user))) {
       const fetchUserData = async () => {
         setLoading(true);
         try {
-          console.log('🔍 Fetching profile data for username:', username);
+          let profile;
+          let profileError;
 
-          // First get the user ID from profiles table
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('username', username)
-            .single();
+          if (username) {
+            // Fetch by username (for other users)
+            console.log('🔍 Fetching profile data for username:', username);
+            const result = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('username', username)
+              .single();
+            profile = result.data;
+            profileError = result.error;
+          } else if (user) {
+            // Fetch current user's profile
+            console.log('🔍 Fetching current user profile data for user ID:', user.id);
+            const result = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+            profile = result.data;
+            profileError = result.error;
+          }
 
           if (profileError) {
             console.error('❌ Error fetching user profile:', profileError);
@@ -168,7 +184,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
 
       fetchUserData();
     }
-  }, [isOpen, username, propUserData]);
+  }, [isOpen, username, propUserData, user]);
 
   // Reset fetched data when modal closes
   useEffect(() => {

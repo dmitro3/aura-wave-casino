@@ -606,11 +606,12 @@ export default function Index({ initialGame }: IndexProps) {
       </div>
 
       {/* Profile Modal - Only show for authenticated users */}
-      {user && userData && (
+      {user && (
         <UserProfile
           isOpen={showProfile}
           onClose={() => setShowProfile(false)}
           userData={userData}
+          onUserDataUpdate={updateUserProfile}
         />
       )}
 
