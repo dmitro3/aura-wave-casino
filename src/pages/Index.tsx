@@ -542,7 +542,7 @@ export default function Index({ initialGame }: IndexProps) {
               user && userData ? (
                 <CoinflipGame userData={userData} onUpdateUser={updateUserProfile} />
               ) : (
-                <CoinflipGame userData={null} onUpdateUser={() => {}} />
+                <CoinflipGame userData={null} onUpdateUser={() => Promise.resolve()} />
               )
             )}
 
@@ -558,7 +558,7 @@ export default function Index({ initialGame }: IndexProps) {
               user && userData ? (
                 <TowerGame userData={userData} onUpdateUser={updateUserProfile} />
               ) : (
-                <TowerGame userData={null} onUpdateUser={() => {}} />
+                <TowerGame userData={null} onUpdateUser={() => Promise.resolve()} />
               )
             )}
 

@@ -17,42 +17,42 @@ export type Database = {
       achievements: {
         Row: {
           category: string
-          created_at: string
+          created_at: string | null
+          criteria: Json
           description: string
+          difficulty: string
           icon: string
           id: string
           name: string
-          unlock_criteria: Json
           rarity: string
-          difficulty: string
-          reward_amount: number
-          reward_type: string
+          reward_amount: number | null
+          reward_type: string | null
         }
         Insert: {
-          category: string
-          created_at?: string
+          category?: string
+          created_at?: string | null
+          criteria: Json
           description: string
-          icon: string
+          difficulty?: string
+          icon?: string
           id?: string
           name: string
-          unlock_criteria: Json
           rarity?: string
-          difficulty?: string
-          reward_amount?: number
-          reward_type?: string
+          reward_amount?: number | null
+          reward_type?: string | null
         }
         Update: {
           category?: string
-          created_at?: string
+          created_at?: string | null
+          criteria?: Json
           description?: string
+          difficulty?: string
           icon?: string
           id?: string
           name?: string
-          unlock_criteria?: Json
           rarity?: string
-          difficulty?: string
-          reward_amount?: number
-          reward_type?: string
+          reward_amount?: number | null
+          reward_type?: string | null
         }
         Relationships: []
       }
@@ -70,6 +70,39 @@ export type Database = {
         Update: {
           created_at?: string
           permissions?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          timestamp: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          timestamp?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          timestamp?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
@@ -247,6 +280,42 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_seeds: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          is_revealed: boolean | null
+          lotto: string
+          lotto_hash: string
+          revealed_at: string | null
+          server_seed: string
+          server_seed_hash: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          is_revealed?: boolean | null
+          lotto: string
+          lotto_hash: string
+          revealed_at?: string | null
+          server_seed: string
+          server_seed_hash: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          is_revealed?: boolean | null
+          lotto?: string
+          lotto_hash?: string
+          revealed_at?: string | null
+          server_seed?: string
+          server_seed_hash?: string
+        }
+        Relationships: []
+      }
       free_case_claims: {
         Row: {
           amount: number
@@ -370,7 +439,9 @@ export type Database = {
       live_bet_feed: {
         Row: {
           action: string | null
+          avatar_url: string | null
           bet_amount: number
+          bet_color: string | null
           created_at: string
           game_data: Json | null
           game_type: string
@@ -378,13 +449,16 @@ export type Database = {
           multiplier: number | null
           profit: number
           result: string
+          round_id: string | null
           streak_length: number | null
           user_id: string
           username: string
         }
         Insert: {
           action?: string | null
+          avatar_url?: string | null
           bet_amount: number
+          bet_color?: string | null
           created_at?: string
           game_data?: Json | null
           game_type: string
@@ -392,13 +466,16 @@ export type Database = {
           multiplier?: number | null
           profit: number
           result: string
+          round_id?: string | null
           streak_length?: number | null
           user_id: string
           username: string
         }
         Update: {
           action?: string | null
+          avatar_url?: string | null
           bet_amount?: number
+          bet_color?: string | null
           created_at?: string
           game_data?: Json | null
           game_type?: string
@@ -406,6 +483,7 @@ export type Database = {
           multiplier?: number | null
           profit?: number
           result?: string
+          round_id?: string | null
           streak_length?: number | null
           user_id?: string
           username?: string
@@ -449,6 +527,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_data_view"
             referencedColumns: ["id"]
           },
         ]
@@ -524,33 +609,45 @@ export type Database = {
           actual_payout: number | null
           bet_amount: number
           bet_color: string
+          client_seed: string | null
           created_at: string
           id: string
+          ip_address: string | null
           is_winner: boolean | null
           potential_payout: number
+          profit: number | null
           round_id: string
+          user_agent: string | null
           user_id: string
         }
         Insert: {
           actual_payout?: number | null
           bet_amount: number
           bet_color: string
+          client_seed?: string | null
           created_at?: string
           id?: string
+          ip_address?: string | null
           is_winner?: boolean | null
           potential_payout: number
+          profit?: number | null
           round_id: string
+          user_agent?: string | null
           user_id: string
         }
         Update: {
           actual_payout?: number | null
           bet_amount?: number
           bet_color?: string
+          client_seed?: string | null
           created_at?: string
           id?: string
+          ip_address?: string | null
           is_winner?: boolean | null
           potential_payout?: number
+          profit?: number | null
           round_id?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: [
@@ -563,68 +660,138 @@ export type Database = {
           },
         ]
       }
+      roulette_client_seeds: {
+        Row: {
+          client_seed: string
+          created_at: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          client_seed: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          client_seed?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       roulette_results: {
         Row: {
           created_at: string
           id: string
           result_color: string
           result_slot: number
+          round_id: string
           round_number: number
+          total_bets_amount: number
+          total_bets_count: number
         }
         Insert: {
           created_at?: string
           id?: string
           result_color: string
           result_slot: number
+          round_id: string
           round_number: number
+          total_bets_amount?: number
+          total_bets_count?: number
         }
         Update: {
           created_at?: string
           id?: string
           result_color?: string
           result_slot?: number
+          round_id?: string
           round_number?: number
+          total_bets_amount?: number
+          total_bets_count?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "roulette_results_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "roulette_rounds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roulette_rounds: {
         Row: {
-          betting_end_time: string | null
+          betting_end_time: string
+          betting_start_time: string
           created_at: string
+          daily_seed_id: string | null
           id: string
+          nonce: number
+          nonce_id: number | null
+          reel_position: number | null
           result_color: string | null
           result_multiplier: number | null
           result_slot: number | null
           round_number: number
-          spin_end_time: string | null
+          server_seed: string
+          server_seed_hash: string
+          spinning_end_time: string
           status: string
           updated_at: string
         }
         Insert: {
-          betting_end_time?: string | null
+          betting_end_time: string
+          betting_start_time?: string
           created_at?: string
+          daily_seed_id?: string | null
           id?: string
+          nonce: number
+          nonce_id?: number | null
+          reel_position?: number | null
           result_color?: string | null
           result_multiplier?: number | null
           result_slot?: number | null
           round_number?: number
-          spin_end_time?: string | null
+          server_seed: string
+          server_seed_hash: string
+          spinning_end_time: string
           status?: string
           updated_at?: string
         }
         Update: {
-          betting_end_time?: string | null
+          betting_end_time?: string
+          betting_start_time?: string
           created_at?: string
+          daily_seed_id?: string | null
           id?: string
+          nonce?: number
+          nonce_id?: number | null
+          reel_position?: number | null
           result_color?: string | null
           result_multiplier?: number | null
           result_slot?: number | null
           round_number?: number
-          spin_end_time?: string | null
+          server_seed?: string
+          server_seed_hash?: string
+          spinning_end_time?: string
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "roulette_rounds_daily_seed_id_fkey"
+            columns: ["daily_seed_id"]
+            isOneToOne: false
+            referencedRelation: "daily_seeds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tips: {
         Row: {
@@ -660,10 +827,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tips_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_data_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tips_to_user_id_fkey"
             columns: ["to_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tips_to_user_id_fkey"
+            columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_data_view"
             referencedColumns: ["id"]
           },
         ]
@@ -751,24 +932,59 @@ export type Database = {
           },
         ]
       }
-      user_achievements: {
+      unlocked_achievements: {
         Row: {
           achievement_id: string
           id: string
-          unlocked_at: string
+          unlocked_at: string | null
           user_id: string
         }
         Insert: {
           achievement_id: string
           id?: string
-          unlocked_at?: string
+          unlocked_at?: string | null
           user_id: string
         }
         Update: {
           achievement_id?: string
           id?: string
-          unlocked_at?: string
+          unlocked_at?: string | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unlocked_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_achievements: {
+        Row: {
+          achievement_id: string | null
+          claimed: boolean | null
+          claimed_at: string | null
+          id: string
+          unlocked_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          achievement_id?: string | null
+          claimed?: boolean | null
+          claimed_at?: string | null
+          id?: string
+          unlocked_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          achievement_id?: string | null
+          claimed?: boolean | null
+          claimed_at?: string | null
+          id?: string
+          unlocked_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -785,176 +1001,330 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_data_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_daily_logins: {
+        Row: {
+          created_at: string | null
+          id: string
+          login_date: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          login_date?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          login_date?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_daily_logins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_daily_logins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_data_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_level_stats: {
         Row: {
-          available_cases: number
-          best_coinflip_streak: number
-          biggest_loss: number
-          biggest_win: number
-          border_tier: number
+          account_created: string | null
+          available_cases: number | null
+          best_coinflip_streak: number | null
+          best_win_streak: number | null
+          biggest_loss: number | null
+          biggest_single_bet: number | null
+          biggest_win: number | null
+          border_tier: number | null
           border_unlocked_at: string | null
-          coinflip_games: number
-          coinflip_profit: number
-          coinflip_wagered: number
-          coinflip_wins: number
-          crash_games: number
-          crash_profit: number
-          crash_wagered: number
-          crash_wins: number
-          created_at: string
-          current_coinflip_streak: number
-          current_level: number
-          current_level_xp: number
+          chat_messages_count: number | null
+          coinflip_games: number | null
+          coinflip_profit: number | null
+          coinflip_wagered: number | null
+          coinflip_wins: number | null
+          crash_games: number | null
+          crash_profit: number | null
+          crash_wagered: number | null
+          crash_wins: number | null
+          created_at: string | null
+          current_coinflip_streak: number | null
+          current_level: number | null
+          current_level_xp: number | null
+          current_win_streak: number | null
           id: string
-          lifetime_xp: number
-          roulette_games: number
-          roulette_profit: number
-          roulette_wagered: number
-          roulette_wins: number
-          roulette_highest_win: number
-          roulette_highest_loss: number
-          roulette_green_wins: number
-          roulette_red_wins: number
-          roulette_black_wins: number
+          lifetime_xp: number | null
+          login_days_count: number | null
+          roulette_best_streak: number | null
+          roulette_biggest_bet: number | null
+          roulette_black_wins: number | null
+          roulette_current_streak: number | null
           roulette_favorite_color: string | null
-          roulette_best_streak: number
-          roulette_current_streak: number
-          roulette_biggest_bet: number
-          total_case_value: number
-          total_cases_opened: number
-          total_games: number
-          total_profit: number
-          total_wagered: number
-          total_wins: number
-          tower_games: number
-          tower_profit: number
-          tower_wagered: number
-          tower_wins: number
-          tower_highest_level: number
-          tower_biggest_win: number
-          tower_biggest_loss: number
-          tower_best_streak: number
-          tower_current_streak: number
-          tower_perfect_games: number
-          updated_at: string
-          user_id: string
-          xp_to_next_level: number
+          roulette_games: number | null
+          roulette_green_wins: number | null
+          roulette_highest_loss: number | null
+          roulette_highest_win: number | null
+          roulette_profit: number | null
+          roulette_red_wins: number | null
+          roulette_wagered: number | null
+          roulette_wins: number | null
+          total_case_value: number | null
+          total_cases_opened: number | null
+          total_games: number | null
+          total_profit: number | null
+          total_wagered: number | null
+          total_wins: number | null
+          tower_best_streak: number | null
+          tower_biggest_loss: number | null
+          tower_biggest_win: number | null
+          tower_current_streak: number | null
+          tower_games: number | null
+          tower_highest_level: number | null
+          tower_perfect_games: number | null
+          tower_profit: number | null
+          tower_wagered: number | null
+          tower_wins: number | null
+          updated_at: string | null
+          user_id: string | null
+          xp_to_next_level: number | null
         }
         Insert: {
-          available_cases?: number
-          best_coinflip_streak?: number
-          biggest_loss?: number
-          biggest_win?: number
-          border_tier?: number
+          account_created?: string | null
+          available_cases?: number | null
+          best_coinflip_streak?: number | null
+          best_win_streak?: number | null
+          biggest_loss?: number | null
+          biggest_single_bet?: number | null
+          biggest_win?: number | null
+          border_tier?: number | null
           border_unlocked_at?: string | null
-          coinflip_games?: number
-          coinflip_profit?: number
-          coinflip_wagered?: number
-          coinflip_wins?: number
-          crash_games?: number
-          crash_profit?: number
-          crash_wagered?: number
-          crash_wins?: number
-          created_at?: string
-          current_coinflip_streak?: number
-          current_level?: number
-          current_level_xp?: number
+          chat_messages_count?: number | null
+          coinflip_games?: number | null
+          coinflip_profit?: number | null
+          coinflip_wagered?: number | null
+          coinflip_wins?: number | null
+          crash_games?: number | null
+          crash_profit?: number | null
+          crash_wagered?: number | null
+          crash_wins?: number | null
+          created_at?: string | null
+          current_coinflip_streak?: number | null
+          current_level?: number | null
+          current_level_xp?: number | null
+          current_win_streak?: number | null
           id?: string
-          lifetime_xp?: number
-          roulette_games?: number
-          roulette_profit?: number
-          roulette_wagered?: number
-          roulette_wins?: number
-          roulette_highest_win?: number
-          roulette_highest_loss?: number
-          roulette_green_wins?: number
-          roulette_red_wins?: number
-          roulette_black_wins?: number
+          lifetime_xp?: number | null
+          login_days_count?: number | null
+          roulette_best_streak?: number | null
+          roulette_biggest_bet?: number | null
+          roulette_black_wins?: number | null
+          roulette_current_streak?: number | null
           roulette_favorite_color?: string | null
-          roulette_best_streak?: number
-          roulette_current_streak?: number
-          roulette_biggest_bet?: number
-          total_case_value?: number
-          total_cases_opened?: number
-          total_games?: number
-          total_profit?: number
-          total_wagered?: number
-          total_wins?: number
-          tower_games?: number
-          tower_profit?: number
-          tower_wagered?: number
-          tower_wins?: number
-          tower_highest_level?: number
-          tower_biggest_win?: number
-          tower_biggest_loss?: number
-          tower_best_streak?: number
-          tower_current_streak?: number
-          tower_perfect_games?: number
-          updated_at?: string
-          user_id: string
-          xp_to_next_level?: number
+          roulette_games?: number | null
+          roulette_green_wins?: number | null
+          roulette_highest_loss?: number | null
+          roulette_highest_win?: number | null
+          roulette_profit?: number | null
+          roulette_red_wins?: number | null
+          roulette_wagered?: number | null
+          roulette_wins?: number | null
+          total_case_value?: number | null
+          total_cases_opened?: number | null
+          total_games?: number | null
+          total_profit?: number | null
+          total_wagered?: number | null
+          total_wins?: number | null
+          tower_best_streak?: number | null
+          tower_biggest_loss?: number | null
+          tower_biggest_win?: number | null
+          tower_current_streak?: number | null
+          tower_games?: number | null
+          tower_highest_level?: number | null
+          tower_perfect_games?: number | null
+          tower_profit?: number | null
+          tower_wagered?: number | null
+          tower_wins?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          xp_to_next_level?: number | null
         }
         Update: {
-          available_cases?: number
-          best_coinflip_streak?: number
-          biggest_loss?: number
-          biggest_win?: number
-          border_tier?: number
+          account_created?: string | null
+          available_cases?: number | null
+          best_coinflip_streak?: number | null
+          best_win_streak?: number | null
+          biggest_loss?: number | null
+          biggest_single_bet?: number | null
+          biggest_win?: number | null
+          border_tier?: number | null
           border_unlocked_at?: string | null
-          coinflip_games?: number
-          coinflip_profit?: number
-          coinflip_wagered?: number
-          coinflip_wins?: number
-          crash_games?: number
-          crash_profit?: number
-          crash_wagered?: number
-          crash_wins?: number
-          created_at?: string
-          current_coinflip_streak?: number
-          current_level?: number
-          current_level_xp?: number
+          chat_messages_count?: number | null
+          coinflip_games?: number | null
+          coinflip_profit?: number | null
+          coinflip_wagered?: number | null
+          coinflip_wins?: number | null
+          crash_games?: number | null
+          crash_profit?: number | null
+          crash_wagered?: number | null
+          crash_wins?: number | null
+          created_at?: string | null
+          current_coinflip_streak?: number | null
+          current_level?: number | null
+          current_level_xp?: number | null
+          current_win_streak?: number | null
           id?: string
-          lifetime_xp?: number
-          roulette_games?: number
-          roulette_profit?: number
-          roulette_wagered?: number
-          roulette_wins?: number
-          roulette_highest_win?: number
-          roulette_highest_loss?: number
-          roulette_green_wins?: number
-          roulette_red_wins?: number
-          roulette_black_wins?: number
+          lifetime_xp?: number | null
+          login_days_count?: number | null
+          roulette_best_streak?: number | null
+          roulette_biggest_bet?: number | null
+          roulette_black_wins?: number | null
+          roulette_current_streak?: number | null
           roulette_favorite_color?: string | null
-          roulette_best_streak?: number
-          roulette_current_streak?: number
-          roulette_biggest_bet?: number
-          total_case_value?: number
-          total_cases_opened?: number
-          total_games?: number
-          total_profit?: number
-          total_wagered?: number
-          total_wins?: number
-          tower_games?: number
-          tower_profit?: number
-          tower_wagered?: number
-          tower_wins?: number
-          tower_highest_level?: number
-          tower_biggest_win?: number
-          tower_biggest_loss?: number
-          tower_best_streak?: number
-          tower_current_streak?: number
-          tower_perfect_games?: number
+          roulette_games?: number | null
+          roulette_green_wins?: number | null
+          roulette_highest_loss?: number | null
+          roulette_highest_win?: number | null
+          roulette_profit?: number | null
+          roulette_red_wins?: number | null
+          roulette_wagered?: number | null
+          roulette_wins?: number | null
+          total_case_value?: number | null
+          total_cases_opened?: number | null
+          total_games?: number | null
+          total_profit?: number | null
+          total_wagered?: number | null
+          total_wins?: number | null
+          tower_best_streak?: number | null
+          tower_biggest_loss?: number | null
+          tower_biggest_win?: number | null
+          tower_current_streak?: number | null
+          tower_games?: number | null
+          tower_highest_level?: number | null
+          tower_perfect_games?: number | null
+          tower_profit?: number | null
+          tower_wagered?: number | null
+          tower_wins?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+          xp_to_next_level?: number | null
+        }
+        Relationships: []
+      }
+      user_rate_limits: {
+        Row: {
+          bet_count: number
+          created_at: string
+          id: string
+          last_bet_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bet_count?: number
+          created_at?: string
+          id?: string
+          last_bet_time?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bet_count?: number
+          created_at?: string
+          id?: string
+          last_bet_time?: string
           updated_at?: string
           user_id?: string
-          xp_to_next_level?: number
         }
         Relationships: []
       }
     }
     Views: {
-      [_ in never]: never
+      user_data_view: {
+        Row: {
+          account_created: string | null
+          available_cases: number | null
+          badges: string[] | null
+          balance: number | null
+          best_coinflip_streak: number | null
+          best_win_streak: number | null
+          biggest_loss: number | null
+          biggest_single_bet: number | null
+          biggest_win: number | null
+          border_tier: number | null
+          border_unlocked_at: string | null
+          chat_messages_count: number | null
+          coinflip_games: number | null
+          coinflip_profit: number | null
+          coinflip_wagered: number | null
+          coinflip_wins: number | null
+          crash_games: number | null
+          crash_profit: number | null
+          crash_wagered: number | null
+          crash_wins: number | null
+          created_at: string | null
+          current_coinflip_streak: number | null
+          current_level: number | null
+          current_level_xp: number | null
+          current_win_streak: number | null
+          id: string | null
+          last_claim_time: string | null
+          lifetime_xp: number | null
+          login_days_count: number | null
+          registration_date: string | null
+          roulette_best_streak: number | null
+          roulette_biggest_bet: number | null
+          roulette_black_wins: number | null
+          roulette_current_streak: number | null
+          roulette_favorite_color: string | null
+          roulette_games: number | null
+          roulette_green_wins: number | null
+          roulette_highest_loss: number | null
+          roulette_highest_win: number | null
+          roulette_profit: number | null
+          roulette_red_wins: number | null
+          roulette_wagered: number | null
+          roulette_wins: number | null
+          total_case_value: number | null
+          total_cases_opened: number | null
+          total_games: number | null
+          total_profit: number | null
+          total_wagered: number | null
+          total_wins: number | null
+          tower_best_streak: number | null
+          tower_biggest_loss: number | null
+          tower_biggest_win: number | null
+          tower_current_streak: number | null
+          tower_games: number | null
+          tower_highest_level: number | null
+          tower_perfect_games: number | null
+          tower_profit: number | null
+          tower_wagered: number | null
+          tower_wins: number | null
+          updated_at: string | null
+          username: string | null
+          xp_to_next_level: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_to_live_feed: {
@@ -977,6 +1347,16 @@ export type Database = {
           bonus_earned: number
           cases_earned: number
         }[]
+      }
+      atomic_bet_balance_check: {
+        Args:
+          | { p_user_id: string; p_amount: number }
+          | { p_user_id: string; p_bet_amount: number; p_round_id: string }
+        Returns: Json
+      }
+      award_achievement_reward: {
+        Args: { p_user_id: string; p_achievement_id: string }
+        Returns: undefined
       }
       calculate_level_from_xp: {
         Args: { total_xp: number }
@@ -1010,9 +1390,64 @@ export type Database = {
         Args: { p_user_id: string; p_case_type: string }
         Returns: boolean
       }
+      check_for_ready_achievements: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      check_rate_limit: {
+        Args:
+          | { p_user_id: string }
+          | {
+              p_user_id: string
+              p_action: string
+              p_limit_count?: number
+              p_limit_window?: unknown
+            }
+        Returns: boolean
+      }
+      claim_achievement_manual: {
+        Args: { p_user_id: string; p_achievement_id: string }
+        Returns: Json
+      }
+      cleanup_old_security_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      create_user_level_stats: {
+        Args: { user_id: string }
+        Returns: Json
+      }
+      create_user_profile: {
+        Args: { user_id: string; user_email: string }
+        Returns: Json
+      }
+      enforce_rate_limit: {
+        Args: {
+          p_user_id: string
+          p_action: string
+          p_limit_per_minute?: number
+        }
+        Returns: boolean
+      }
+      ensure_user_level_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      ensure_user_profile: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_next_free_case_claim_time: {
         Args: { p_user_id: string; p_case_type: string }
         Returns: string
+      }
+      get_user_bet_stats: {
+        Args: { p_user_id: string } | { p_user_id: string; p_round_id: string }
+        Returns: Json
+      }
+      initialize_user_level_stats: {
+        Args: { user_id: string }
+        Returns: undefined
       }
       process_tip: {
         Args: {
@@ -1023,8 +1458,49 @@ export type Database = {
         }
         Returns: boolean
       }
+      rollback_bet_balance: {
+        Args: { p_user_id: string; p_amount: number }
+        Returns: undefined
+      }
+      secure_balance_check: {
+        Args: { p_user_id: string; p_amount: number }
+        Returns: Json
+      }
       test_realtime_feed: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      test_service_role_access: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      track_bet_amount: {
+        Args: { p_user_id: string; p_amount: number }
+        Returns: undefined
+      }
+      track_chat_message: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      track_daily_login: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      track_game_result: {
+        Args:
+          | {
+              p_user_id: string
+              p_game_type: string
+              p_amount: number
+              p_result: string
+              p_profit: number
+            }
+          | {
+              p_user_id: string
+              p_game_type: string
+              p_is_win: boolean
+              p_profit: number
+            }
         Returns: undefined
       }
       update_user_stats_and_level: {
@@ -1050,6 +1526,16 @@ export type Database = {
       validate_bet_amount: {
         Args: { p_amount: number }
         Returns: boolean
+      }
+      validate_bet_limits: {
+        Args:
+          | { p_user_id: string; p_amount: number; p_game_type: string }
+          | { p_user_id: string; p_round_id: string; p_bet_amount: number }
+        Returns: Json
+      }
+      validate_user_input: {
+        Args: { p_input_type: string; p_input_value: string }
+        Returns: Json
       }
       validate_username: {
         Args: { p_username: string }
