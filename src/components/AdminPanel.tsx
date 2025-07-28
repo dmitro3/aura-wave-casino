@@ -27,13 +27,19 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
       }
 
       try {
-        // Try the new admin check function first
-        const { data: adminCheck, error: adminError } = await supabase.rpc('check_admin_status');
+        // Try multiple approaches to check admin status
+        let isAdminUser = false;
         
-        if (adminError) {
-          console.log('Admin check function failed, trying direct table access:', adminError);
-          
-          // Fallback to direct table access
+        // Approach 1: Try the admin check function
+        const { data: adminCheck, error: adminError } = await supabase.rpc('check_admin_status');
+        if (!adminError && adminCheck !== null) {
+          isAdminUser = adminCheck;
+          console.log('Admin check via function:', isAdminUser);
+        }
+        
+        // Approach 2: If function fails, try direct table access
+        if (adminError || isAdminUser === false) {
+          console.log('Trying direct table access...');
           const { data, error } = await supabase
             .from('admin_users')
             .select('user_id, permissions, created_at')
@@ -42,12 +48,23 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
           if (error && error.code !== 'PGRST116') {
             console.error('Error checking admin status:', error);
+          } else if (data) {
+            isAdminUser = true;
+            console.log('Admin check via direct access:', isAdminUser);
           }
-
-          setIsAdmin(!!data);
-        } else {
-          setIsAdmin(adminCheck);
         }
+        
+        // Approach 3: Try the simple function as last resort
+        if (!isAdminUser) {
+          console.log('Trying simple admin check...');
+          const { data: simpleCheck, error: simpleError } = await supabase.rpc('check_admin_status_simple');
+          if (!simpleError && simpleCheck !== null) {
+            isAdminUser = simpleCheck;
+            console.log('Admin check via simple function:', isAdminUser);
+          }
+        }
+
+        setIsAdmin(isAdminUser);
       } catch (err) {
         console.error('Error checking admin status:', err);
         setIsAdmin(false);
