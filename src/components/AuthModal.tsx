@@ -229,7 +229,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 value={registerData.password}
                 onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                 className="glass border-0"
-                placeholder="Choose a password (min 6 characters)"
+                placeholder="Choose a password (min 8 chars, uppercase, lowercase, number)"
                 disabled={loading}
               />
             </div>
