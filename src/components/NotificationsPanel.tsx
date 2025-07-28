@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, Gift, Award, Star, Check, X, ExternalLink } from 'lucide-react';
+import { Bell, Gift, Award, Star, Check, X, ExternalLink, Megaphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,7 @@ import { CaseRewardNotification } from './CaseRewardNotification';
 interface Notification {
   id: string;
   user_id: string;
-  type: 'tip_sent' | 'tip_received' | 'achievement_unlocked' | 'level_up' | 'level_reward_case';
+  type: 'tip_sent' | 'tip_received' | 'achievement_unlocked' | 'level_up' | 'level_reward_case' | 'admin_broadcast';
   title: string;
   message: string;
   data: any;
@@ -69,7 +69,7 @@ export default function NotificationsPanel() {
           setUnreadCount(prev => prev + 1);
           
           // Show toast for important notifications
-          if (newNotification.type === 'tip_received') {
+          if (newNotification.type === 'tip_received' || newNotification.type === 'admin_broadcast') {
             toast({
               title: newNotification.title,
               description: newNotification.message,
@@ -176,6 +176,8 @@ export default function NotificationsPanel() {
         return <Star className="w-4 h-4" />;
       case 'level_reward_case':
         return <Gift className="w-4 h-4" />;
+      case 'admin_broadcast':
+        return <Megaphone className="w-4 h-4" />;
       default:
         return <Bell className="w-4 h-4" />;
     }
@@ -193,6 +195,8 @@ export default function NotificationsPanel() {
         return 'text-yellow-400';
       case 'level_reward_case':
         return 'text-orange-400';
+      case 'admin_broadcast':
+        return 'text-red-400';
       default:
         return 'text-gray-400';
     }

@@ -28,11 +28,12 @@ import { useBalanceAnimation } from '@/hooks/useBalanceAnimation';
 import { FloatingBalanceIncrease } from '@/components/FloatingBalanceIncrease';
 import { AnimatedBalance } from '@/components/AnimatedBalance';
 import { MaintenanceAwareGame } from '@/components/MaintenanceAwareGame';
+import { useToast } from '@/hooks/use-toast';
 
 interface Notification {
   id: string;
   user_id: string;
-  type: string;
+  type: 'tip_sent' | 'tip_received' | 'achievement_unlocked' | 'level_up' | 'level_reward_case' | 'admin_broadcast';
   title: string;
   message: string;
   data?: any;
@@ -47,6 +48,7 @@ interface IndexProps {
 export default function Index({ initialGame }: IndexProps) {
   const { user, signOut, loading: authLoading } = useAuth();
   const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
+  const { toast } = useToast();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -154,7 +156,16 @@ export default function Index({ initialGame }: IndexProps) {
           (payload) => {
             if (payload.eventType === 'INSERT') {
               const newNotification = payload.new as Notification;
+              console.log('🔔 Received notification:', newNotification);
               setNotifications(prev => [newNotification, ...prev]);
+              
+              // Show toast for admin broadcast notifications
+              if (newNotification.type === 'admin_broadcast') {
+                toast({
+                  title: newNotification.title,
+                  description: newNotification.message,
+                });
+              }
             }
           }
         )
