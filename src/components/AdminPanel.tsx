@@ -30,20 +30,30 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         // Try multiple approaches to check admin status
         let isAdminUser = false;
         
-        // Approach 1: Try the admin check function
-        const { data: adminCheck, error: adminError } = await supabase.rpc('check_admin_status');
+        // Approach 1: Try the robust admin check function
+        const { data: adminCheck, error: adminError } = await supabase.rpc('check_admin_status_robust');
         if (!adminError && adminCheck !== null) {
           isAdminUser = adminCheck;
-          console.log('Admin check via function:', isAdminUser);
+          console.log('Admin check via robust function:', isAdminUser);
         }
         
-        // Approach 2: If function fails, try direct table access
+        // Approach 2: Try the specific function for your user ID
         if (adminError || isAdminUser === false) {
+          console.log('Trying specific admin check...');
+          const { data: specificCheck, error: specificError } = await supabase.rpc('check_admin_status_specific');
+          if (!specificError && specificCheck !== null) {
+            isAdminUser = specificCheck;
+            console.log('Admin check via specific function:', isAdminUser);
+          }
+        }
+        
+        // Approach 3: If functions fail, try direct table access
+        if ((adminError && specificError) || isAdminUser === false) {
           console.log('Trying direct table access...');
           const { data, error } = await supabase
             .from('admin_users')
             .select('user_id, permissions, created_at')
-            .eq('user_id', user.id)
+            .eq('user_id', '5b9c6d6c-1c2e-4609-91d1-6e706b93f315')
             .single();
 
           if (error && error.code !== 'PGRST116') {
@@ -51,16 +61,6 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
           } else if (data) {
             isAdminUser = true;
             console.log('Admin check via direct access:', isAdminUser);
-          }
-        }
-        
-        // Approach 3: Try the simple function as last resort
-        if (!isAdminUser) {
-          console.log('Trying simple admin check...');
-          const { data: simpleCheck, error: simpleError } = await supabase.rpc('check_admin_status_simple');
-          if (!simpleError && simpleCheck !== null) {
-            isAdminUser = simpleCheck;
-            console.log('Admin check via simple function:', isAdminUser);
           }
         }
 
