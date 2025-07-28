@@ -6,12 +6,13 @@ import { Progress } from '@/components/ui/progress';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { User, Wallet, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot } from 'lucide-react';
+import { User, Wallet, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { supabase } from '@/integrations/supabase/client';
 import AuthModal from '@/components/AuthModal';
 import UserProfile from '@/components/UserProfile';
+import AdminPanel from '@/components/AdminPanel';
 
 import CoinflipGame from '@/components/CoinflipGame';
 import { RealtimeChat } from '@/components/RealtimeChat';
@@ -47,6 +48,7 @@ export default function Index({ initialGame }: IndexProps) {
   const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -351,6 +353,18 @@ export default function Index({ initialGame }: IndexProps) {
                 </Button>
               )}
 
+              {/* Admin Panel Button - Only show for authenticated users */}
+              {user && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowAdminPanel(true)}
+                  className="glass border-0 hover:glow-primary transition-smooth"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              )}
+
               {/* Enhanced Level Display - Only show for authenticated users */}
               {user && userData && (
                 <>
@@ -595,6 +609,12 @@ export default function Index({ initialGame }: IndexProps) {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
+      />
+
+      {/* Admin Panel Modal */}
+      <AdminPanel
+        isOpen={showAdminPanel}
+        onClose={() => setShowAdminPanel(false)}
       />
 
         {/* Live Level-Up Notifications - Only show for authenticated users */}
