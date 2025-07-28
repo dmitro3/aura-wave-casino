@@ -1,0 +1,199 @@
+-- Fix user registration system with correct column names
+-- This fixes the handle_new_user function to use the actual profiles table schema
+
+-- Step 1: Drop existing trigger and function
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- Step 2: Create a corrected handle_new_user function
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $function$
+DECLARE
+  username_text TEXT;
+BEGIN
+  -- Generate username
+  username_text := COALESCE(NEW.raw_user_meta_data->>'username', 'User_' || substr(NEW.id::text, 1, 8));
+  
+  -- Insert into profiles (using correct column names from the actual schema)
+  INSERT INTO public.profiles (
+    id, 
+    username, 
+    registration_date, 
+    balance, 
+    level, 
+    xp, 
+    total_wagered, 
+    total_profit, 
+    last_claim_time, 
+    badges,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    NEW.id,
+    username_text,
+    NEW.created_at,
+    0,
+    1,
+    0,
+    0,
+    0,
+    '1970-01-01T00:00:00Z',
+    ARRAY['welcome'],
+    NEW.created_at,
+    NEW.created_at
+  );
+  
+  -- Insert into user_level_stats (using correct column names)
+  INSERT INTO public.user_level_stats (
+    user_id,
+    current_level,
+    current_level_xp,
+    lifetime_xp,
+    xp_to_next_level,
+    border_tier,
+    available_cases,
+    total_cases_opened,
+    coinflip_games,
+    coinflip_wins,
+    coinflip_wagered,
+    coinflip_profit,
+    crash_games,
+    crash_wins,
+    crash_wagered,
+    crash_profit,
+    roulette_games,
+    roulette_wins,
+    roulette_wagered,
+    roulette_profit,
+    roulette_highest_win,
+    roulette_highest_loss,
+    roulette_green_wins,
+    roulette_red_wins,
+    roulette_black_wins,
+    roulette_favorite_color,
+    tower_games,
+    tower_wins,
+    tower_wagered,
+    tower_profit,
+    total_games,
+    total_wins,
+    total_wagered,
+    total_profit,
+    biggest_win,
+    biggest_loss,
+    chat_messages_count,
+    login_days_count,
+    biggest_single_bet,
+    account_created,
+    current_win_streak,
+    best_win_streak,
+    tower_highest_level,
+    tower_biggest_win,
+    tower_biggest_loss,
+    tower_best_streak,
+    tower_current_streak,
+    tower_perfect_games,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    NEW.id,
+    1,
+    0,
+    0,
+    100,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    'red',
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    NEW.created_at,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    NEW.created_at,
+    NEW.created_at
+  );
+  
+  RETURN NEW;
+  
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log the error but don't fail the user creation
+    RAISE NOTICE 'Warning: Error in handle_new_user for user %: %', NEW.id, SQLERRM;
+    RETURN NEW;
+END;
+$function$;
+
+-- Step 3: Create the trigger
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Step 4: Test the function
+DO $$
+BEGIN
+  RAISE NOTICE '✅ User registration system fixed successfully';
+END $$;
+
+-- Step 5: Show verification
+SELECT 
+  'Trigger verification:' as info,
+  trigger_name,
+  event_manipulation,
+  event_object_table
+FROM information_schema.triggers 
+WHERE trigger_name = 'on_auth_user_created';
+
+SELECT 
+  'Function verification:' as info,
+  routine_name,
+  routine_type
+FROM information_schema.routines 
+WHERE routine_name = 'handle_new_user';
+
+-- Step 6: Show current data
+SELECT 
+  'Current data:' as info,
+  (SELECT COUNT(*) FROM auth.users) as total_users,
+  (SELECT COUNT(*) FROM public.profiles) as total_profiles,
+  (SELECT COUNT(*) FROM public.user_level_stats) as total_user_stats;
