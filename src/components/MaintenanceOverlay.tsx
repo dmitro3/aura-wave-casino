@@ -67,16 +67,16 @@ export default function MaintenanceOverlay() {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 max-w-lg w-full text-center shadow-2xl border border-gray-200 dark:border-gray-700 relative overflow-hidden">
-          {/* Animated background gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 animate-pulse"></div>
+      <div className="fixed inset-0 bg-background/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="glass rounded-2xl p-8 max-w-lg w-full text-center shadow-glow border border-border relative overflow-hidden">
+          {/* Animated background gradient - matches site theme */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/10 animate-pulse-glow"></div>
           
           {/* Admin Access Button - Only show for admin users */}
           {user && !adminLoading && isAdmin && (
             <button
               onClick={() => setShowAdminPanel(true)}
-              className="absolute top-4 right-4 p-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105 z-10"
+              className="absolute top-4 right-4 p-3 gradient-primary text-white rounded-lg transition-all duration-200 flex items-center space-x-2 shadow-glow hover:shadow-xl transform hover:scale-105 z-10"
             >
               <Shield className="h-4 w-4" />
               <span className="text-sm font-medium">Admin</span>
@@ -85,53 +85,53 @@ export default function MaintenanceOverlay() {
           
           {/* Main content */}
           <div className="relative z-10">
-            {/* Icon with animated background */}
+            {/* Icon with animated background - matches site colors */}
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full blur-xl opacity-30 animate-pulse"></div>
-                <div className="relative bg-gradient-to-r from-yellow-400 to-orange-500 p-4 rounded-full shadow-lg">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-full blur-xl opacity-40 animate-pulse-glow"></div>
+                <div className="relative bg-gradient-to-r from-primary to-accent p-4 rounded-full shadow-glow">
                   <Wrench className="h-12 w-12 text-white" />
                 </div>
               </div>
             </div>
 
-            {/* Title with gradient text */}
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+            {/* Title with gradient text - matches site theme */}
+            <h1 className="text-4xl font-bold mb-4 gradient-primary bg-clip-text text-transparent">
               {maintenanceStatus?.maintenance_title || 'Under Maintenance'}
             </h1>
 
             {/* Message */}
-            <p className="text-gray-600 dark:text-gray-400 text-lg mb-6 leading-relaxed">
+            <p className="text-muted-foreground text-lg mb-6 leading-relaxed">
               {maintenanceStatus?.maintenance_message || 'Website is currently under maintenance. Please check back soon.'}
             </p>
 
-            {/* Status Info */}
+            {/* Status Info - matches site colors */}
             {maintenanceStatus?.started_at && (
-              <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-6 bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-800">
-                <Clock className="h-4 w-4 text-blue-500" />
+              <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground mb-6 bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
+                <Clock className="h-4 w-4 text-primary" />
                 <span>
                   Started: {new Date(maintenanceStatus.started_at).toLocaleString()}
                 </span>
               </div>
             )}
 
-            {/* Animated dots */}
+            {/* Animated dots - matches site color scheme */}
             <div className="flex justify-center space-x-2 mb-6">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-2 h-2 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-secondary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
             </div>
 
             {/* Auto-refresh notice */}
-            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <RefreshCw className="h-4 w-4 animate-spin" />
+            <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground mb-4">
+              <RefreshCw className="h-4 w-4 animate-spin text-accent" />
               <span>This page will automatically refresh when maintenance is complete.</span>
             </div>
 
-            {/* Admin notice for admin users */}
+            {/* Admin notice for admin users - matches site styling */}
             {user && !adminLoading && isAdmin && (
-              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <div className="mt-4 p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+                <p className="text-sm text-primary flex items-center justify-center">
                   <Shield className="h-4 w-4 mr-2" />
                   Admin access available - Click the Admin button to control maintenance mode.
                 </p>
