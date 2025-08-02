@@ -237,6 +237,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           description: `Security protocol activated on floor ${updatedGame.current_level + 1}. Access denied.`,
           variant: "destructive"
         });
+        
+        // Refresh XP and level stats after loss
+        refreshLevelStats();
+        triggerXPRefresh();
       } else if (updatedGame.status === 'cashed_out') {
         const newBalance = userData!.balance + updatedGame.final_payout!;
         await onUpdateUser({ balance: newBalance });
@@ -245,6 +249,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           title: "DATA EXTRACTION SUCCESSFUL",
           description: `Secured ${(updatedGame.final_payout || 0).toFixed(2)} credits from floor ${updatedGame.current_level}!`,
         });
+        
+        // Refresh XP and level stats after win
+        refreshLevelStats();
+        triggerXPRefresh();
       }
       
       refreshHistory();
@@ -294,6 +302,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         title: "SECURE EXTRACTION",
         description: `Successfully extracted ${(updatedGame.final_payout || 0).toFixed(2)} credits!`,
       });
+      
+      // Refresh XP and level stats after manual cash out
+      refreshLevelStats();
+      triggerXPRefresh();
       
       refreshHistory();
       
