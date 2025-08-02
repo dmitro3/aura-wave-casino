@@ -200,7 +200,7 @@ serve(async (req) => {
           });
         }
 
-        // Deduct bet from balance and update wagering + XP
+        // Deduct bet from balance
         const { error: balanceError } = await supabase
           .from('profiles')
           .update({ 
@@ -217,17 +217,7 @@ serve(async (req) => {
           });
         }
 
-        // Add wagering and XP using the new helper function
-        const { data: wagerResult, error: wagerError } = await supabase.rpc('add_wager_and_xp', {
-          user_uuid: user.id,
-          wager_amount: bet_amount
-        });
-
-        if (wagerError) {
-          console.error('❌ Wager/XP update error:', wagerError);
-        } else {
-          console.log(`✅ Added $${bet_amount} to total_wagered and ${wagerResult.xp_calculated} XP for tower bet`);
-        }
+        console.log(`✅ Deducted $${bet_amount} from balance for tower game start`);
 
         // Generate mine positions
         const minePositions = generateMinePositions(difficulty);
@@ -326,6 +316,15 @@ serve(async (req) => {
               }
             });
 
+          // Update user stats and XP for the loss
+          await supabase.rpc('update_user_stats_and_xp', {
+            p_user_id: user.id,
+            p_game_type: 'tower',
+            p_bet_amount: game.bet_amount,
+            p_profit: -game.bet_amount,
+            p_is_win: false
+          });
+
           console.log(`💥 Player hit mine at level ${game.current_level + 1}`);
 
           // Return updated game state
@@ -394,6 +393,15 @@ serve(async (req) => {
                   completed: true
                 }
               });
+
+            // Update user stats and XP for the win
+            await supabase.rpc('update_user_stats_and_xp', {
+              p_user_id: user.id,
+              p_game_type: 'tower',
+              p_bet_amount: game.bet_amount,
+              p_profit: finalPayout - game.bet_amount,
+              p_is_win: true
+            });
 
             console.log(`🏆 Player completed tower: ${finalPayout} at level ${nextLevel}`);
           } else {
@@ -486,6 +494,15 @@ serve(async (req) => {
               cashed_out: true
             }
           });
+
+        // Update user stats and XP for the cash out
+        await supabase.rpc('update_user_stats_and_xp', {
+          p_user_id: user.id,
+          p_game_type: 'tower',
+          p_bet_amount: game.bet_amount,
+          p_profit: payout - game.bet_amount,
+          p_is_win: true
+        });
 
         console.log(`💰 Player cashed out: ${payout} at level ${game.current_level}`);
 

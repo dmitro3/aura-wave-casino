@@ -173,16 +173,19 @@ serve(async (req) => {
       throw new Error('Failed to update user balance')
     }
 
-    // Add wagering and XP using the new helper function
-    const { data: wagerResult, error: wagerError } = await supabase.rpc('add_wager_and_xp', {
-      user_uuid: user.id,
-      wager_amount: bet_amount
+    // Update user stats and XP using the unified system
+    const { data: statsResult, error: statsError } = await supabase.rpc('update_user_stats_and_xp', {
+      p_user_id: user.id,
+      p_game_type: 'coinflip',
+      p_bet_amount: bet_amount,
+      p_profit: profit,
+      p_is_win: action === 'won'
     });
 
-    if (wagerError) {
-      console.error('❌ Wager/XP update error:', wagerError);
+    if (statsError) {
+      console.error('❌ Stats/XP update error:', statsError);
     } else {
-      console.log(`✅ Added $${bet_amount} to total_wagered and ${wagerResult.xp_calculated} XP for coinflip bet`);
+      console.log(`✅ Updated coinflip stats: $${bet_amount} wagered, $${profit} profit, ${statsResult.xp_added} XP added`);
     }
 
     // Add game record to history
