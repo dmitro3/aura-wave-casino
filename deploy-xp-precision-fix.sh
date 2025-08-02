@@ -20,7 +20,11 @@ echo "5. ✅ No more minimum bet restrictions for XP"
 echo ""
 
 # Apply database migration
-echo "📊 Applying XP precision fix..."
+echo "📊 Applying XP precision fix with view handling..."
+echo ""
+echo "🔧 MIGRATION: 20250102000007-fix-xp-precision-with-view-handling.sql"
+echo "This migration properly handles the user_data_view dependency"
+echo ""
 supabase db push --project-ref $PROJECT_REF
 
 if [ $? -eq 0 ]; then
