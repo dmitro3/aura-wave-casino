@@ -553,8 +553,6 @@ export type Database = {
           lifetime_xp: number
           registration_date: string
           total_cases_opened: number | null
-          total_profit: number
-          total_wagered: number
           updated_at: string
           username: string
           xp: number
@@ -574,8 +572,6 @@ export type Database = {
           lifetime_xp?: number
           registration_date?: string
           total_cases_opened?: number | null
-          total_profit?: number
-          total_wagered?: number
           updated_at?: string
           username: string
           xp?: number
@@ -595,8 +591,6 @@ export type Database = {
           lifetime_xp?: number
           registration_date?: string
           total_cases_opened?: number | null
-          total_profit?: number
-          total_wagered?: number
           updated_at?: string
           username?: string
           xp?: number

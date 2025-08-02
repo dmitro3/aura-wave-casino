@@ -317,7 +317,7 @@ serve(async (req) => {
             });
 
           // Update user stats and XP for the loss
-          await supabase.rpc('update_user_stats_and_xp', {
+          await supabase.rpc('update_user_level_stats', {
             p_user_id: user.id,
             p_game_type: 'tower',
             p_bet_amount: game.bet_amount,
@@ -395,7 +395,7 @@ serve(async (req) => {
               });
 
             // Update user stats and XP for the win
-            await supabase.rpc('update_user_stats_and_xp', {
+            await supabase.rpc('update_user_level_stats', {
               p_user_id: user.id,
               p_game_type: 'tower',
               p_bet_amount: game.bet_amount,
@@ -496,7 +496,7 @@ serve(async (req) => {
           });
 
         // Update user stats and XP for the cash out
-        await supabase.rpc('update_user_stats_and_xp', {
+        await supabase.rpc('update_user_level_stats', {
           p_user_id: user.id,
           p_game_type: 'tower',
           p_bet_amount: game.bet_amount,

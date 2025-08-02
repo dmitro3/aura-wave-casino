@@ -174,7 +174,7 @@ serve(async (req) => {
     }
 
     // Update user stats and XP using the unified system
-    const { data: statsResult, error: statsError } = await supabase.rpc('update_user_stats_and_xp', {
+    const { data: statsResult, error: statsError } = await supabase.rpc('update_user_level_stats', {
       p_user_id: user.id,
       p_game_type: 'coinflip',
       p_bet_amount: bet_amount,

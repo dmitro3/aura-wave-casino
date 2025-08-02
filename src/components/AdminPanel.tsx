@@ -183,8 +183,8 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
           id, 
           username, 
           balance, 
-          total_wagered, 
-          created_at
+          created_at,
+          user_level_stats!inner(total_wagered)
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
@@ -221,7 +221,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
             level: levelStats?.current_level || 1,
             xp: levelStats?.current_level_xp || 0,
             balance: user.balance || 0,
-            total_wagered: user.total_wagered || 0,
+            total_wagered: user.user_level_stats?.total_wagered || 0,
             created_at: user.created_at || ''
           };
         }));
