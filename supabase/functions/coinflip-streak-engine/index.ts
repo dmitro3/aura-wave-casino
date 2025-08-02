@@ -174,18 +174,22 @@ serve(async (req) => {
     }
 
     // Update user stats and XP using the unified system
-    const { data: statsResult, error: statsError } = await supabase.rpc('update_user_level_stats', {
-      p_user_id: user.id,
-      p_game_type: 'coinflip',
-      p_bet_amount: bet_amount,
-      p_profit: profit,
-      p_is_win: action === 'won'
-    });
+    try {
+      const { data: statsResult, error: statsError } = await supabase.rpc('update_user_level_stats', {
+        p_user_id: user.id,
+        p_game_type: 'coinflip',
+        p_bet_amount: bet_amount,
+        p_profit: profit,
+        p_is_win: action === 'won'
+      });
 
-    if (statsError) {
-      console.error('❌ Stats/XP update error:', statsError);
-    } else {
-      console.log(`✅ Updated coinflip stats: $${bet_amount} wagered, $${profit} profit, ${statsResult.xp_added} XP added`);
+      if (statsError) {
+        console.error('❌ Stats/XP update error:', statsError);
+      } else {
+        console.log(`✅ Updated coinflip stats: $${bet_amount} wagered, $${profit} profit, ${statsResult.xp_added} XP added`);
+      }
+    } catch (rpcError) {
+      console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
     }
 
     // Add game record to history

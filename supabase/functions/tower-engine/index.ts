@@ -317,13 +317,23 @@ serve(async (req) => {
             });
 
           // Update user stats and XP for the loss
-          await supabase.rpc('update_user_level_stats', {
-            p_user_id: user.id,
-            p_game_type: 'tower',
-            p_bet_amount: game.bet_amount,
-            p_profit: -game.bet_amount,
-            p_is_win: false
-          });
+          try {
+            const { error: statsError } = await supabase.rpc('update_user_level_stats', {
+              p_user_id: user.id,
+              p_game_type: 'tower',
+              p_bet_amount: game.bet_amount,
+              p_profit: -game.bet_amount,
+              p_is_win: false
+            });
+
+            if (statsError) {
+              console.error('❌ Stats update error (loss):', statsError);
+            } else {
+              console.log('✅ Stats updated for tower loss');
+            }
+          } catch (rpcError) {
+            console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
+          }
 
           console.log(`💥 Player hit mine at level ${game.current_level + 1}`);
 
@@ -395,13 +405,23 @@ serve(async (req) => {
               });
 
             // Update user stats and XP for the win
-            await supabase.rpc('update_user_level_stats', {
-              p_user_id: user.id,
-              p_game_type: 'tower',
-              p_bet_amount: game.bet_amount,
-              p_profit: finalPayout - game.bet_amount,
-              p_is_win: true
-            });
+            try {
+              const { error: statsError } = await supabase.rpc('update_user_level_stats', {
+                p_user_id: user.id,
+                p_game_type: 'tower',
+                p_bet_amount: game.bet_amount,
+                p_profit: finalPayout - game.bet_amount,
+                p_is_win: true
+              });
+
+              if (statsError) {
+                console.error('❌ Stats update error (win):', statsError);
+              } else {
+                console.log('✅ Stats updated for tower win');
+              }
+            } catch (rpcError) {
+              console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
+            }
 
             console.log(`🏆 Player completed tower: ${finalPayout} at level ${nextLevel}`);
           } else {
@@ -496,13 +516,23 @@ serve(async (req) => {
           });
 
         // Update user stats and XP for the cash out
-        await supabase.rpc('update_user_level_stats', {
-          p_user_id: user.id,
-          p_game_type: 'tower',
-          p_bet_amount: game.bet_amount,
-          p_profit: payout - game.bet_amount,
-          p_is_win: true
-        });
+        try {
+          const { error: statsError } = await supabase.rpc('update_user_level_stats', {
+            p_user_id: user.id,
+            p_game_type: 'tower',
+            p_bet_amount: game.bet_amount,
+            p_profit: payout - game.bet_amount,
+            p_is_win: true
+          });
+
+          if (statsError) {
+            console.error('❌ Stats update error (cash out):', statsError);
+          } else {
+            console.log('✅ Stats updated for tower cash out');
+          }
+        } catch (rpcError) {
+          console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
+        }
 
         console.log(`💰 Player cashed out: ${payout} at level ${game.current_level}`);
 
