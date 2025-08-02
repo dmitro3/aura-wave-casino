@@ -219,25 +219,6 @@ serve(async (req) => {
 
         console.log(`✅ Deducted $${bet_amount} from balance for tower game start`);
 
-        // Award XP and track wager immediately when bet is placed
-        try {
-          const { error: statsError } = await supabase.rpc('update_user_level_stats', {
-            p_user_id: user.id,
-            p_game_type: 'tower',
-            p_bet_amount: bet_amount,
-            p_profit: 0, // No profit/loss yet, just tracking the wager
-            p_is_win: false // Neutral - not a win or loss, just placing the bet
-          });
-
-          if (statsError) {
-            console.error('❌ Stats update error (bet placed):', statsError);
-          } else {
-            console.log('✅ XP awarded and wager tracked for tower bet placement');
-          }
-        } catch (rpcError) {
-          console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
-        }
-
         // Generate mine positions
         const minePositions = generateMinePositions(difficulty);
         const config = DIFFICULTY_CONFIGS[difficulty];
@@ -335,20 +316,20 @@ serve(async (req) => {
               }
             });
 
-          // Update user stats for the loss outcome (wager already tracked at game start)
+          // Update user stats and XP for the loss
           try {
             const { error: statsError } = await supabase.rpc('update_user_level_stats', {
               p_user_id: user.id,
               p_game_type: 'tower',
-              p_bet_amount: 0, // Don't double-count the wager
-              p_profit: -game.bet_amount, // Track the loss
+              p_bet_amount: game.bet_amount,
+              p_profit: -game.bet_amount,
               p_is_win: false
             });
 
             if (statsError) {
               console.error('❌ Stats update error (loss):', statsError);
             } else {
-              console.log('✅ Loss outcome recorded for tower game');
+              console.log('✅ Stats updated for tower loss');
             }
           } catch (rpcError) {
             console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
@@ -423,20 +404,20 @@ serve(async (req) => {
                 }
               });
 
-            // Update user stats for the win outcome (wager already tracked at game start)
+            // Update user stats and XP for the win
             try {
               const { error: statsError } = await supabase.rpc('update_user_level_stats', {
                 p_user_id: user.id,
                 p_game_type: 'tower',
-                p_bet_amount: 0, // Don't double-count the wager
-                p_profit: finalPayout - game.bet_amount, // Track the profit
+                p_bet_amount: game.bet_amount,
+                p_profit: finalPayout - game.bet_amount,
                 p_is_win: true
               });
 
               if (statsError) {
                 console.error('❌ Stats update error (win):', statsError);
               } else {
-                console.log('✅ Win outcome recorded for tower completion');
+                console.log('✅ Stats updated for tower win');
               }
             } catch (rpcError) {
               console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
