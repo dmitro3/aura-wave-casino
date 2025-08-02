@@ -124,12 +124,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const balanceRef = useRef<number>(0);
   const lastResultsFetchRef = useRef<number>(0);
 
-  // Smart polling optimization refs
-  const lastGameStateFetch = useRef<number>(0);
-  const consecutiveNoChanges = useRef<number>(0);
-  const isUserActivelyPlaying = useRef<boolean>(false);
-  const pollingIntervalRef = useRef<number>(2000); // Dynamic polling interval
-
   // Update balance ref when profile changes
   useEffect(() => {
     if (profile?.balance !== undefined) {
@@ -204,172 +198,105 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         
         userBetsRef.current = {};
         currentRoundRef.current = data?.id || null;
-        setWinningColor(null); // Clear winning color for new round
-        setExtendedWinAnimation(false); // Clear extended win animation for new round
-        
-        // Fetch bets for the new round
-        if (data?.id) {
-          fetchRoundBets(data.id);
-        }
+        setBetTotals({
+          green: { total: 0, count: 0, users: [] },
+          red: { total: 0, count: 0, users: [] },
+          black: { total: 0, count: 0, users: [] }
+        });
       }
       
       setCurrentRound(data);
-    } catch (error) {
-      console.error('❌ Error fetching current round:', error);
+      
+      // Fetch bets for this round
+      if (data?.id) {
+        fetchRoundBets(data.id);
+      }
+    } catch (error: any) {
+      // Only log the error, don't spam console or show toasts for edge function failures
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to fetch current round:', error.message || error);
+      }
     }
   };
 
-  // Fetch round bets
+  // Fetch bets for current round
   const fetchRoundBets = async (roundId: string) => {
-    if (!roundId) return;
-
     try {
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_round_bets', roundId }
       });
 
       if (error) throw error;
+      
+
       setRoundBets(data || []);
+      calculateBetTotals(data || []);
       
-      // Calculate bet totals
-      const totals: BetTotals = {
-        green: { total: 0, count: 0, users: [] },
-        red: { total: 0, count: 0, users: [] },
-        black: { total: 0, count: 0, users: [] }
-      };
-      
-      (data || []).forEach((bet: RouletteBet) => {
-        const color = bet.bet_color as keyof BetTotals;
-        if (totals[color]) {
-          totals[color].total += bet.bet_amount;
-          totals[color].count += 1;
-          totals[color].users.push(bet);
+      // Calculate user's bets for this round from database
+      if (user) {
+        const userRoundBets = (data || []).filter((bet: RouletteBet) => bet.user_id === user.id);
+        const dbUserBets: Record<string, number> = {};
+        userRoundBets.forEach((bet: RouletteBet) => {
+          dbUserBets[bet.bet_color] = (dbUserBets[bet.bet_color] || 0) + bet.bet_amount;
+        });
+
+        
+        // Only update user bets if there's actually a difference to prevent flickering
+        const currentBets = userBetsRef.current;
+        const hasChanges = Object.keys(dbUserBets).some(color => 
+          dbUserBets[color] !== (currentBets[color] || 0)
+        ) || Object.keys(currentBets).some(color =>
+          (currentBets[color] || 0) !== (dbUserBets[color] || 0)
+        );
+        
+        if (hasChanges || Object.keys(currentBets).length === 0) {
+          setUserBets(dbUserBets);
+          userBetsRef.current = dbUserBets;
+          
+          // DO NOT sync isolated totals with database - keep them completely isolated
         }
-      });
-      
-      setBetTotals(totals);
-    } catch (error) {
-      console.error('❌ Error fetching round bets:', error);
+      }
+    } catch (error: any) {
+      // Only log in development, don't spam console
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to fetch round bets:', error.message || error);
+      }
     }
   };
 
-  // Fetch recent results with optional force flag
-  const fetchRecentResults = async (force = false) => {
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastResultsFetchRef.current;
-    
-    // Rate limit to once per 2 seconds unless forced
-    if (!force && timeSinceLastFetch < 2000) {
-      return;
-    }
-    
+  // Fetch recent results
+  const fetchRecentResults = async (forceRefresh = false) => {
     try {
+      const now = Date.now();
+      
+      // Prevent over-fetching (unless forced) - max once per 2 seconds
+      if (!forceRefresh && now - lastResultsFetchRef.current < 2000) {
+        return;
+      }
+      
+      lastResultsFetchRef.current = now;
+      
       const { data, error } = await supabase.functions.invoke('roulette-engine', {
         body: { action: 'get_recent_results' }
       });
 
       if (error) throw error;
       
-      lastResultsFetchRef.current = now;
-      setRecentResults(data || []);
-    } catch (error) {
-      console.error('❌ Error fetching recent results:', error);
+      // 🛡️ DEDUPLICATION: Remove duplicates by round_number (same as Provably Fair History)
+      const uniqueResults = data ? data.filter((result: RouletteResult, index: number, self: RouletteResult[]) => 
+        index === self.findIndex(r => r.round_number === result.round_number)
+      ) : [];
+      
+      setRecentResults(uniqueResults);
+    } catch (error: any) {
+      // Only log in development, don't spam console
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to fetch recent results:', error.message || error);
+      }
     }
   };
 
-  // OPTIMIZED: Batched game state fetching with smart caching
-  const fetchGameState = async (includeRecentResults = true, skipIfRecent = false) => {
-    const now = Date.now();
-    
-    // Skip if recent fetch (within 500ms) and skipIfRecent is true
-    if (skipIfRecent && (now - lastGameStateFetch.current) < 500) {
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('roulette-engine', {
-        body: { 
-          action: 'get_game_state',
-          roundId: currentRound?.id,
-          includeRecentResults
-        }
-      });
 
-      if (error) throw error;
-      
-      lastGameStateFetch.current = now;
-      
-      const { currentRound: newRound, roundBets, recentResults } = data;
-      
-      // Check if anything actually changed
-      const roundChanged = currentRound?.id !== newRound?.id || 
-                          currentRound?.status !== newRound?.status ||
-                          currentRound?.result_slot !== newRound?.result_slot;
-      const betsChanged = roundBets && roundBets.length !== roundBets.length;
-      
-      if (roundChanged || betsChanged) {
-        consecutiveNoChanges.current = 0;
-        pollingIntervalRef.current = Math.max(1000, pollingIntervalRef.current - 200); // Speed up when changes occur
-      } else {
-        consecutiveNoChanges.current++;
-        if (consecutiveNoChanges.current > 3) {
-          pollingIntervalRef.current = Math.min(5000, pollingIntervalRef.current + 500); // Slow down when no changes
-        }
-      }
-      
-      // Handle round updates
-      if (newRound) {
-        const isNewRound = currentRound?.id !== newRound.id;
-        
-        if (isNewRound) {
-          setUserBets({});
-          
-          if (isolatedRoundId !== newRound.id) {
-            setIsolatedRoundTotals({});
-            setIsolatedRoundId(newRound.id);
-          }
-          
-          userBetsRef.current = {};
-          currentRoundRef.current = newRound.id;
-          setWinningColor(null);
-          setExtendedWinAnimation(false);
-        }
-        
-        setCurrentRound(newRound);
-      }
-      
-      // Handle bets updates
-      if (roundBets) {
-        setRoundBets(roundBets);
-        
-        // Calculate bet totals
-        const totals: BetTotals = {
-          green: { total: 0, count: 0, users: [] },
-          red: { total: 0, count: 0, users: [] },
-          black: { total: 0, count: 0, users: [] }
-        };
-        
-        roundBets.forEach((bet: RouletteBet) => {
-          const color = bet.bet_color as keyof BetTotals;
-          if (totals[color]) {
-            totals[color].total += bet.bet_amount;
-            totals[color].count += 1;
-            totals[color].users.push(bet);
-          }
-        });
-        
-        setBetTotals(totals);
-      }
-      
-      // Handle recent results updates
-      if (recentResults && includeRecentResults) {
-        setRecentResults(recentResults);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error fetching game state:', error);
-    }
-  };
 
   // Open provably fair history modal
   const openProvablyFairModal = () => {
@@ -466,8 +393,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
   // Real-time subscriptions
   useEffect(() => {
-    if (!user) return;
-
     // Subscribe to round updates
     const roundSubscription = supabase
       .channel(`roulette_rounds_${Date.now()}`)
@@ -504,7 +429,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           
           setCurrentRound(round);
           
-          // Handle different scenarios with reduced fetching
+          // Handle different scenarios
           if (isNewRound) {
             setUserBets({});
             
@@ -518,18 +443,43 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
             currentRoundRef.current = round.id;
             setWinningColor(null); // Clear winning color for new round
             setExtendedWinAnimation(false); // Clear extended win animation for new round
-            
-            // Use batched fetch for new rounds
-            fetchGameState(false); // Don't fetch recent results on every round change
+            fetchRoundBets(round.id);
+          } else if (round.status === 'betting' && oldRound?.status !== 'betting') {
+            fetchRoundBets(round.id);
+          } else if (round.status === 'spinning' && oldRound?.status === 'betting') {
+            fetchRoundBets(round.id);
           } else if (round.status === 'completed') {
-            // Only update recent results when round becomes completed
-            fetchRecentResults(true);
+            fetchRoundBets(round.id);
+            
+            // IMPROVED: Always update recent results when ANY round becomes completed
+            // This handles all possible completion scenarios
+            if (round.status === 'completed') {
+              // Immediate update for responsiveness (forced)
+              fetchRecentResults(true);
+              
+              // Also update after delay to ensure DB consistency
+              setTimeout(() => fetchRecentResults(true), 500);
+            }
           }
         }
       })
       .subscribe();
 
-    // Subscribe to bet updates for live feed - reduced frequency
+    // Additional subscription for newly inserted completed rounds (edge case handling)
+    const completedRoundsSubscription = supabase
+      .channel(`completed_roulette_rounds_${Date.now()}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'roulette_rounds',
+        filter: 'status=eq.completed'
+      }, (payload) => {
+        // Immediate update for new completed rounds (forced)
+        fetchRecentResults(true);
+      })
+      .subscribe();
+
+    // Subscribe to bet updates for live feed
     const betSubscription = supabase
       .channel(`roulette_bets_${Date.now()}`)
       .on('postgres_changes', {
@@ -537,16 +487,21 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         schema: 'public',
         table: 'roulette_bets'
       }, (payload) => {
-        // Only refresh if it's for the current round and use smart batching
-        if (currentRound?.id && payload.new?.round_id === currentRound.id) {
-          fetchGameState(false, true); // Skip if recent, don't fetch recent results
+        // Always refresh bets to show live updates for all users
+        if (currentRound?.id) {
+          fetchRoundBets(currentRound.id);
         }
       })
       .subscribe();
+
+    // Subscribe to results updates - REMOVED: No longer needed since we use roulette_rounds
+    // The round subscription already handles result updates
     
     return () => {
       roundSubscription.unsubscribe();
+      completedRoundsSubscription.unsubscribe();
       betSubscription.unsubscribe();
+      // resultsSubscription.unsubscribe(); - REMOVED
     };
   }, [user, currentRound?.id]);
 
@@ -567,39 +522,18 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   useEffect(() => {
     const initializeGame = async () => {
       setLoading(true);
-      await fetchGameState(true); // Use batched fetch for initial load
+      await Promise.all([
+        fetchCurrentRound(),
+        fetchRecentResults()
+      ]);
       setLoading(false);
     };
 
     initializeGame();
 
-    // Smart polling with dynamic intervals
-    const smartPolling = () => {
-      const currentInterval = pollingIntervalRef.current;
-      
-      // Reduce polling when user hasn't been active for 30 seconds
-      if (isUserActivelyPlaying.current) {
-        const timeSinceActivity = Date.now() - lastBetTime;
-        if (timeSinceActivity > 30000) { // 30 seconds
-          isUserActivelyPlaying.current = false;
-          pollingIntervalRef.current = Math.min(4000, pollingIntervalRef.current + 1000);
-        }
-      }
-      
-      // Fetch with recent results only occasionally (every 4th poll)
-      const shouldFetchResults = Math.random() < 0.25; // 25% chance
-      fetchGameState(shouldFetchResults, true);
-      
-      // Schedule next poll with current interval
-      setTimeout(smartPolling, currentInterval);
-    };
-
-    // Start smart polling
-    const pollTimeout = setTimeout(smartPolling, 2000);
-    
-    return () => {
-      clearTimeout(pollTimeout);
-    };
+    // Refresh current round every 2 seconds
+    const refreshInterval = setInterval(fetchCurrentRound, 2000);
+    return () => clearInterval(refreshInterval);
   }, []);
 
   // Handle round payout (Fetch updated balance from backend)
@@ -728,30 +662,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   };
 
-  // Place bet with comprehensive security
+  // Place bet
   const placeBet = async (color: string) => {
-    if (!user || !profile || !currentRound || isMaintenanceMode) {
-      if (isMaintenanceMode) {
-        toast({
-          title: "Maintenance Mode",
-          description: "The system is currently in maintenance mode. Please try again later.",
-          variant: "destructive"
-        });
-      }
-      return;
-    }
-
-    // Track user activity for smart polling
-    isUserActivelyPlaying.current = true;
-    pollingIntervalRef.current = Math.max(1000, pollingIntervalRef.current - 500); // Speed up polling when user is active
-
-    // SECURITY: Rate limiting check
-    const now = Date.now();
-    if (now - lastBetTime < MIN_BET_INTERVAL) {
+    // MAINTENANCE CHECK: Prevent betting during maintenance
+    if (isMaintenanceMode) {
       toast({
-        title: "Please wait",
-        description: `Please wait ${Math.ceil((MIN_BET_INTERVAL - (now - lastBetTime)) / 1000)} seconds before placing another bet.`,
-        variant: "destructive"
+        title: "SYSTEM MAINTENANCE",
+        description: "Game temporarily offline for upgrades",
+        variant: "warning",
       });
       return;
     }
