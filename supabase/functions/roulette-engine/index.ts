@@ -928,29 +928,31 @@ async function completeRound(supabase: any, round: any) {
     // Process each bet
     for (const bet of bets || []) {
       try {
-        // Calculate if this bet won - only check bet_color since bet_slot is not used
-        const isWin = bet.bet_color === round.result_color;
+        // Calculate if this bet won
+        const isWin = bet.bet_color === round.result_color || bet.bet_slot === round.result_slot;
         let payout = 0;
         let profit = -bet.bet_amount; // Default to loss
-        
-        console.log(`🎯 Processing bet ${bet.id}: ${bet.bet_color} vs ${round.result_color} = ${isWin ? 'WIN' : 'LOSS'}`);
 
         if (isWin) {
-          // Calculate payout based on bet color
-          if (bet.bet_color === 'green') {
-            // Green bet wins 14x
-            payout = bet.bet_amount * 14;
-          } else {
-            // Red/Black bet wins 2x
-            payout = bet.bet_amount * 2;
+          // Calculate payout based on bet type
+          if (bet.bet_color && bet.bet_color === round.result_color) {
+            // Color bet win - check if it's green for higher multiplier
+            if (bet.bet_color === 'green') {
+              payout = bet.bet_amount * 14; // 14x multiplier for green bets
+            } else {
+              payout = bet.bet_amount * 2; // 2x multiplier for red/black bets
+            }
+            profit = payout - bet.bet_amount;
+          } else if (bet.bet_slot && bet.bet_slot === round.result_slot) {
+            // Slot bet win (green 0 slot)
+            payout = bet.bet_amount * 14; // 14x multiplier for slot bet
+            profit = payout - bet.bet_amount;
           }
-          profit = payout - bet.bet_amount;
           winners_processed++;
-          console.log(`💰 Winner! Payout: ${payout}, Profit: ${profit}`);
         }
 
         // Update the bet record with result
-        const updateResult = await supabase
+        await supabase
           .from('roulette_bets')
           .update({
             result: isWin ? 'win' : 'loss',
@@ -960,12 +962,6 @@ async function completeRound(supabase: any, round: any) {
             updated_at: new Date().toISOString()
           })
           .eq('id', bet.id);
-          
-        if (updateResult.error) {
-          console.error(`❌ Error updating bet ${bet.id}:`, updateResult.error);
-        } else {
-          console.log(`✅ Updated bet ${bet.id}: is_winner=${isWin}, profit=${profit}, payout=${payout}`);
-        }
 
         // Update user balance (add payout to current balance)
         if (payout > 0) {
