@@ -124,7 +124,17 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
       if (betsError) {
         console.error('❌ Bets error:', betsError);
       } else {
-        console.log('✅ User bets:', bets);
+        console.log('✅ User bets raw data:', bets);
+        // Debug: Log each bet's profit and actual_payout values
+        bets?.forEach((bet, index) => {
+          console.log(`Bet ${index}:`, {
+            bet_amount: bet.bet_amount,
+            actual_payout: bet.actual_payout,
+            profit: bet.profit,
+            is_winner: bet.is_winner,
+            calculated_profit: (bet.actual_payout || 0) - bet.bet_amount
+          });
+        });
         setUserBets(bets || []);
       }
 
@@ -359,24 +369,45 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {userBets.map((bet, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
-                        <div className="flex items-center gap-2">
-                          <Badge className={`${bet.bet_color === 'green' ? 'bg-emerald-500' : bet.bet_color === 'red' ? 'bg-red-500' : 'bg-gray-700'}`}>
-                            {bet.bet_color.toUpperCase()}
-                          </Badge>
-                          <span>Bet: ${bet.bet_amount}</span>
+                    {userBets.map((bet, index) => {
+                      // Calculate profit with multiple fallbacks for different data states
+                      let calculatedProfit;
+                      
+                      if (bet.profit !== null && bet.profit !== undefined && bet.profit !== 0) {
+                        // Use stored profit if it exists and isn't default 0
+                        calculatedProfit = bet.profit;
+                      } else if (bet.actual_payout !== null && bet.actual_payout !== undefined) {
+                        // Calculate from actual_payout if available
+                        calculatedProfit = bet.actual_payout - bet.bet_amount;
+                      } else if (bet.is_winner && roundData) {
+                        // For winners, calculate expected payout based on bet type
+                        const multiplier = bet.bet_color === 'green' ? 14 : 2;
+                        const expectedPayout = bet.bet_amount * multiplier;
+                        calculatedProfit = expectedPayout - bet.bet_amount;
+                      } else {
+                        // Default to loss (negative bet amount)
+                        calculatedProfit = -bet.bet_amount;
+                      }
+                      
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${bet.bet_color === 'green' ? 'bg-emerald-500' : bet.bet_color === 'red' ? 'bg-red-500' : 'bg-gray-700'}`}>
+                              {bet.bet_color.toUpperCase()}
+                            </Badge>
+                            <span>Bet: ${bet.bet_amount}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={bet.is_winner ? 'default' : 'destructive'}>
+                              {bet.is_winner ? 'WON' : 'LOST'}
+                            </Badge>
+                            <span className={calculatedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                              {calculatedProfit >= 0 ? '+' : ''}${calculatedProfit.toFixed(2)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={bet.is_winner ? 'default' : 'destructive'}>
-                            {bet.is_winner ? 'WON' : 'LOST'}
-                          </Badge>
-                          <span className={bet.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                            {bet.profit >= 0 ? '+' : ''}${bet.profit.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
