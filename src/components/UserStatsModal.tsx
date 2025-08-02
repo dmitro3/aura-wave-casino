@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatXP, formatXPProgress, calculateXPProgress } from '@/lib/xpUtils';
+import { calculateAccurateXPProgress } from '@/lib/levelRequirements';
 
 
 interface Achievement {
@@ -158,14 +159,20 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
       })) || [];
 
       // Use level stats if available, otherwise fallback to profile
+      const currentLevel = levelStats?.current_level || 1;
+      const lifetimeXP = levelStats?.lifetime_xp || 0;
+      
+      // Calculate accurate XP progress using fixed level requirements
+      const accurateProgress = calculateAccurateXPProgress(currentLevel, lifetimeXP);
+      
       const stats: UserStats = {
         id: profile.id,
         username: profile.username,
         registration_date: profile.registration_date,
-        current_level: levelStats?.current_level || 1,
-        lifetime_xp: levelStats?.lifetime_xp || 0,
-        current_xp: levelStats?.current_level_xp || 0,
-        xp_to_next_level: levelStats?.xp_to_next_level || 100,
+        current_level: currentLevel,
+        lifetime_xp: lifetimeXP,
+        current_xp: accurateProgress.current_level_xp,
+        xp_to_next_level: accurateProgress.xp_to_next_level,
         badges: profile.badges || [],
         total_wagered: levelStats?.total_wagered || 0,
         total_profit: levelStats?.total_profit || 0,

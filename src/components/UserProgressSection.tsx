@@ -6,6 +6,7 @@ import { Trophy, Target, TrendingUp, TrendingDown, Gift, Crown } from 'lucide-re
 import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { formatXP, formatXPProgress, calculateXPProgress } from '@/lib/xpUtils';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
+import { calculateAccurateXPProgress } from '@/lib/levelRequirements';
 import { ProfileBorder } from './ProfileBorder';
 import { EnhancedLevelBadge } from './EnhancedLevelBadge';
 
@@ -49,7 +50,9 @@ export function UserProgressSection() {
     );
   }
 
-  const progressPercentage = calculateXPProgress(levelStats.current_level_xp, levelStats.xp_to_next_level);
+  // Calculate accurate XP progress using fixed level requirements
+  const accurateProgress = calculateAccurateXPProgress(levelStats.current_level, levelStats.lifetime_xp);
+  const progressPercentage = calculateXPProgress(accurateProgress.current_level_xp, accurateProgress.xp_to_next_level);
 
   const overallWinRate = stats.total_games > 0 ? (stats.total_wins / stats.total_games) * 100 : 0;
 
@@ -76,8 +79,8 @@ export function UserProgressSection() {
                 level={levelStats.current_level} 
                 size="lg" 
                 showProgress={true}
-                currentXP={levelStats.current_level_xp}
-                xpToNext={levelStats.xp_to_next_level}
+                            currentXP={accurateProgress.current_level_xp}
+            xpToNext={accurateProgress.xp_to_next_level}
               />
             </div>
           </div>
@@ -86,7 +89,7 @@ export function UserProgressSection() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>XP Progress</span>
-              <span>{formatXPProgress(levelStats.current_level_xp, levelStats.current_level_xp + levelStats.xp_to_next_level)}</span>
+                              <span>{formatXPProgress(accurateProgress.current_level_xp, accurateProgress.current_level_xp + accurateProgress.xp_to_next_level)}</span>
             </div>
             <Progress value={progressPercentage} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">

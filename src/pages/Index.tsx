@@ -25,6 +25,7 @@ import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
 import { useXPSync } from '@/contexts/XPSyncContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { calculateAccurateXPProgress } from '@/lib/levelRequirements';
 import { useBalanceAnimation } from '@/hooks/useBalanceAnimation';
 import { FloatingBalanceIncrease } from '@/components/FloatingBalanceIncrease';
 import { AnimatedBalance } from '@/components/AnimatedBalance';
@@ -644,12 +645,20 @@ export default function Index({ initialGame }: IndexProps) {
 
 
   // Use user_level_stats as the single source of truth for level and XP data
-  const effectiveStats = {
-    current_level: userData?.levelStats?.current_level || userLevelStats?.current_level || 1,
-    lifetime_xp: userData?.levelStats?.lifetime_xp || userLevelStats?.lifetime_xp || 0,
-    current_level_xp: userData?.levelStats?.current_level_xp || userLevelStats?.current_level_xp || 0,
-    xp_to_next_level: userData?.levelStats?.xp_to_next_level || userLevelStats?.xp_to_next_level || 100
-  };
+  const effectiveStats = useMemo(() => {
+    const currentLevel = userData?.levelStats?.current_level || userLevelStats?.current_level || 1;
+    const lifetimeXP = userData?.levelStats?.lifetime_xp || userLevelStats?.lifetime_xp || 0;
+    
+    // Calculate accurate XP progress using fixed level requirements
+    const accurateProgress = calculateAccurateXPProgress(currentLevel, lifetimeXP);
+    
+    return {
+      current_level: currentLevel,
+      lifetime_xp: lifetimeXP,
+      current_level_xp: accurateProgress.current_level_xp,
+      xp_to_next_level: accurateProgress.xp_to_next_level
+    };
+  }, [userData?.levelStats, userLevelStats]);
 
   // Get current level XP from user_level_stats table
   const displayCurrentLevelXP = useMemo(() => {

@@ -3,6 +3,7 @@ import { ProfileBorder } from './ProfileBorder';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
 import { formatXPProgress } from '@/lib/xpUtils';
+import { calculateAccurateXPProgress } from '@/lib/levelRequirements';
 
 interface UserLevelDisplayProps {
   username: string;
@@ -24,6 +25,9 @@ export function UserLevelDisplay({ username, showXP = false, size = 'sm', classN
       </div>
     );
   }
+
+  // Calculate accurate XP progress using fixed level requirements
+  const accurateProgress = calculateAccurateXPProgress(levelStats.current_level, levelStats.lifetime_xp);
 
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -71,7 +75,7 @@ export function UserLevelDisplay({ username, showXP = false, size = 'sm', classN
         
         {showXP && (
           <div className="text-xs text-muted-foreground">
-            {formatXPProgress(levelStats.current_level_xp, levelStats.current_level_xp + levelStats.xp_to_next_level)}
+            {formatXPProgress(accurateProgress.current_level_xp, accurateProgress.current_level_xp + accurateProgress.xp_to_next_level)}
           </div>
         )}
       </div>
