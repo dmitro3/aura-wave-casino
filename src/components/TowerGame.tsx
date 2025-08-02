@@ -112,8 +112,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const [selectedTiles, setSelectedTiles] = useState<number[]>([]); // Track selected tile at each level
   const { toast } = useToast();
   const { isMaintenanceMode } = useMaintenance();
-  const { refreshLevelStats } = useLevelSync();
-  const { triggerXPRefresh } = useXPSync();
+  const { forceRefresh } = useLevelSync();
+  const { forceFullRefresh } = useXPSync();
   
   const { history: gameHistory, refetch: refreshHistory } = useGameHistory('tower');
   const { recentBets } = useRealtimeFeeds();

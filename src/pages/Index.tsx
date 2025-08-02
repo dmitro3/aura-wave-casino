@@ -645,9 +645,10 @@ export default function Index({ initialGame }: IndexProps) {
 
 
   // Use user_level_stats as the single source of truth for level and XP data
+  // Prioritize real-time levelStats from LevelSyncContext for live updates
   const effectiveStats = useMemo(() => {
-    const currentLevel = userData?.levelStats?.current_level || userLevelStats?.current_level || 1;
-    const lifetimeXP = userData?.levelStats?.lifetime_xp || userLevelStats?.lifetime_xp || 0;
+    const currentLevel = levelStats?.current_level || userData?.levelStats?.current_level || userLevelStats?.current_level || 1;
+    const lifetimeXP = levelStats?.lifetime_xp || userData?.levelStats?.lifetime_xp || userLevelStats?.lifetime_xp || 0;
     
     // Calculate accurate XP progress using fixed level requirements
     const accurateProgress = calculateAccurateXPProgress(currentLevel, lifetimeXP);
@@ -658,7 +659,7 @@ export default function Index({ initialGame }: IndexProps) {
       current_level_xp: accurateProgress.current_level_xp,
       xp_to_next_level: accurateProgress.xp_to_next_level
     };
-  }, [userData?.levelStats, userLevelStats]);
+  }, [levelStats, userData?.levelStats, userLevelStats]);
 
   // Get current level XP from user_level_stats table
   const displayCurrentLevelXP = useMemo(() => {
