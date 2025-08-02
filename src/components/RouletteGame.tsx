@@ -571,25 +571,22 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
       console.log(`💰 Round results: Bet ${totalBetAmount}, Profit ${totalProfit}, Win: ${isWin}`);
 
-      // Update user statistics using the proper function
+      // Update user statistics using the unified function
       console.log('📊 Updating roulette statistics with:', {
         user_id: user.id,
         game_type: 'roulette',
         bet_amount: totalBetAmount,
-        result: isWin ? 'win' : 'loss',
         profit: totalProfit,
-        winning_color: completedRound.result_color,
-        bet_colors: userBetsInRound.map(([color, _]) => color).join(',') // Multiple colors if user bet on multiple
+        is_win: isWin,
+        winning_color: completedRound.result_color
       });
 
-      const { data: statsResult, error: statsError } = await supabase.rpc('update_user_stats_and_level', {
+      const { data: statsResult, error: statsError } = await supabase.rpc('update_user_level_stats', {
         p_user_id: user.id,
         p_game_type: 'roulette',
         p_bet_amount: totalBetAmount,
-        p_result: isWin ? 'win' : 'loss',
         p_profit: totalProfit,
-        p_winning_color: completedRound.result_color,
-        p_bet_color: userBetsInRound.map(([color, _]) => color).join(',') // Multiple colors if user bet on multiple
+        p_is_win: isWin
       });
 
       if (statsError) {
@@ -642,6 +639,14 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         await onUpdateUser({
           balance: newBalance
         });
+
+        // Refresh XP and level stats after round completion (for both wins and losses)
+        try {
+          await forceFullRefresh();
+          console.log('✅ XP and level stats refreshed after roulette round');
+        } catch (refreshError) {
+          console.error('❌ Error refreshing XP stats:', refreshError);
+        }
 
         // Show appropriate notification
         if (balanceDifference > 0) {
