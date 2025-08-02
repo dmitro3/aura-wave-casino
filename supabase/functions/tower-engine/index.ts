@@ -178,10 +178,10 @@ serve(async (req) => {
         console.log('✅ TOWER ENGINE: Input validation passed');
         
         // Check user balance
-        // Get user profile with balance and wagering info
+        // Get user profile with balance info
         const { data: userProfile, error: userError } = await supabase
           .from('profiles')
-          .select('id, balance, total_wagered')
+          .select('id, balance')
           .eq('id', user.id)
           .single();
 

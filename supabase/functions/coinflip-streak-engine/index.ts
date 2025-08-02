@@ -148,7 +148,7 @@ serve(async (req) => {
     // Get current user stats for calculations
     const { data: userData, error: userError } = await supabase
       .from('profiles')
-      .select('balance, total_wagered, total_profit')
+      .select('balance')
       .eq('id', user.id)
       .single()
 
@@ -157,13 +157,12 @@ serve(async (req) => {
       throw new Error('Failed to get user data')
     }
 
-    // Update user balance and wagering + XP
+    // Update user balance
     const newBalance = userData.balance + profit
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
         balance: newBalance,
-        total_profit: userData.total_profit + profit,
         updated_at: new Date().toISOString()
       })
       .eq('id', user.id)
@@ -221,29 +220,7 @@ serve(async (req) => {
       console.error('❌ Error adding game history:', historyError)
     }
 
-    // Update game stats
-    const existingStats = await supabase
-      .from('game_stats')
-      .select('wins, losses, total_profit')
-      .eq('user_id', user.id)
-      .eq('game_type', 'coinflip')
-      .single()
-
-    if (existingStats.data) {
-      const { error: statsError } = await supabase
-        .from('game_stats')
-        .update({
-          wins: existingStats.data.wins + (won ? 1 : 0),
-          losses: existingStats.data.losses + (won ? 0 : 1),
-          total_profit: existingStats.data.total_profit + profit
-        })
-        .eq('user_id', user.id)
-        .eq('game_type', 'coinflip')
-
-      if (statsError) {
-        console.error('❌ Error updating game stats:', statsError)
-      }
-    }
+    // Note: Game stats are now tracked in user_level_stats via update_user_level_stats() function
 
     const response: CoinflipResponse = {
       success: true,
