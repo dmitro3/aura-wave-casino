@@ -905,33 +905,140 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
 
 async function completeRound(supabase: any, round: any) {
   console.log(`🏁 Completing round ${round.id} with result: ${round.result_color} ${round.result_slot}`);
-  console.log('🔍 Using new complete_roulette_round function for comprehensive processing');
+  console.log('🔍 Using unified stats system for comprehensive processing');
 
   try {
-    // Use the database function to handle all round completion logic including XP
-    const { data: result, error } = await supabase.rpc('complete_roulette_round', {
-      p_round_id: round.id
-    });
+    // Get all bets for this round
+    const { data: bets, error: betsError } = await supabase
+      .from('roulette_bets')
+      .select('*')
+      .eq('round_id', round.id);
 
-    if (error) {
-      console.error('❌ complete_roulette_round failed:', error);
-      throw new Error(`Round completion failed: ${error.message}`);
+    if (betsError) {
+      console.error('❌ Failed to get bets for round:', betsError);
+      throw new Error(`Failed to get bets: ${betsError.message}`);
     }
 
-    if (!result || !result.success) {
-      console.error('❌ complete_roulette_round returned failure:', result);
-      throw new Error(`Round completion failed: ${result?.error || 'Unknown error'}`);
+    console.log(`📊 Processing ${bets?.length || 0} bets for round ${round.id}`);
+
+    let bets_processed = 0;
+    let winners_processed = 0;
+    let total_xp_awarded = 0;
+
+    // Process each bet
+    for (const bet of bets || []) {
+      try {
+        // Calculate if this bet won
+        const isWin = bet.bet_color === round.result_color || bet.bet_slot === round.result_slot;
+        let payout = 0;
+        let profit = -bet.bet_amount; // Default to loss
+
+        if (isWin) {
+          // Calculate payout based on bet type
+          if (bet.bet_color && bet.bet_color === round.result_color) {
+            // Color bet win
+            payout = bet.bet_amount * 2; // 2x multiplier for color bets
+            profit = payout - bet.bet_amount;
+          } else if (bet.bet_slot && bet.bet_slot === round.result_slot) {
+            // Slot bet win (green 0 slot)
+            payout = bet.bet_amount * 14; // 14x multiplier for slot bet
+            profit = payout - bet.bet_amount;
+          }
+          winners_processed++;
+        }
+
+        // Update the bet record with result
+        await supabase
+          .from('roulette_bets')
+          .update({
+            result: isWin ? 'win' : 'loss',
+            actual_payout: payout,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', bet.id);
+
+        // Update user balance (add payout to current balance)
+        if (payout > 0) {
+          const { data: currentProfile } = await supabase
+            .from('profiles')
+            .select('balance')
+            .eq('id', bet.user_id)
+            .single();
+          
+          if (currentProfile) {
+            await supabase
+              .from('profiles')
+              .update({
+                balance: currentProfile.balance + payout,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', bet.user_id);
+          }
+        }
+
+        // Update user stats and XP using unified system
+        try {
+          const { data: statsResult, error: statsError } = await supabase.rpc('update_user_level_stats', {
+            p_user_id: bet.user_id,
+            p_game_type: 'roulette',
+            p_bet_amount: bet.bet_amount,
+            p_profit: profit,
+            p_is_win: isWin
+          });
+
+          if (statsError) {
+            console.error('❌ Stats update error for bet:', bet.id, statsError);
+          } else {
+            total_xp_awarded += statsResult.xp_added || 0;
+            console.log(`✅ Stats updated for bet ${bet.id}: ${statsResult.xp_added} XP`);
+          }
+        } catch (rpcError) {
+          console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);
+        }
+
+        // Add to game history
+        await supabase
+          .from('game_history')
+          .insert({
+            user_id: bet.user_id,
+            game_type: 'roulette',
+            bet_amount: bet.bet_amount,
+            profit: profit,
+            result: isWin ? 'win' : 'loss',
+            game_data: {
+              round_id: round.id,
+              bet_color: bet.bet_color,
+              bet_slot: bet.bet_slot,
+              result_color: round.result_color,
+              result_slot: round.result_slot,
+              multiplier: isWin ? (payout / bet.bet_amount) : 0
+            }
+          });
+
+        bets_processed++;
+        console.log(`✅ Processed bet ${bet.id}: ${isWin ? 'WIN' : 'LOSS'} - Payout: $${payout}`);
+
+      } catch (betError) {
+        console.error(`❌ Error processing bet ${bet.id}:`, betError);
+        // Continue processing other bets
+      }
     }
+
+    // Mark round as completed
+    await supabase
+      .from('roulette_rounds')
+      .update({ status: 'completed' })
+      .eq('id', round.id);
 
     console.log('✅ Round completion successful:', {
-      bets_processed: result.bets_processed,
-      winners_processed: result.winners_processed,
-      xp_awarded: result.xp_awarded,
-      result_color: result.result_color,
-      result_slot: result.result_slot
+      bets_processed,
+      winners_processed,
+      total_xp_awarded,
+      result_color: round.result_color,
+      result_slot: round.result_slot
     });
 
-    console.log(`✅ Round ${round.id} completed successfully with ${result.bets_processed} bets and ${result.xp_awarded} total XP awarded`);
+    console.log(`✅ Round ${round.id} completed successfully with ${bets_processed} bets and ${total_xp_awarded} total XP awarded`);
     
   } catch (error) {
     console.error('❌ Error in completeRound:', error);
@@ -944,8 +1051,7 @@ async function completeRound(supabase: any, round: any) {
       
     throw error;
   }
-
-    }
+}
 
 // Advanced Provably Fair Result Generation
 async function generateProvablyFairResult(supabase: any, dailySeed: any, nonceId: number) {
