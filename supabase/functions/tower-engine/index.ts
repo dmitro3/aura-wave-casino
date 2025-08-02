@@ -178,24 +178,56 @@ serve(async (req) => {
         console.log('✅ TOWER ENGINE: Input validation passed');
         
         // Check user balance
-        const { data: profile } = await supabase
+        // Get user profile with balance and wagering info
+        const { data: userProfile, error: userError } = await supabase
           .from('profiles')
-          .select('balance')
+          .select('id, balance, total_wagered')
           .eq('id', user.id)
           .single();
 
-        if (!profile || profile.balance < bet_amount) {
+        if (userError || !userProfile) {
+          console.error('❌ Failed to get user profile:', userError);
+          return new Response(JSON.stringify({ error: 'User profile not found' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (userProfile.balance < bet_amount) {
           return new Response(JSON.stringify({ error: 'Insufficient balance' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
 
-        // Deduct bet amount immediately
-        await supabase
+        // Deduct bet from balance and update wagering + XP
+        const { error: balanceError } = await supabase
           .from('profiles')
-          .update({ balance: profile.balance - bet_amount })
+          .update({ 
+            balance: userProfile.balance - bet_amount,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', user.id);
+
+        if (balanceError) {
+          console.error('❌ Balance update error:', balanceError);
+          return new Response(JSON.stringify({ error: 'Failed to update balance', details: balanceError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Add wagering and XP using the new helper function
+        const { data: wagerResult, error: wagerError } = await supabase.rpc('add_wager_and_xp', {
+          user_uuid: user.id,
+          wager_amount: bet_amount
+        });
+
+        if (wagerError) {
+          console.error('❌ Wager/XP update error:', wagerError);
+        } else {
+          console.log(`✅ Added $${bet_amount} to total_wagered and ${wagerResult.xp_calculated} XP for tower bet`);
+        }
 
         // Generate mine positions
         const minePositions = generateMinePositions(difficulty);

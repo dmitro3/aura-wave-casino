@@ -157,13 +157,12 @@ serve(async (req) => {
       throw new Error('Failed to get user data')
     }
 
-    // Update user balance
+    // Update user balance and wagering + XP
     const newBalance = userData.balance + profit
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ 
         balance: newBalance,
-        total_wagered: userData.total_wagered + bet_amount,
         total_profit: userData.total_profit + profit,
         updated_at: new Date().toISOString()
       })
@@ -172,6 +171,18 @@ serve(async (req) => {
     if (updateError) {
       console.error('❌ Error updating profile:', updateError)
       throw new Error('Failed to update user balance')
+    }
+
+    // Add wagering and XP using the new helper function
+    const { data: wagerResult, error: wagerError } = await supabase.rpc('add_wager_and_xp', {
+      user_uuid: user.id,
+      wager_amount: bet_amount
+    });
+
+    if (wagerError) {
+      console.error('❌ Wager/XP update error:', wagerError);
+    } else {
+      console.log(`✅ Added $${bet_amount} to total_wagered and ${wagerResult.xp_calculated} XP for coinflip bet`);
     }
 
     // Add game record to history
