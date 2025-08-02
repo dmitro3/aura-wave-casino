@@ -125,9 +125,10 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
         console.error('❌ Bets error:', betsError);
       } else {
         console.log('✅ User bets raw data:', bets);
-        // Debug: Log each bet's profit and actual_payout values
+        // Debug: Log each bet's profit and win/loss data
         bets?.forEach((bet, index) => {
           console.log(`Bet ${index}:`, {
+            bet_color: bet.bet_color,
             bet_amount: bet.bet_amount,
             actual_payout: bet.actual_payout,
             profit: bet.profit,
@@ -135,6 +136,15 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
             calculated_profit: (bet.actual_payout || 0) - bet.bet_amount
           });
         });
+        
+        // Debug: Log round result for comparison
+        if (roundData) {
+          console.log('Round result:', {
+            round_id: roundData.id,
+            result_color: roundData.result_color,
+            result_slot: roundData.result_slot
+          });
+        }
         setUserBets(bets || []);
       }
 
@@ -370,6 +380,13 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                 <CardContent>
                   <div className="space-y-2">
                     {userBets.map((bet, index) => {
+                      // Calculate if this bet should be a winner based on round result
+                      let calculatedIsWinner = bet.is_winner;
+                      if (roundData && (bet.is_winner === null || bet.is_winner === undefined)) {
+                        // Fallback calculation if is_winner not set properly
+                        calculatedIsWinner = bet.bet_color === roundData.result_color;
+                      }
+                      
                       // Calculate profit with multiple fallbacks for different data states
                       let calculatedProfit;
                       
@@ -379,7 +396,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                       } else if (bet.actual_payout !== null && bet.actual_payout !== undefined) {
                         // Calculate from actual_payout if available
                         calculatedProfit = bet.actual_payout - bet.bet_amount;
-                      } else if (bet.is_winner && roundData) {
+                      } else if (calculatedIsWinner && roundData) {
                         // For winners, calculate expected payout based on bet type
                         const multiplier = bet.bet_color === 'green' ? 14 : 2;
                         const expectedPayout = bet.bet_amount * multiplier;
@@ -398,8 +415,8 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                             <span>Bet: ${bet.bet_amount}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant={bet.is_winner ? 'default' : 'destructive'}>
-                              {bet.is_winner ? 'WON' : 'LOST'}
+                            <Badge variant={calculatedIsWinner ? 'default' : 'destructive'}>
+                              {calculatedIsWinner ? 'WON' : 'LOST'}
                             </Badge>
                             <span className={calculatedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                               {calculatedProfit >= 0 ? '+' : ''}${calculatedProfit.toFixed(2)}
