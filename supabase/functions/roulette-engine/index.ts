@@ -76,6 +76,15 @@ serve(async (req) => {
           });
         }
 
+        // NEW: Batched endpoint that combines multiple operations
+        case 'get_game_state': {
+          const includeRecentResults = requestData.includeRecentResults !== false; // Default true
+          const gameState = await getBatchedGameState(supabase, roundId, includeRecentResults);
+          return new Response(JSON.stringify(gameState), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
         case 'place_bet': {
           if (!userId || !betColor || !betAmount || !roundId) {
             throw new Error('Missing required bet parameters');
@@ -253,6 +262,92 @@ serve(async (req) => {
   }
 });
 
+// Smart caching for static/semi-static data
+let lastRecentResults: any[] = [];
+let lastRecentResultsFetch = 0;
+let lastRoundData: any = null;
+let lastRoundFetch = 0;
+const CACHE_DURATION_MS = 1000; // 1 second cache for frequent data
+
+// Performance-optimized batched game state endpoint
+async function getBatchedGameState(supabase: any, roundId?: string, includeRecentResults = true) {
+  const now = Date.now();
+  
+  // Get current round with smart caching
+  let currentRound = null;
+  if (!lastRoundData || (now - lastRoundFetch) > CACHE_DURATION_MS) {
+    currentRound = await getCurrentRound(supabase);
+    lastRoundData = currentRound;
+    lastRoundFetch = now;
+  } else {
+    currentRound = lastRoundData;
+  }
+  
+  const responseData: any = {
+    currentRound
+  };
+  
+  // Only fetch bets if roundId is provided or if current round exists
+  const targetRoundId = roundId || currentRound?.id;
+  if (targetRoundId) {
+    try {
+      const { data: bets, error } = await supabase
+        .from('roulette_bets')
+        .select(`
+          *,
+          profiles(username, avatar_url)
+        `)
+        .eq('round_id', targetRoundId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching round bets in batched call:', error);
+        // Try without profiles join as fallback
+        const { data: fallbackBets } = await supabase
+          .from('roulette_bets')
+          .select('*')
+          .eq('round_id', targetRoundId)
+          .order('created_at', { ascending: false });
+        
+        responseData.roundBets = fallbackBets || [];
+      } else {
+        responseData.roundBets = bets || [];
+      }
+      
+      console.log(`📊 Retrieved ${responseData.roundBets.length} bets for round ${targetRoundId} (batched)`);
+    } catch (error) {
+      console.error('❌ Round bets fetch crashed in batched call:', error);
+      responseData.roundBets = [];
+    }
+  } else {
+    responseData.roundBets = [];
+  }
+  
+  // Conditionally include recent results with caching
+  if (includeRecentResults) {
+    if (!lastRecentResults.length || (now - lastRecentResultsFetch) > CACHE_DURATION_MS) {
+      try {
+        const { data: results, error } = await supabase
+          .from('roulette_rounds')
+          .select('id, round_number, result_slot, result_color, result_multiplier, created_at')
+          .eq('status', 'completed')
+          .order('round_number', { ascending: false })
+          .limit(15);
+
+        if (!error && results) {
+          lastRecentResults = results;
+          lastRecentResultsFetch = now;
+        }
+      } catch (error) {
+        console.error('❌ Recent results fetch failed in batched call:', error);
+      }
+    }
+    responseData.recentResults = lastRecentResults;
+  }
+  
+  return responseData;
+}
+
 async function getCurrentRound(supabase: any) {
   console.log('🔍 Getting current round');
   
@@ -281,6 +376,10 @@ async function getCurrentRound(supabase: any) {
     // Check if betting phase should end and spinning should start
     if (activeRound.status === 'betting' && now >= bettingEnd) {
       console.log('🎲 Betting ended, generating result and starting spin');
+      
+      // Clear cache since round is changing
+      lastRoundData = null;
+      lastRoundFetch = 0;
       
       let result;
       
@@ -436,6 +535,13 @@ async function getCurrentRound(supabase: any) {
     // Check if spinning phase should end
     if (activeRound.status === 'spinning' && now >= spinningEnd) {
       console.log('🏁 Spinning ended, completing round');
+      
+      // Clear cache since round is completing
+      lastRoundData = null;
+      lastRoundFetch = 0;
+      lastRecentResults = [];
+      lastRecentResultsFetch = 0;
+      
       await completeRound(supabase, activeRound);
       
       // Create new round immediately
@@ -447,6 +553,11 @@ async function getCurrentRound(supabase: any) {
 
   // No active round, create new one
   console.log('🆕 Creating new round');
+  
+  // Clear cache when creating new round
+  lastRoundData = null;
+  lastRoundFetch = 0;
+  
   return await createNewRound(supabase);
 }
 
