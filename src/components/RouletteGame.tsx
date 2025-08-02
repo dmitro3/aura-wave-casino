@@ -571,8 +571,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
       console.log(`💰 Round results: Bet ${totalBetAmount}, Profit ${totalProfit}, Win: ${isWin}`);
 
-      // Update user statistics using the unified function
-      console.log('📊 Updating roulette statistics with:', {
+      // Stats and XP are automatically updated by the backend roulette engine
+      console.log('📊 Backend handles roulette statistics for:', {
         user_id: user.id,
         game_type: 'roulette',
         bet_amount: totalBetAmount,
@@ -580,20 +580,6 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         is_win: isWin,
         winning_color: completedRound.result_color
       });
-
-      const { data: statsResult, error: statsError } = await supabase.rpc('update_user_level_stats', {
-        p_user_id: user.id,
-        p_game_type: 'roulette',
-        p_bet_amount: totalBetAmount,
-        p_profit: totalProfit,
-        p_is_win: isWin
-      });
-
-      if (statsError) {
-        console.error('❌ Error updating user stats:', statsError);
-      } else {
-        console.log('✅ User stats updated successfully:', statsResult);
-      }
 
       // Small delay to let backend finish processing payouts
       await new Promise(resolve => setTimeout(resolve, 500));
