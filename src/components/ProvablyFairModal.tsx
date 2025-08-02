@@ -380,31 +380,9 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
                 <CardContent>
                   <div className="space-y-2">
                     {userBets.map((bet, index) => {
-                      // Calculate if this bet should be a winner based on round result
-                      let calculatedIsWinner = bet.is_winner;
-                      if (roundData && (bet.is_winner === null || bet.is_winner === undefined)) {
-                        // Fallback calculation if is_winner not set properly
-                        calculatedIsWinner = bet.bet_color === roundData.result_color;
-                      }
-                      
-                      // Calculate profit with multiple fallbacks for different data states
-                      let calculatedProfit;
-                      
-                      if (bet.profit !== null && bet.profit !== undefined && bet.profit !== 0) {
-                        // Use stored profit if it exists and isn't default 0
-                        calculatedProfit = bet.profit;
-                      } else if (bet.actual_payout !== null && bet.actual_payout !== undefined) {
-                        // Calculate from actual_payout if available
-                        calculatedProfit = bet.actual_payout - bet.bet_amount;
-                      } else if (calculatedIsWinner && roundData) {
-                        // For winners, calculate expected payout based on bet type
-                        const multiplier = bet.bet_color === 'green' ? 14 : 2;
-                        const expectedPayout = bet.bet_amount * multiplier;
-                        calculatedProfit = expectedPayout - bet.bet_amount;
-                      } else {
-                        // Default to loss (negative bet amount)
-                        calculatedProfit = -bet.bet_amount;
-                      }
+                      // Use database values directly (fixed at database level)
+                      const calculatedProfit = bet.profit || (bet.actual_payout - bet.bet_amount);
+                      const calculatedIsWinner = bet.is_winner;
                       
                       return (
                         <div key={index} className="flex items-center justify-between p-3 rounded-lg border bg-card/50">
