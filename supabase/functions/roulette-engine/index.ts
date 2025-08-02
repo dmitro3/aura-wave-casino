@@ -953,6 +953,8 @@ async function completeRound(supabase: any, round: any) {
           .update({
             result: isWin ? 'win' : 'loss',
             actual_payout: payout,
+            profit: profit,
+            is_winner: isWin,
             updated_at: new Date().toISOString()
           })
           .eq('id', bet.id);
