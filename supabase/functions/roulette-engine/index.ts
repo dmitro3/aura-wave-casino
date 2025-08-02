@@ -435,8 +435,24 @@ async function getCurrentRound(supabase: any) {
 
     // Check if spinning phase should end
     if (activeRound.status === 'spinning' && now >= spinningEnd) {
-      console.log('🏁 Spinning ended, completing round');
-      await completeRound(supabase, activeRound);
+      console.log('🏁 Spinning ended, attempting to complete round');
+      
+      // Use atomic update to prevent duplicate completion
+      const { data: updatedRound, error: updateError } = await supabase
+        .from('roulette_rounds')
+        .update({ status: 'completing' })  // Set intermediate status first
+        .eq('id', activeRound.id)
+        .eq('status', 'spinning')  // Only update if still spinning
+        .select()
+        .single();
+      
+      if (updateError || !updatedRound) {
+        console.log('🔄 Round already being completed by another process');
+        return activeRound;  // Another process is handling completion
+      }
+      
+      console.log('🏁 Successfully claimed round for completion');
+      await completeRound(supabase, { ...activeRound, status: 'completing' });
       
       // Create new round immediately
       return await createNewRound(supabase);
@@ -906,6 +922,12 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
 async function completeRound(supabase: any, round: any) {
   console.log(`🏁 Completing round ${round.id} with result: ${round.result_color} ${round.result_slot}`);
   console.log('🔍 Using unified stats system for comprehensive processing');
+  
+  // Prevent duplicate processing - check if round is already completed
+  if (round.status === 'completed') {
+    console.log(`⚠️ Round ${round.id} already completed, skipping processing`);
+    return;
+  }
 
   try {
     // Get all bets for this round
