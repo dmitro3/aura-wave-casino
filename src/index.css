@@ -861,7 +861,7 @@
   
   /* Icon animations */
   .animate-cyber-icon {
-    animation: cyber-icon 20s ease-in-out infinite;
+    animation: cyber-icon 60s ease-in-out infinite;
   }
   
   @keyframes cyber-icon {
