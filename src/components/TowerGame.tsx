@@ -110,6 +110,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const [difficulty, setDifficulty] = useState('easy');
   const [animatingTiles, setAnimatingTiles] = useState<Set<string>>(new Set());
   const [selectedTiles, setSelectedTiles] = useState<number[]>([]); // Track selected tile at each level
+  const [loadingActiveGame, setLoadingActiveGame] = useState(true); // Loading state for checking active games
   const { toast } = useToast();
   const { isMaintenanceMode } = useMaintenance();
   const { forceRefresh } = useLevelSync();
@@ -118,16 +119,105 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const { history: gameHistory, refetch: refreshHistory } = useGameHistory('tower');
   const { recentBets } = useRealtimeFeeds();
 
+  // Check for active game on component mount
+  useEffect(() => {
+    const checkForActiveGame = async () => {
+      if (!userData?.id) {
+        setLoadingActiveGame(false);
+        return;
+      }
+
+      try {
+        console.log('🔍 TOWER: Checking for active game for user:', userData.id);
+        
+        const { data: activeGames, error } = await supabase
+          .from('tower_games')
+          .select('*')
+          .eq('user_id', userData.id)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) {
+          console.error('Error checking for active game:', error);
+          setLoadingActiveGame(false);
+          return;
+        }
+
+        if (activeGames && activeGames.length > 0) {
+          const activeGame = activeGames[0];
+          console.log('🎮 TOWER: Found active game:', activeGame);
+          
+          // Also get the selected tiles from tower_levels
+          const { data: levels, error: levelsError } = await supabase
+            .from('tower_levels')
+            .select('level_number, tile_selected')
+            .eq('game_id', activeGame.id)
+            .order('level_number', { ascending: true });
+
+          if (levelsError) {
+            console.error('Error fetching tower levels:', levelsError);
+          } else {
+            const selectedTilesArray = levels?.map(level => level.tile_selected) || [];
+            setSelectedTiles(selectedTilesArray);
+            console.log('🎯 TOWER: Restored selected tiles:', selectedTilesArray);
+          }
+
+          // Convert the database game to our state format
+          const gameState: TowerGameState = {
+            id: activeGame.id,
+            difficulty: activeGame.difficulty,
+            bet_amount: parseFloat(activeGame.bet_amount),
+            current_level: activeGame.current_level,
+            max_level: activeGame.max_level,
+            status: activeGame.status as 'active' | 'cashed_out' | 'lost',
+            current_multiplier: parseFloat(activeGame.current_multiplier),
+            final_payout: activeGame.final_payout ? parseFloat(activeGame.final_payout) : undefined,
+            mine_positions: activeGame.mine_positions,
+            selected_tiles: selectedTilesArray
+          };
+
+          setGame(gameState);
+          setDifficulty(activeGame.difficulty);
+          
+          toast({
+            title: "Active Game Restored",
+            description: `Resumed your ${DIFFICULTY_INFO[activeGame.difficulty as keyof typeof DIFFICULTY_INFO].name} tower game from level ${activeGame.current_level + 1}`,
+          });
+        } else {
+          console.log('🎮 TOWER: No active game found');
+        }
+      } catch (error) {
+        console.error('Error checking for active game:', error);
+      } finally {
+        setLoadingActiveGame(false);
+      }
+    };
+
+    checkForActiveGame();
+  }, [userData?.id]);
+
   // Reset game state
   const resetGame = () => {
     setGame(null);
     setAnimatingTiles(new Set());
     setSelectedTiles([]);
+    setLoadingActiveGame(false);
   };
 
   // Start new game
   const startGame = async () => {
-    if (!userData?.id || loading || isMaintenanceMode) return;
+    if (!userData?.id || loading || isMaintenanceMode || loadingActiveGame) return;
+    
+    // Prevent starting a new game if there's already an active one
+    if (game?.status === 'active') {
+      toast({
+        title: "Game Already Active",
+        description: "Complete your current tower climb before starting a new one",
+        variant: "destructive"
+      });
+      return;
+    }
     
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -497,6 +587,22 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       </div>
     );
   };
+
+  // Show loading state while checking for active games
+  if (loadingActiveGame) {
+    return (
+      <div className="max-w-7xl mx-auto p-4 space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="animate-spin">
+              <Building2 className="w-12 h-12 text-primary mx-auto" />
+            </div>
+            <p className="text-slate-300 font-mono">SCANNING FOR ACTIVE PROTOCOLS...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-4 space-y-6">
