@@ -124,10 +124,11 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const balanceRef = useRef<number>(0);
   const lastResultsFetchRef = useRef<number>(0);
 
-  // Update balance ref when profile changes
+  // Update balance ref when profile changes (for backward compatibility)
   useEffect(() => {
     if (profile?.balance !== undefined) {
       balanceRef.current = profile.balance;
+      console.log('🎰 Roulette balanceRef synced with real-time balance:', profile.balance);
     }
   }, [profile?.balance]);
 
@@ -673,8 +674,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       return;
     }
 
-    // SECURITY 5: Validate bet amount
-    const currentBalance = balanceRef.current;
+    // SECURITY 5: Validate bet amount (using real-time balance)
+    const currentBalance = profile?.balance || 0;
     if (betAmount === '' || betAmount < 0.01 || betAmount > 1000000) {
       toast({
         title: "Invalid Bet Amount",
