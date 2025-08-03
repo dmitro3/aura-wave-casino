@@ -304,10 +304,52 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       if (activeGames && activeGames.length > 0) {
         console.log('⚠️ TOWER: Found active game in database, preventing double bet:', activeGames[0]);
         setLoading(false);
+        
+        // Restore the active game state to sync with server
+        const activeGame = activeGames[0];
+        
+        // Fetch the full game data and restore state
+        const { data: fullGameData, error: gameError } = await supabase
+          .from('tower_games')
+          .select('*')
+          .eq('id', activeGame.id)
+          .single();
+          
+        if (!gameError && fullGameData) {
+          console.log('🔄 TOWER: Restoring active game state from server:', fullGameData);
+          
+          // Also get the selected tiles
+          const { data: levels } = await supabase
+            .from('tower_levels')
+            .select('level_number, tile_selected')
+            .eq('game_id', fullGameData.id)
+            .order('level_number', { ascending: true });
+            
+          const selectedTilesArray = levels?.map(level => level.tile_selected) || [];
+          setSelectedTiles(selectedTilesArray);
+          
+          // Convert to game state format
+          const gameState: TowerGameState = {
+            id: fullGameData.id,
+            difficulty: fullGameData.difficulty,
+            bet_amount: parseFloat(fullGameData.bet_amount),
+            current_level: fullGameData.current_level,
+            max_level: fullGameData.max_level,
+            status: fullGameData.status as 'active' | 'cashed_out' | 'lost',
+            current_multiplier: parseFloat(fullGameData.current_multiplier),
+            final_payout: fullGameData.final_payout ? parseFloat(fullGameData.final_payout) : undefined,
+            mine_positions: fullGameData.mine_positions,
+            selected_tiles: selectedTilesArray
+          };
+          
+          setGame(gameState);
+          setDifficulty(fullGameData.difficulty);
+        }
+        
         toast({
-          title: "Active Game Detected",
-          description: "You already have an active tower game. Please refresh the page to continue.",
-          variant: "destructive"
+          title: "Active Game Restored",
+          description: "Your active tower game has been restored. Continue playing from where you left off.",
+          variant: "default"
         });
         return;
       }
@@ -393,7 +435,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
 
   // Select tile
   const selectTile = async (tileIndex: number) => {
-    if (!game || loading || game.status !== 'active') return;
+    if (!game || loading || game.status !== 'active') {
+      console.log('🚫 TOWER: Tile selection blocked - loading:', loading, 'game status:', game?.status);
+      return;
+    }
     
     const tileKey = `${game.current_level}-${tileIndex}`;
     setAnimatingTiles(prev => new Set([...prev, tileKey]));
@@ -413,15 +458,15 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       
       const updatedGame = response.data;
       
-      // Track the selected tile for this level immediately
+      // Update game state only after server confirms the change
+      setGame(updatedGame);
+      
+      // Track the selected tile for this level after server confirmation
       setSelectedTiles(prev => {
         const newSelected = [...prev];
         newSelected[game.current_level] = tileIndex;
         return newSelected;
       });
-      
-      // Update game state immediately for instant UI response
-      setGame(updatedGame);
       
       // Handle game end
       if (updatedGame.status === 'lost') {
@@ -465,7 +510,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
 
   // Cash out
   const cashOut = async () => {
-    if (!game || loading || game.status !== 'active') return;
+    if (!game || loading || game.status !== 'active') {
+      console.log('🚫 TOWER: Cash out blocked - loading:', loading, 'game status:', game?.status);
+      return;
+    }
     
     setLoading(true);
     try {
@@ -481,7 +529,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       
       const updatedGame = response.data;
       
-      // Update game state immediately for instant UI response
+      // Update game state only after server confirms the change
       setGame(updatedGame);
       
       // Balance will be updated automatically via real-time subscription when backend processes the payout
