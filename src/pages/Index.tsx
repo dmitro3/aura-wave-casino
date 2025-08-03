@@ -1180,10 +1180,10 @@ export default function Index({ initialGame }: IndexProps) {
                       </div>
                       
                       {/* Tech corner accents - positioned relative to outer container */}
-                      <div className="absolute top-2 left-2 w-2 h-2 border-l border-t border-green-400/60" />
-                      <div className="absolute top-2 right-2 w-2 h-2 border-r border-t border-green-400/60" />
-                      <div className="absolute bottom-2 left-2 w-2 h-2 border-l border-b border-emerald-400/60" />
-                      <div className="absolute bottom-2 right-2 w-2 h-2 border-r border-b border-emerald-400/60" />
+                      <div className="absolute top-1.5 left-1.5 w-2 h-2 border-l border-t border-green-400/60" />
+                      <div className="absolute top-1.5 right-1.5 w-2 h-2 border-r border-t border-green-400/60" />
+                      <div className="absolute bottom-1.5 left-1.5 w-2 h-2 border-l border-b border-emerald-400/60" />
+                      <div className="absolute bottom-1.5 right-1.5 w-2 h-2 border-r border-b border-emerald-400/60" />
                     </div>
                   )}
 
