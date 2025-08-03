@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Zap, AlertTriangle, Coins, Cpu, Shield, Crown, TrendingUp, Target, Gamepad2, User, Bot } from 'lucide-react';
+import { Building2, Zap, AlertTriangle, Coins, Cpu, Shield, Crown, TrendingUp, Target, Gamepad2, User, Bot, CheckCircle, X } from 'lucide-react';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { UserProfile } from '@/hooks/useUserProfile';
@@ -554,7 +554,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     }
   };
 
-  // Render individual tile with cyberpunk design
+  // Render individual tile with modern design
   const renderTile = (levelIndex: number, tileIndex: number) => {
     const tileKey = `${levelIndex}-${tileIndex}`;
     const isAnimating = animatingTiles.has(tileKey);
@@ -578,39 +578,21 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     } else if (isGameEnded) {
       revealed = { safe: !isMine };
     }
-    
-    // Debug logging for development (uncomment if needed)
-    // if (game && levelIndex <= 2) {
-    //   console.log(`🏗️ Tower Level ${levelIndex}: current=${game.current_level}, isCurrentLevel=${isCurrentLevel}, isPastLevel=${isPastLevel}, revealed=${revealed?.safe}, status=${game.status}`);
-    // }
-    
-    const hasCharacter = isPastLevel && tileIndex === Math.floor(tilesPerRow / 2);
-    const glowColor = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO]?.glowColor || 'emerald';
 
-    // Base cyberpunk tile styling
-    let tileClass = "group relative w-full h-10 rounded-lg border-2 transition-all duration-300 font-mono text-xs ";
-    tileClass += "bg-gradient-to-br from-slate-900/80 via-slate-800/60 to-slate-900/80 ";
-    tileClass += "border-slate-700/50 backdrop-blur-sm ";
-    tileClass += "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20 ";
+    // Modern tile styling
+    let tileClass = "relative w-full h-12 rounded-lg transition-all duration-200 ";
     
     // State-based styling
     if (revealed?.safe) {
-      tileClass += `bg-gradient-to-br from-${glowColor}-900/40 via-${glowColor}-800/30 to-${glowColor}-900/40 `;
-      tileClass += `border-${glowColor}-500/60 shadow-lg shadow-${glowColor}-500/20 `;
+      tileClass += "bg-emerald-500/20 border-2 border-emerald-500/40 ";
     } else if (revealed && !revealed.safe) {
-      tileClass += "bg-gradient-to-br from-red-900/40 via-red-800/30 to-red-900/40 ";
-      tileClass += "border-red-500/60 shadow-lg shadow-red-500/20 ";
-    } else if (wasSelected && !revealed) {
-      // Highlight selected tiles that aren't revealed yet (for visual feedback)
-      tileClass += "bg-gradient-to-br from-amber-900/30 via-amber-800/20 to-amber-900/30 ";
-      tileClass += "border-amber-400/50 shadow-md shadow-amber-400/20 ";
+      tileClass += "bg-red-500/20 border-2 border-red-500/40 ";
     } else if (isCurrentLevel && game?.status === 'active') {
-      tileClass += "cursor-pointer hover:bg-gradient-to-br hover:from-primary/20 hover:to-primary/10 ";
-      tileClass += "hover:border-primary hover:shadow-primary/30 ";
+      tileClass += "bg-slate-700/50 border-2 border-slate-600/50 hover:border-primary/50 hover:bg-slate-600/50 cursor-pointer ";
     } else if (isFutureLevel || !game) {
-      tileClass += "cursor-not-allowed opacity-20 ";
+      tileClass += "bg-slate-800/30 border-2 border-slate-700/30 opacity-30 cursor-not-allowed ";
     } else {
-      tileClass += "cursor-not-allowed opacity-40 ";
+      tileClass += "bg-slate-700/30 border-2 border-slate-600/30 opacity-50 cursor-not-allowed ";
     }
 
     if (isAnimating) {
@@ -624,55 +606,17 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         onClick={() => isCurrentLevel && game?.status === 'active' ? selectTile(tileIndex) : null}
         disabled={!isCurrentLevel || game?.status !== 'active' || loading}
       >
-        {/* Cyberpunk grid background */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-cyan-400/10 to-transparent"></div>
-          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-cyan-400/30"></div>
-          <div className="absolute top-1 right-1 w-2 h-2 border-r border-t border-cyan-400/30"></div>
-          <div className="absolute bottom-1 left-1 w-2 h-2 border-l border-b border-cyan-400/30"></div>
-          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-cyan-400/30"></div>
-        </div>
-        
-        {/* Content */}
-        <div className="relative z-10 flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full">
           {revealed ? (
             revealed.safe ? (
-              <div className="flex items-center gap-2 text-emerald-400">
-                <Shield className="w-4 h-4" />
-                <span className="animate-pulse">SECURE</span>
-              </div>
+              <CheckCircle className="w-6 h-6 text-emerald-400" />
             ) : (
-              <div className="flex items-center gap-2 text-red-400">
-                <AlertTriangle className="w-4 h-4" />
-                <span className="animate-pulse">BREACH</span>
-              </div>
+              <X className="w-6 h-6 text-red-400" />
             )
-          ) : hasCharacter && game ? (
-            <div className="flex items-center justify-center">
-              <Bot className="w-5 h-5 text-primary animate-pulse" />
-            </div>
-          ) : wasSelected && !revealed ? (
-            <div className="flex items-center gap-2 text-amber-400">
-              <Crown className="w-4 h-4" />
-              <span className="text-xs animate-pulse">SELECTED</span>
-            </div>
           ) : isCurrentLevel && game?.status === 'active' ? (
-            <div className="flex items-center gap-2 text-primary opacity-70">
-              <Cpu className="w-4 h-4" />
-              <span className="text-xs">CLICK</span>
-            </div>
-          ) : isFutureLevel ? (
-            <div className="flex items-center gap-2 text-slate-600 opacity-30">
-              <div className="w-1 h-1 bg-slate-600 rounded-full"></div>
-              <div className="w-1 h-1 bg-slate-600 rounded-full"></div>
-              <div className="w-1 h-1 bg-slate-600 rounded-full"></div>
-            </div>
+            <div className="w-3 h-3 bg-slate-400 rounded-full opacity-50"></div>
           ) : (
-            <div className="flex items-center gap-2 text-slate-500 opacity-40">
-              <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
-              <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
-              <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
-            </div>
+            <div className="w-2 h-2 bg-slate-500 rounded-full opacity-30"></div>
           )}
         </div>
 
@@ -687,40 +631,42 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     );
   };
 
-  // Render tower level with cyberpunk design
+  // Render tower level with modern design
   const renderLevel = (levelIndex: number) => {
     const tilesPerRow = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO]?.tilesPerRow || 3;
     const multiplier = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS]?.[levelIndex];
     const isCurrentLevel = game?.current_level === levelIndex;
     const isPastLevel = game && game.current_level > levelIndex;
-    const glowColor = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO]?.glowColor || 'emerald';
 
     return (
       <div 
         key={levelIndex} 
-        className={`p-2 rounded-lg border backdrop-blur-sm transition-all duration-500 ${
+        className={`p-3 rounded-xl transition-all duration-300 ${
           isPastLevel 
-            ? `bg-gradient-to-r from-${glowColor}-900/30 via-${glowColor}-800/20 to-${glowColor}-900/30 border-${glowColor}-500/40 shadow-lg shadow-${glowColor}-500/20` 
+            ? 'bg-emerald-500/10 border border-emerald-500/30' 
             : isCurrentLevel 
-              ? 'bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 border-primary/40 shadow-lg shadow-primary/20' 
-              : 'bg-gradient-to-r from-slate-900/40 via-slate-800/30 to-slate-900/40 border-slate-700/30'
+              ? 'bg-primary/10 border border-primary/30 shadow-lg shadow-primary/10' 
+              : 'bg-slate-800/50 border border-slate-700/50'
         }`}
       >
-        {/* Multiplier at very top - minimal spacing */}
-        <div className="text-center mb-1">
-          <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded border ${
+        {/* Multiplier and level info */}
+        <div className="flex items-center justify-between mb-2">
+          <div className={`px-2 py-1 rounded-lg text-xs font-semibold ${
             isPastLevel 
-              ? `bg-${glowColor}-500/20 text-${glowColor}-300 border-${glowColor}-400/50` 
+              ? 'bg-emerald-500/20 text-emerald-300' 
               : isCurrentLevel 
-                ? 'bg-primary/20 text-primary border-primary/50' 
-                : 'bg-slate-800/30 text-slate-400 border-slate-600/50'
+                ? 'bg-primary/20 text-primary' 
+                : 'bg-slate-700/50 text-slate-400'
           }`}>
             {multiplier ? multiplier.toFixed(2) : '1.00'}x
-          </span>
+          </div>
+          <div className="text-xs text-slate-400">
+            Level {levelIndex + 1}
+          </div>
         </div>
         
-        {/* Tiles - Rectangular tower formation */}
-        <div className={`grid gap-1.5 ${
+        {/* Tiles - Modern grid */}
+        <div className={`grid gap-2 ${
           tilesPerRow === 2 ? 'grid-cols-2' :
           tilesPerRow === 3 ? 'grid-cols-3' :
           tilesPerRow === 4 ? 'grid-cols-4' : 'grid-cols-3'
@@ -728,15 +674,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           {Array.from({ length: tilesPerRow }, (_, i) => renderTile(levelIndex, i))}
         </div>
 
-        {/* Status indicator - minimal */}
-        {isCurrentLevel && game?.status === 'active' && (
-          <div className="flex justify-center mt-1">
-            <div className="flex items-center gap-1 text-primary font-bold text-xs animate-pulse">
-              <Target className="w-2 h-2" />
-              <span className="font-mono text-xs">ACTIVE</span>
-            </div>
-          </div>
-        )}
+
       </div>
     );
   };
@@ -750,8 +688,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             <div className="animate-spin">
               <Building2 className="w-12 h-12 text-primary mx-auto" />
             </div>
-            <p className="text-slate-300 font-mono">SCANNING FOR ACTIVE PROTOCOLS...</p>
-            <p className="text-slate-400 font-mono text-sm">User ID: {userData?.id || 'Loading...'}</p>
+            <p className="text-slate-300">Looking for active games...</p>
+            <p className="text-slate-400 text-sm">Please wait</p>
           </div>
         </div>
       </div>
@@ -759,51 +697,67 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-6">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+    <div className="max-w-5xl mx-auto p-4 space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Game Controls - Cyberpunk Style */}
-        <div className="xl:col-span-1 space-y-4">
-          <Card className="glass border-0 bg-gradient-to-br from-slate-900/80 via-slate-800/60 to-slate-900/80 backdrop-blur-xl">
-            <CardHeader className="pb-3">
+        {/* Game Controls - Modern Style */}
+        <div className="lg:col-span-1 space-y-4">
+          <Card className="border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3 text-white">
-                <Building2 className="w-6 h-6 text-primary" />
-                <span className="font-mono text-lg">TOWER PROTOCOL</span>
+                <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+                  <Building2 className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Tower</h2>
+                  <p className="text-sm text-slate-400 font-normal">Climb to win</p>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!game ? (
                 <>
                   {/* Bet Amount */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-mono text-slate-300 uppercase tracking-wider">Bet Amount</label>
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-slate-300">Bet Amount</label>
                     <div className="relative">
                       <Input
                         type="number"
                         value={betAmount}
                         onChange={(e) => setBetAmount(e.target.value)}
-                        className="bg-slate-800/50 border-slate-600 text-white font-mono pl-8"
+                        className="pl-10 pr-20 h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg"
                         min="1"
                         max={userData?.balance || 0}
                         step="0.01"
+                        placeholder="0.00"
                       />
-                      <Coins className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-primary" />
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                        <Coins className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
+                        ${userData?.balance.toFixed(2) || '0.00'}
+                      </div>
                     </div>
                   </div>
 
                   {/* Difficulty Selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-mono text-slate-300 uppercase tracking-wider">Protocol Level</label>
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-slate-300">Difficulty</label>
                     <Select value={difficulty} onValueChange={setDifficulty}>
-                      <SelectTrigger className="bg-slate-800/50 border-slate-600 text-white font-mono">
+                      <SelectTrigger className="h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-800 border-slate-600">
                         {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
-                          <SelectItem key={key} value={key} className="text-white font-mono">
-                            <div className="flex items-center gap-2">
-                              {info.icon}
-                              <span>{info.name}</span>
+                          <SelectItem key={key} value={key} className="text-white">
+                            <div className="flex items-center gap-3">
+                              <div className="p-1 rounded bg-slate-700/50">
+                                {info.icon}
+                              </div>
+                              <div>
+                                <div className="font-medium">{info.name}</div>
+                                <div className="text-xs text-slate-400">Max: {info.maxMultiplier}</div>
+                              </div>
                             </div>
                           </SelectItem>
                         ))}
@@ -811,37 +765,21 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     </Select>
                   </div>
 
-                  {/* Difficulty Info */}
-                  <div className={`p-3 rounded-lg border ${DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].color}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].icon}
-                      <span className="font-mono text-sm font-bold">
-                        {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name}
-                      </span>
-                    </div>
-                    <p className="text-xs font-mono opacity-90">
-                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].description}
-                    </p>
-                    <p className="text-xs font-mono mt-1 opacity-70">
-                      MAX: {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].maxMultiplier}
-                    </p>
-                  </div>
-
                   {/* Start Game Button */}
                   <Button 
                     onClick={startGame} 
                     disabled={loading || isMaintenanceMode}
-                    className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-mono font-bold py-3"
+                    className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02]"
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        INITIALIZING...
+                        Starting Game...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Gamepad2 className="w-4 h-4" />
-                        INITIATE CLIMB
+                        Start Game
                       </div>
                     )}
                   </Button>
@@ -906,17 +844,17 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                       <Button 
                         onClick={cashOut} 
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-mono font-bold"
+                        className="w-full h-12 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold rounded-lg transition-all duration-200"
                       >
                         {loading ? (
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            EXTRACTING...
+                            Cashing Out...
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
                             <TrendingUp className="w-4 h-4" />
-                            EXTRACT ${(parseFloat(betAmount) * (game.current_multiplier || 1)).toFixed(2)}
+                            Cash Out ${(parseFloat(betAmount) * (game.current_multiplier || 1)).toFixed(2)}
                           </div>
                         )}
                       </Button>
@@ -931,35 +869,23 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         </div>
 
         {/* Main Tower Display */}
-        <div className="xl:col-span-3">
-          <Card className="glass border-0 bg-gradient-to-br from-slate-900/80 via-slate-800/60 to-slate-900/80 backdrop-blur-xl">
+        <div className="lg:col-span-2">
+          <Card className="border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-3 text-white">
-                  <Building2 className="w-6 h-6 text-primary" />
-                  <span className="font-mono text-xl">DATA TOWER</span>
-                  {game && (
-                    <Badge variant="outline" className={DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].color}>
-                      {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name}
-                    </Badge>
-                  )}
-                </CardTitle>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Tower Climb</h3>
+                  <p className="text-sm text-slate-400">Choose your path to reach the top</p>
+                </div>
                 
                 {game && (
-                  <div className="flex items-center gap-4 text-sm font-mono">
-                    <div className="text-slate-300">
-                      BET: <span className="text-primary">${parseFloat(betAmount).toFixed(2)}</span>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-white">
+                      ${(parseFloat(betAmount) * (game.current_multiplier || 1)).toFixed(2)}
                     </div>
-                    {game.status === 'active' && (
-                      <div className="text-slate-300">
-                        NEXT: <span className="text-amber-400">
-                          {game.current_level < PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS].length - 1 
-                            ? `${(PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS][game.current_level + 1] || 1).toFixed(2)}x`
-                            : 'MAX'
-                          }
-                        </span>
-                      </div>
-                    )}
+                    <div className="text-sm text-slate-400">
+                      Level {game.current_level + 1} • {difficulty}
+                    </div>
                   </div>
                 )}
               </div>
