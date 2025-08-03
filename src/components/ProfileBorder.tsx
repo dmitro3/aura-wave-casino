@@ -26,92 +26,110 @@ const getBorderDesign = (tier: number, size: string) => {
   const baseClasses = `${sizeClasses[size]} rounded-full overflow-hidden relative`;
 
   switch (tier) {
-    case 1: // BASIC (Level 1-9)
+    case 1: // BASIC (Level 1-9) - Simple clean look
       return {
         name: 'BASIC',
-        container: `${baseClasses} border-2 border-slate-400`,
-        inner: '',
-        animation: '',
-        description: 'Basic border for new players'
+        container: `${baseClasses} border-2 border-slate-500/80 bg-slate-900/20`,
+        inner: `
+          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-slate-600/20 to-slate-700/30"></div>
+          <div class="absolute inset-1 rounded-full border border-slate-400/30"></div>
+        `,
+        description: 'Basic tier for new players'
       };
 
-    case 2: // BRONZE (Level 10-24)
+    case 2: // BRONZE (Level 10-24) - Warm copper tones
       return {
         name: 'BRONZE',
-        container: `${baseClasses} border-2 border-amber-600 shadow-md shadow-amber-600/30`,
+        container: `${baseClasses} border-[3px] border-amber-700 bg-amber-950/30 shadow-lg shadow-amber-900/40`,
         inner: `
-          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-amber-700/20"></div>
-          <div class="absolute inset-0 rounded-full border border-amber-500/40"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-amber-500/15 via-orange-600/20 to-amber-800/25"></div>
+          <div class="absolute inset-1 rounded-full border border-amber-600/50"></div>
+          <div class="absolute inset-2 rounded-full bg-gradient-to-tr from-amber-400/10 to-orange-500/15"></div>
+          <div class="absolute top-1 left-1 w-2 h-2 rounded-full bg-amber-400/60 blur-[1px]"></div>
+          <div class="absolute bottom-2 right-2 w-1 h-1 rounded-full bg-orange-300/70"></div>
         `,
-        animation: '',
-        description: 'Bronze border with warm glow'
+        description: 'Bronze tier with warm metallic finish'
       };
 
-    case 3: // SILVER (Level 25-49) 
+    case 3: // SILVER (Level 25-49) - Sleek metallic
       return {
         name: 'SILVER',
-        container: `${baseClasses} border-2 border-slate-300 shadow-lg shadow-slate-300/40`,
+        container: `${baseClasses} border-[3px] border-slate-300 bg-slate-800/40 shadow-xl shadow-slate-400/30`,
         inner: `
-          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-slate-200/20 via-gray-300/15 to-slate-400/20"></div>
-          <div class="absolute inset-0 rounded-full border border-slate-200/50 animate-pulse"></div>
-          <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-spin" style="animation-duration: 3s;"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-slate-200/20 via-gray-300/25 to-slate-500/20"></div>
+          <div class="absolute inset-1 rounded-full border border-slate-200/60"></div>
+          <div class="absolute inset-2 rounded-full bg-gradient-to-tr from-white/10 to-slate-300/15"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-conic from-slate-400/0 via-white/20 to-slate-400/0"></div>
+          <div class="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-white/80 blur-[0.5px]"></div>
+          <div class="absolute bottom-1 left-2 w-1 h-1 rounded-full bg-slate-200/90"></div>
         `,
-        animation: 'shimmer',
-        description: 'Silver border with elegant shimmer'
+        description: 'Silver tier with polished chrome finish'
       };
 
-    case 4: // GOLD (Level 50-74)
+    case 4: // GOLD (Level 50-74) - Rich golden elegance
       return {
         name: 'GOLD',
-        container: `${baseClasses} border-2 border-yellow-400 shadow-xl shadow-yellow-400/50`,
+        container: `${baseClasses} border-[4px] border-yellow-400 bg-yellow-950/40 shadow-2xl shadow-yellow-500/40`,
         inner: `
-          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-300/25 via-amber-400/20 to-yellow-600/25"></div>
-          <div class="absolute inset-0 rounded-full border border-yellow-300/60 animate-pulse"></div>
-          <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-yellow-200/30 to-transparent animate-spin" style="animation-duration: 2s;"></div>
-          <div class="absolute inset-[-1px] rounded-full bg-gradient-to-r from-yellow-400/0 via-yellow-300/40 to-yellow-400/0 animate-ping" style="animation-duration: 2s;"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-yellow-300/25 via-amber-400/30 to-yellow-600/25"></div>
+          <div class="absolute inset-1 rounded-full border-2 border-yellow-300/70"></div>
+          <div class="absolute inset-2 rounded-full bg-gradient-to-tr from-yellow-200/15 to-amber-300/20"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-conic from-yellow-500/0 via-yellow-200/30 to-yellow-500/0"></div>
+          <div class="absolute inset-3 rounded-full border border-yellow-200/40"></div>
+          <div class="absolute top-1 left-2 w-2 h-2 rounded-full bg-yellow-200/90 blur-[1px]"></div>
+          <div class="absolute bottom-2 right-1 w-1.5 h-1.5 rounded-full bg-amber-300/80"></div>
+          <div class="absolute top-3 right-3 w-1 h-1 rounded-full bg-yellow-100/90"></div>
         `,
-        animation: 'golden-glow',
-        description: 'Gold border with radiant shine'
+        description: 'Gold tier with luxurious golden radiance'
       };
 
-    case 5: // PLATINUM (Level 75-99)
+    case 5: // PLATINUM (Level 75-99) - Premium metallic
       return {
         name: 'PLATINUM',
-        container: `${baseClasses} border-2 border-slate-100 shadow-2xl shadow-slate-100/60`,
+        container: `${baseClasses} border-[4px] border-slate-100 bg-slate-900/50 shadow-2xl shadow-slate-200/50 ring-1 ring-white/20`,
         inner: `
-          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-slate-100/30 via-gray-200/25 to-slate-300/30"></div>
-          <div class="absolute inset-0 rounded-full border border-slate-50/70 animate-pulse"></div>
-          <div class="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/40 to-transparent animate-spin" style="animation-duration: 1.5s;"></div>
-          <div class="absolute inset-[-1px] rounded-full bg-gradient-to-r from-slate-100/0 via-white/60 to-slate-100/0 animate-ping" style="animation-duration: 1.5s;"></div>
-          <div class="absolute inset-[-2px] rounded-full bg-gradient-to-r from-transparent via-slate-200/30 to-transparent animate-pulse" style="animation-duration: 1s;"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-slate-100/30 via-gray-200/35 to-slate-300/30"></div>
+          <div class="absolute inset-1 rounded-full border-2 border-slate-50/80"></div>
+          <div class="absolute inset-2 rounded-full bg-gradient-to-tr from-white/15 to-slate-200/20"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-conic from-slate-200/0 via-white/40 to-slate-200/0"></div>
+          <div class="absolute inset-3 rounded-full border border-white/50"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-radial from-white/10 via-transparent to-slate-300/10"></div>
+          <div class="absolute top-1 left-1 w-2.5 h-2.5 rounded-full bg-white/90 blur-[1px]"></div>
+          <div class="absolute bottom-1 right-2 w-1.5 h-1.5 rounded-full bg-slate-100/90"></div>
+          <div class="absolute top-2 right-1 w-1 h-1 rounded-full bg-white/95"></div>
+          <div class="absolute bottom-3 left-3 w-1 h-1 rounded-full bg-slate-50/80"></div>
         `,
-        animation: 'platinum-radiance',
-        description: 'Platinum border with pristine radiance'
+        description: 'Platinum tier with pristine metallic brilliance'
       };
 
-    case 6: // DIAMOND (Level 100+)
+    case 6: // DIAMOND (Level 100+) - Ultimate prestige
       return {
         name: 'DIAMOND', 
-        container: `${baseClasses} border-3 border-cyan-300 shadow-2xl shadow-cyan-300/80`,
+        container: `${baseClasses} border-[5px] border-cyan-300 bg-slate-900/60 shadow-2xl shadow-cyan-400/60 ring-2 ring-cyan-200/30`,
         inner: `
-          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-200/40 via-blue-300/30 to-purple-300/40"></div>
-          <div class="absolute inset-0 rounded-full border border-cyan-200/80 animate-pulse"></div>
-          <div class="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-300/0 via-cyan-100/50 to-cyan-300/0 animate-spin" style="animation-duration: 1s;"></div>
-          <div class="absolute inset-[-1px] rounded-full bg-gradient-to-r from-cyan-300/0 via-white/70 to-cyan-300/0 animate-ping" style="animation-duration: 1s;"></div>
-          <div class="absolute inset-[-2px] rounded-full bg-gradient-to-r from-purple-300/0 via-cyan-200/40 to-blue-300/0 animate-pulse" style="animation-duration: 0.8s;"></div>
-          <div class="absolute inset-0 rounded-full bg-gradient-to-45 from-transparent via-rainbow-200/20 to-transparent animate-spin" style="animation-duration: 0.5s;"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-to-br from-cyan-200/40 via-blue-300/35 to-purple-300/40"></div>
+          <div class="absolute inset-1 rounded-full border-2 border-cyan-200/90"></div>
+          <div class="absolute inset-2 rounded-full bg-gradient-to-tr from-cyan-100/20 to-blue-200/25"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-conic from-cyan-300/0 via-cyan-100/50 to-purple-300/20"></div>
+          <div class="absolute inset-3 rounded-full border border-cyan-100/60"></div>
+          <div class="absolute inset-0 rounded-full bg-gradient-radial from-white/15 via-cyan-200/10 to-blue-300/15"></div>
+          <div class="absolute inset-1 rounded-full bg-gradient-conic from-purple-300/0 via-cyan-200/20 to-blue-400/0"></div>
+          <div class="absolute top-1 left-1 w-3 h-3 rounded-full bg-cyan-100/95 blur-[1.5px]"></div>
+          <div class="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-blue-200/90 blur-[1px]"></div>
+          <div class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-white/95"></div>
+          <div class="absolute bottom-3 left-2 w-1 h-1 rounded-full bg-cyan-200/90"></div>
+          <div class="absolute top-3 left-3 w-1 h-1 rounded-full bg-purple-200/80"></div>
+          <div class="absolute bottom-2 right-3 w-1 h-1 rounded-full bg-blue-100/85"></div>
         `,
-        animation: 'diamond-brilliance',
-        description: 'Diamond border with brilliant rainbow refraction'
+        description: 'Diamond tier with crystalline multi-faceted brilliance'
       };
 
     default:
       return {
         name: 'BASIC',
-        container: `${baseClasses} border-2 border-slate-400`,
-        inner: '',
-        animation: '',
-        description: 'Default border'
+        container: `${baseClasses} border-2 border-slate-500/80 bg-slate-900/20`,
+        inner: `<div class="absolute inset-0 rounded-full bg-gradient-to-br from-slate-600/20 to-slate-700/30"></div>`,
+        description: 'Default tier'
       };
   }
 };
