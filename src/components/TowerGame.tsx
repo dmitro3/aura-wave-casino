@@ -120,15 +120,53 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const { history: gameHistory, refetch: refreshHistory } = useGameHistory('tower');
   const { recentBets } = useRealtimeFeeds();
 
-  // Real-time balance sync: Update bet amount if it exceeds new balance
+  // Real-time balance state for instant UI updates
+  const [realtimeBalance, setRealtimeBalance] = useState<number>(userData?.balance || 0);
+
+  // Sync realtime balance when userData changes
   useEffect(() => {
     if (userData?.balance !== undefined) {
+      setRealtimeBalance(userData.balance);
+    }
+  }, [userData?.balance]);
+
+  // Direct real-time balance subscription for instant updates
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const balanceChannel = supabase
+      .channel(`tower_balance_${userData.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userData.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE' && payload.new?.balance !== undefined) {
+            const newBalance = parseFloat(payload.new.balance);
+            console.log('🎯 Tower real-time balance update:', realtimeBalance, '→', newBalance);
+            setRealtimeBalance(newBalance);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(balanceChannel);
+    };
+  }, [userData?.id, realtimeBalance]);
+
+  // Real-time balance sync: Update bet amount if it exceeds new balance
+  useEffect(() => {
+    if (realtimeBalance !== undefined) {
       const currentBet = parseFloat(betAmount) || 0;
-      const newBalance = userData.balance;
       
       // If current bet amount exceeds new balance, adjust it
-      if (currentBet > newBalance) {
-        const adjustedBet = Math.min(currentBet, newBalance);
+      if (currentBet > realtimeBalance) {
+        const adjustedBet = Math.min(currentBet, realtimeBalance);
         if (adjustedBet >= 0.01) {
           setBetAmount(adjustedBet.toFixed(2));
           console.log('🎯 Tower bet amount adjusted for new balance:', currentBet, '→', adjustedBet);
@@ -138,7 +176,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         }
       }
     }
-  }, [userData?.balance, betAmount]);
+  }, [realtimeBalance, betAmount]);
 
   // Check for active game on component mount
   useEffect(() => {
@@ -751,7 +789,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                             }
                             
                             const value = parseFloat(inputValue);
-                            const maxBalance = userData?.balance || 0;
+                            const maxBalance = realtimeBalance;
                             
                             if (isNaN(value) || inputValue === '' || inputValue === '.') {
                               setBetAmount(inputValue);
@@ -765,7 +803,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           }}
                           className="pl-10 pr-24 h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                           min="0.01"
-                          max={userData?.balance || 0}
+                          max={realtimeBalance}
                           step="0.01"
                           placeholder="0.00"
                         />
@@ -773,7 +811,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           <Coins className="w-4 h-4 text-primary" />
                         </div>
                         <div className="absolute right-16 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
-                          ${userData?.balance.toFixed(2) || '0.00'}
+                          ${realtimeBalance.toFixed(2)}
                         </div>
                         
                         {/* Custom arrow buttons */}
@@ -783,7 +821,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                             onClick={() => {
                               const current = parseFloat(betAmount) || 0;
                               const newValue = current + 0.01;
-                              const maxBalance = userData?.balance || 0;
+                              const maxBalance = realtimeBalance;
                               setBetAmount(Math.min(newValue, maxBalance).toFixed(2));
                             }}
                             className="flex-1 flex items-center justify-center w-8 rounded-tr-lg bg-slate-700/50 hover:bg-slate-600/50 border-l border-slate-600/50 text-slate-400 hover:text-white transition-colors"
@@ -826,7 +864,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           onClick={() => {
                             const current = parseFloat(betAmount) || 0;
                             const doubled = current * 2;
-                            const maxAmount = userData?.balance || 0;
+                            const maxAmount = realtimeBalance;
                             setBetAmount(Math.min(doubled, maxAmount).toFixed(2));
                           }}
                           className="flex-1 h-8 bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50 hover:text-white text-xs"
@@ -838,7 +876,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            setBetAmount((userData?.balance || 0).toFixed(2));
+                            setBetAmount(realtimeBalance.toFixed(2));
                           }}
                           className="flex-1 h-8 bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50 hover:text-white text-xs font-semibold"
                         >

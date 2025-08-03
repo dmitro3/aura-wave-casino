@@ -124,6 +124,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const balanceRef = useRef<number>(0);
   const lastResultsFetchRef = useRef<number>(0);
 
+  // Real-time balance state for instant UI updates
+  const [realtimeBalance, setRealtimeBalance] = useState<number>(profile?.balance || 0);
+
+  // Sync realtime balance when profile changes
+  useEffect(() => {
+    if (profile?.balance !== undefined) {
+      setRealtimeBalance(profile.balance);
+    }
+  }, [profile?.balance]);
+
   // Update balance ref when profile changes (for backward compatibility)
   useEffect(() => {
     if (profile?.balance !== undefined) {
@@ -132,15 +142,44 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
   }, [profile?.balance]);
 
+  // Direct real-time balance subscription for instant updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const balanceChannel = supabase
+      .channel(`roulette_balance_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'UPDATE' && payload.new?.balance !== undefined) {
+            const newBalance = parseFloat(payload.new.balance);
+            console.log('🎰 Roulette real-time balance update:', realtimeBalance, '→', newBalance);
+            setRealtimeBalance(newBalance);
+            balanceRef.current = newBalance; // Keep ref in sync too
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(balanceChannel);
+    };
+  }, [user?.id, realtimeBalance]);
+
   // Real-time balance sync: Update bet amount if it exceeds new balance
   useEffect(() => {
-    if (profile?.balance !== undefined && betAmount !== '') {
+    if (realtimeBalance !== undefined && betAmount !== '') {
       const currentBet = Number(betAmount) || 0;
-      const newBalance = profile.balance;
       
       // If current bet amount exceeds new balance, adjust it
-      if (currentBet > newBalance) {
-        const adjustedBet = Math.min(currentBet, newBalance);
+      if (currentBet > realtimeBalance) {
+        const adjustedBet = Math.min(currentBet, realtimeBalance);
         if (adjustedBet >= 0.01) {
           setBetAmount(Number(adjustedBet.toFixed(2)));
           console.log('🎰 Roulette bet amount adjusted for new balance:', currentBet, '→', adjustedBet);
@@ -150,7 +189,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         }
       }
     }
-  }, [profile?.balance, betAmount]);
+  }, [realtimeBalance, betAmount]);
   
   // Filter roulette bets from live feed (only current round, show during betting and spinning)
   const rouletteBets = (liveBetFeed || []).filter(bet => 
@@ -675,7 +714,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
     }
 
     // SECURITY 5: Validate bet amount (using real-time balance)
-    const currentBalance = profile?.balance || 0;
+    const currentBalance = realtimeBalance;
     if (betAmount === '' || betAmount < 0.01 || betAmount > 1000000) {
       toast({
         title: "Invalid Bet Amount",
@@ -1196,7 +1235,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                   {user && profile && (
                     <div className="flex items-center gap-2">
                       <Wallet className="w-4 h-4" />
-                      <span>Balance: ${profile.balance.toFixed(2)}</span>
+                      <span>Balance: ${realtimeBalance.toFixed(2)}</span>
                     </div>
                   )}
                   <span className="text-muted-foreground">
@@ -1296,7 +1335,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                       return; // Don't update if not a valid number
                                     }
                                     
-                                    const maxBalance = profile?.balance || 0;
+                                    const maxBalance = realtimeBalance;
                                     setBetAmount(newAmount > maxBalance ? maxBalance : Math.max(0.01, newAmount));
                                   }}
                                   onBlur={(e) => {
@@ -1323,7 +1362,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                                     onClick={() => {
                                       const currentAmount = betAmount === '' ? 0 : Number(betAmount);
                                       const newAmount = currentAmount + 0.01;
-                                      const maxBalance = profile?.balance || 0;
+                                      const maxBalance = realtimeBalance;
                                       setBetAmount(newAmount > maxBalance ? maxBalance : newAmount);
                                     }}
                                     disabled={currentRound.status !== 'betting'}
@@ -1359,7 +1398,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                           }}>
                             <div className="w-1 h-1 bg-accent animate-pulse"></div>
                             <span className="text-xs text-slate-300 whitespace-nowrap font-mono tracking-wide">
-                              MAX: <span className="text-accent font-bold">${profile?.balance?.toFixed(2) || '0.00'}</span>
+                              MAX: <span className="text-accent font-bold">${realtimeBalance.toFixed(2)}</span>
                             </span>
                           </div>
                         </div>
@@ -1380,7 +1419,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => setBetAmount(Math.min(profile?.balance || 0, Number(betAmount) * 2))}
+                                                              onClick={() => setBetAmount(Math.min(realtimeBalance, Number(betAmount) * 2))}
                           disabled={currentRound.status !== 'betting'}
                           className="h-9 w-14 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 hover:from-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 hover:border-emerald-400 text-emerald-400 hover:text-emerald-300 font-bold text-sm hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out"
                         >
@@ -1440,7 +1479,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                           isNaN(Number(betAmount)) ||
                           Number(betAmount) <= 0 ||
                           Number(betAmount) < 0.01 ||
-                          Number(betAmount) > (profile?.balance || 0) ||
+                                                              Number(betAmount) > realtimeBalance ||
                           userBetLimits.betCount >= MAX_BETS_PER_ROUND ||
                           userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND ||
                           Date.now() - lastBetTime < MIN_BET_INTERVAL
@@ -1461,7 +1500,7 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
                           isNaN(Number(betAmount)) ? 'Invalid bet amount' :
                           Number(betAmount) <= 0 ? 'Bet amount must be greater than 0' :
                           Number(betAmount) < 0.01 ? 'Minimum bet is $0.01' :
-                          Number(betAmount) > (profile?.balance || 0) ? 'Insufficient balance' :
+                                                            Number(betAmount) > realtimeBalance ? 'Insufficient balance' :
                           userBetLimits.betCount >= MAX_BETS_PER_ROUND ? 'Max bets reached' :
                           userBetLimits.totalThisRound + Number(betAmount) > MAX_TOTAL_BET_PER_ROUND ? 'Round limit reached' :
                           Date.now() - lastBetTime < MIN_BET_INTERVAL ? 'Rate limited' :
