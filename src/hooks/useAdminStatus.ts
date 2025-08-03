@@ -103,7 +103,10 @@ export const useAdminStatus = (userId?: string) => {
           filter: `user_id=eq.${targetUserId}`
         },
         async (payload) => {
-          console.log('🔄 Admin status changed for user:', targetUserId, payload);
+          // Only log actual admin changes, not connection status
+          if (process.env.NODE_ENV === 'development') {
+            console.log('🔄 Admin status changed for user:', targetUserId);
+          }
           
           // Clear cache for this user
           adminStatusCache.delete(targetUserId);
@@ -115,9 +118,7 @@ export const useAdminStatus = (userId?: string) => {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Admin status subscription status:', status, 'for user:', targetUserId);
-      });
+      .subscribe(); // Remove the verbose status callback
 
     subscriptionRef.current = channel;
 
@@ -155,8 +156,11 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
   const mountedRef = useRef(true);
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
 
+  // Deduplicate user IDs to prevent spam
+  const uniqueUserIds = Array.from(new Set(userIds.filter(Boolean)));
+
   const checkMultipleAdminStatus = useCallback(async () => {
-    if (userIds.length === 0) {
+    if (uniqueUserIds.length === 0) {
       setAdminStatuses({});
       setLoading(false);
       return;
@@ -166,7 +170,7 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
     const uncachedUserIds: string[] = [];
     const cachedStatuses: Record<string, boolean> = {};
     
-    userIds.forEach(userId => {
+    uniqueUserIds.forEach(userId => {
       const cached = adminStatusCache.get(userId);
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         cachedStatuses[userId] = cached.isAdmin;
@@ -190,7 +194,6 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
 
       if (mountedRef.current) {
         if (rpcError) {
-          console.log('RPC multiple admin check failed, treating all as non-admin:', rpcError);
           const statuses: Record<string, boolean> = { ...cachedStatuses };
           uncachedUserIds.forEach(userId => {
             statuses[userId] = false;
@@ -230,7 +233,6 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
       }
     } catch (err: any) {
       if (mountedRef.current) {
-        console.log('Multiple admin status check failed:', err);
         const statuses: Record<string, boolean> = { ...cachedStatuses };
         uncachedUserIds.forEach(userId => {
           statuses[userId] = false;
@@ -244,20 +246,23 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
         setLoading(false);
       }
     }
-  }, [userIds]);
+  }, [uniqueUserIds]);
 
   // Set up real-time subscription for admin status changes
   useEffect(() => {
-    if (userIds.length === 0) return;
+    if (uniqueUserIds.length === 0) return;
 
     // Clean up existing subscription
     if (subscriptionRef.current) {
       subscriptionRef.current.unsubscribe();
     }
 
+    // Create a stable subscription key to prevent excessive recreation
+    const subscriptionKey = uniqueUserIds.sort().join('_');
+
     // Set up new subscription for admin_users table changes for any of the target users
     const channel = supabase
-      .channel(`multiple_admin_status_${userIds.join('_')}`)
+      .channel(`multiple_admin_status_${subscriptionKey}`)
       .on(
         'postgres_changes',
         {
@@ -269,8 +274,11 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
         async (payload) => {
           // Check if the change affects any of our target users
           const affectedUserId = payload.new?.user_id || payload.old?.user_id;
-          if (affectedUserId && userIds.includes(affectedUserId)) {
-            console.log('🔄 Admin status changed for tracked user:', affectedUserId, payload);
+          if (affectedUserId && uniqueUserIds.includes(affectedUserId)) {
+            // Only log in development mode and only actual changes
+            if (process.env.NODE_ENV === 'development') {
+              console.log('🔄 Admin status changed for tracked user:', affectedUserId);
+            }
             
             // Clear cache for affected user
             adminStatusCache.delete(affectedUserId);
@@ -283,9 +291,7 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('📡 Multiple admin status subscription status:', status, 'for users:', userIds);
-      });
+      .subscribe(); // Remove the verbose status callback
 
     subscriptionRef.current = channel;
 
@@ -296,7 +302,7 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
         subscriptionRef.current = null;
       }
     };
-  }, [userIds, checkMultipleAdminStatus]);
+  }, [uniqueUserIds.join(','), checkMultipleAdminStatus]); // Use stable dependency
 
   useEffect(() => {
     mountedRef.current = true;
