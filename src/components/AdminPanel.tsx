@@ -1121,7 +1121,45 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
   useEffect(() => {
     checkAdminStatus();
-  }, [currentUser]);
+
+    // Real-time subscription for admin status changes
+    if (currentUser) {
+      const adminChannel = supabase
+        .channel(`admin_status_panel_${currentUser.id}`)
+        .on(
+          'postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'admin_users',
+            filter: `user_id=eq.${currentUser.id}`
+          },
+          (payload) => {
+            console.log('Admin status change detected (AdminPanel):', payload);
+            if (payload.eventType === 'INSERT') {
+              setIsAdmin(true);
+            } else if (payload.eventType === 'DELETE') {
+              setIsAdmin(false);
+              // Close the panel and show access denied message
+              if (isOpen) {
+                toast({
+                  title: "🔒 Access Revoked",
+                  description: "Your administrator privileges have been removed.",
+                  variant: "destructive",
+                  duration: 5000
+                });
+                // Panel will show "Access Denied" due to isAdmin being false
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(adminChannel);
+      };
+    }
+  }, [currentUser, isOpen]);
 
   // Check system status when admin panel opens
   useEffect(() => {
