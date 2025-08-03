@@ -711,9 +711,8 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   });
 
   const { data: balanceResult, error: balanceError } = await supabase.rpc('atomic_bet_balance_check', {
-    p_user_id: userId,
-    p_bet_amount: betAmount,
-    p_round_id: roundId
+    user_uuid: userId,
+    bet_amount: betAmount
   });
 
   console.log('🔍 Atomic balance check result:', {
@@ -728,16 +727,11 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   }
 
   if (!balanceResult) {
-    console.error('❌ No result from atomic balance check');
-    throw new Error('Balance validation failed: No result returned');
+    console.error('❌ Balance check failed - insufficient balance or user not found');
+    throw new Error('Insufficient balance');
   }
 
-  if (!balanceResult.success) {
-    console.error('❌ Balance check returned failure:', balanceResult);
-    throw new Error(balanceResult.error_message || 'Insufficient balance');
-  }
-
-  console.log('✅ Atomic balance check successful:', balanceResult);
+  console.log('✅ Atomic balance check successful - balance deducted');
 
   // SECURITY 6: Check total bets per user per round limit
   const { data: userBetsCount, error: userBetsError } = await supabase
