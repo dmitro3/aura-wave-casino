@@ -172,9 +172,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       console.log('🎯 TOWER: Game started, received data:', newGame);
       setGame(newGame);
       
-      // Update user balance
-      const newBalance = userData.balance - amount;
-      await onUpdateUser({ balance: newBalance });
+      // Balance will be updated automatically via real-time subscription when backend processes the bet
+      console.log('⚡ Balance will be updated via real-time subscription after backend deducts bet amount');
       
       toast({
         title: "Game Started",
@@ -241,8 +240,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           variant: "destructive"
         });
       } else if (updatedGame.status === 'cashed_out') {
-        const newBalance = userData!.balance + updatedGame.final_payout!;
-        await onUpdateUser({ balance: newBalance });
+        // Balance will be updated automatically via real-time subscription when backend processes the payout
+        console.log('⚡ Balance will be updated via real-time subscription after backend adds payout');
         
         toast({
           title: "DATA EXTRACTION SUCCESSFUL",
@@ -290,8 +289,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       const updatedGame = response.data;
       setGame(updatedGame);
       
-      const newBalance = userData!.balance + updatedGame.final_payout!;
-      await onUpdateUser({ balance: newBalance });
+      // Balance will be updated automatically via real-time subscription when backend processes the payout
+      console.log('⚡ Balance will be updated via real-time subscription after backend adds auto cash-out payout');
       
       toast({
         title: "SECURE EXTRACTION",

@@ -575,12 +575,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       const payout = isWin ? totalBetAmount + totalProfit : 0; // Total payout includes bet amount back + profit
       const newBalance = profile.balance + payout; // Add payout (if any) to current balance
       
-      console.log(`💰 Balance update: ${profile.balance} + ${payout} = ${newBalance}`);
-
-      // Update frontend balance immediately (Tower game pattern)
-      await onUpdateUser({
-        balance: newBalance
-      });
+      console.log(`💰 Expected balance after payout: ${profile.balance} + ${payout} = ${newBalance}`);
+      console.log('⚡ Balance will be updated automatically via real-time subscription when backend processes the round');
 
         // Refresh XP and level stats after round completion (for both wins and losses)
         try {
@@ -791,14 +787,8 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
         betCount: prev.betCount + 1
       }));
 
-      // Update balance optimistically
-      const newBalance = currentProfile.balance - Number(betAmount);
-      balanceRef.current = newBalance;
-      
-      // Update profile balance through the parent component
-      await onUpdateUser({
-        balance: newBalance
-      });
+      // Balance will be updated automatically via real-time subscription when backend processes the bet
+      console.log('⚡ Balance will be updated via real-time subscription after atomic balance deduction in backend');
 
       currentRoundRef.current = currentRound.id;
 

@@ -38,40 +38,46 @@ export function useUserProfile() {
       return
     }
 
-    // Disable realtime subscriptions temporarily to reduce console noise
-    console.log("[useUserProfile] Realtime disabled, using polling fallback");
+    // Set up real-time balance subscription for instant updates
+    console.log("[useUserProfile] Setting up real-time balance subscription for user:", user.id);
     
     fetchUserProfile()
     
-    // Set up polling for balance updates (every 30 seconds instead of 5)
-    const balanceRefreshInterval = setInterval(async () => {
-      try {
-        const { data: currentProfile } = await supabase
-          .from('profiles')
-          .select('balance')
-          .eq('id', user.id)
-          .single();
-
-        if (currentProfile) {
-          setUserData(prev => {
-            if (!prev) return null;
-            if (prev.balance !== currentProfile.balance) {
-              console.log('🔄 PERIODIC BALANCE SYNC:', prev.balance, '→', currentProfile.balance);
-              return {
-                ...prev,
-                balance: currentProfile.balance,
-              };
-            }
-            return prev;
-          });
+    // Real-time subscription for instant balance updates
+    const balanceSubscription = supabase
+      .channel(`balance_updates_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('💰 REAL-TIME BALANCE UPDATE:', payload);
+          const newBalance = payload.new?.balance;
+          
+          if (typeof newBalance === 'number') {
+            setUserData(prev => {
+              if (!prev) return null;
+              if (prev.balance !== newBalance) {
+                console.log('⚡ INSTANT BALANCE SYNC:', prev.balance, '→', newBalance);
+                return {
+                  ...prev,
+                  balance: newBalance,
+                };
+              }
+              return prev;
+            });
+          }
         }
-      } catch (error) {
-        console.error('Error in periodic balance refresh:', error);
-      }
-    }, 30000); // Every 30 seconds instead of 5
+      )
+      .subscribe();
 
     return () => {
-      clearInterval(balanceRefreshInterval);
+      console.log("[useUserProfile] Cleaning up balance subscription");
+      supabase.removeChannel(balanceSubscription);
     };
   }, [user])
 
