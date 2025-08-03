@@ -239,6 +239,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         setTimeout(() => {
           refetchAdminStatuses();
         }, 500); // Delay to ensure users state is updated
+
+        // Also refresh pending deletions to ensure account deletion status is up to date
+        loadPendingDeletions();
       }
     } catch (err) {
       console.error('Error loading users:', err);
