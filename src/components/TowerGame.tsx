@@ -935,7 +935,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
 
         {/* Main Tower Display */}
         <div className="lg:col-span-2">
-          <Card className="border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-sm">
+          <Card className="border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-sm relative">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -955,6 +955,48 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                 )}
               </div>
             </CardHeader>
+            
+            {/* Game End Overlay */}
+            {game?.status !== 'active' && game?.status && (
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
+                <div className="bg-slate-900/95 border border-slate-700/50 rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+                  {game.status === 'lost' ? (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="text-4xl text-red-400 mb-4">
+                        <AlertTriangle className="w-16 h-16 mx-auto" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-red-400">SECURITY BREACH DETECTED</h3>
+                      <p className="text-slate-300">
+                        Access denied on floor {game.current_level + 1}. System lockdown initiated.
+                      </p>
+                      <div className="text-red-400 text-sm">
+                        Protocol terminated by {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name} security systems
+                      </div>
+                      <div className="text-slate-400 text-xs mt-2 animate-pulse">
+                        Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 animate-fade-in">
+                      <div className="text-4xl text-emerald-400 mb-4">
+                        <Crown className="w-16 h-16 mx-auto" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-emerald-400">DATA EXTRACTION SUCCESSFUL</h3>
+                      <p className="text-slate-300">
+                        Successfully extracted ${(game.final_payout || 0).toFixed(2)} from floor {game.current_level}
+                      </p>
+                      <div className="text-emerald-400 text-sm">
+                        {(game.current_multiplier || 1).toFixed(2)}x multiplier achieved
+                      </div>
+                      <div className="text-slate-400 text-xs mt-2 animate-pulse">
+                        Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
             <CardContent className="space-y-4">
               <div className="space-y-0">
                 {/* Tower levels - always visible, updates based on difficulty */}
@@ -972,48 +1014,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             </CardContent>
           </Card>
 
-          {/* Game End Status */}
-          {game?.status !== 'active' && game?.status && (
-            <Card className="glass border-0 bg-gradient-to-br from-slate-900/80 via-slate-800/60 to-slate-900/80 backdrop-blur-xl mt-4">
-              <CardContent className="p-6 text-center">
-                {game.status === 'lost' ? (
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="text-4xl text-red-400 mb-4">
-                      <AlertTriangle className="w-16 h-16 mx-auto" />
-                    </div>
-                    <h3 className="text-2xl font-mono font-bold text-red-400">SECURITY BREACH DETECTED</h3>
-                    <p className="text-slate-300 font-mono">
-                      Access denied on floor {game.current_level + 1}. System lockdown initiated.
-                    </p>
-                    <div className="text-red-400 font-mono text-sm">
-                      Protocol terminated by {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name} security systems
-                    </div>
-                    <div className="text-slate-400 font-mono text-xs mt-2 animate-pulse">
-                      Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
-                    </div>
 
-                  </div>
-                ) : (
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="text-4xl text-emerald-400 mb-4">
-                      <Crown className="w-16 h-16 mx-auto" />
-                    </div>
-                    <h3 className="text-2xl font-mono font-bold text-emerald-400">DATA EXTRACTION SUCCESSFUL</h3>
-                    <p className="text-slate-300 font-mono">
-                      Successfully extracted ${(game.final_payout || 0).toFixed(2)} from floor {game.current_level}
-                    </p>
-                    <div className="text-emerald-400 font-mono text-sm">
-                      {(game.current_multiplier || 1).toFixed(2)}x multiplier achieved
-                    </div>
-                    <div className="text-slate-400 font-mono text-xs mt-2 animate-pulse">
-                      Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
-                    </div>
-
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
