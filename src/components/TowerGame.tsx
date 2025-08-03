@@ -273,7 +273,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const startGame = async () => {
     if (!userData?.id || loading || isMaintenanceMode || loadingActiveGame) return;
     
-    // Prevent starting a new game if there's already an active one
+    // Prevent starting a new game if there's already an active one (local state check)
     if (game?.status === 'active') {
       toast({
         title: "Game Already Active",
@@ -282,9 +282,46 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       });
       return;
     }
+
+    // Double-check for active games in database to prevent race conditions
+    setLoading(true);
+    try {
+      console.log('🔍 TOWER: Double-checking for active games before starting new game...');
+      const { data: activeGames, error: checkError } = await supabase
+        .from('tower_games')
+        .select('id, status, created_at')
+        .eq('user_id', userData.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (checkError) {
+        console.error('❌ TOWER: Error checking for active games:', checkError);
+        setLoading(false);
+        return;
+      }
+
+      if (activeGames && activeGames.length > 0) {
+        console.log('⚠️ TOWER: Found active game in database, preventing double bet:', activeGames[0]);
+        setLoading(false);
+        toast({
+          title: "Active Game Detected",
+          description: "You already have an active tower game. Please refresh the page to continue.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ TOWER: No active games found, proceeding with new game...');
+    } catch (error) {
+      console.error('❌ TOWER: Error in active game check:', error);
+      setLoading(false);
+      return;
+    }
     
     const amount = parseFloat(betAmount);
     if (isNaN(amount) || amount <= 0) {
+      setLoading(false);
       toast({
         title: "Invalid bet amount",
         description: "Please enter a valid bet amount",
@@ -294,6 +331,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     }
 
     if (amount > userData.balance) {
+      setLoading(false);
       toast({
         title: "Insufficient balance",
         description: "You don't have enough balance for this bet",
@@ -302,7 +340,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       return;
     }
 
-    setLoading(true);
+    // Continue with game creation (loading is already set from database check)
     try {
       const requestBody = { 
         action: 'start',
@@ -374,14 +412,16 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       if (response.error) throw response.error;
       
       const updatedGame = response.data;
-      setGame(updatedGame);
       
-      // Track the selected tile for this level
+      // Track the selected tile for this level immediately
       setSelectedTiles(prev => {
         const newSelected = [...prev];
         newSelected[game.current_level] = tileIndex;
         return newSelected;
       });
+      
+      // Update game state immediately for instant UI response
+      setGame(updatedGame);
       
       // Handle game end
       if (updatedGame.status === 'lost') {
@@ -414,13 +454,12 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       });
     } finally {
       setLoading(false);
-      setTimeout(() => {
-        setAnimatingTiles(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(tileKey);
-          return newSet;
-        });
-      }, 1000);
+      // Remove animation immediately for instant response
+      setAnimatingTiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(tileKey);
+        return newSet;
+      });
     }
   };
 
@@ -441,6 +480,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       if (response.error) throw response.error;
       
       const updatedGame = response.data;
+      
+      // Update game state immediately for instant UI response
       setGame(updatedGame);
       
       // Balance will be updated automatically via real-time subscription when backend processes the payout
