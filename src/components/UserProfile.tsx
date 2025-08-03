@@ -154,69 +154,38 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
 
     setIsSendingTip(true);
     try {
-      // First check if user has sufficient balance
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('balance')
-        .eq('id', user.id)
-        .single();
+      // Use the secure atomic tip function
+      const { data, error } = await supabase.rpc('send_tip', {
+        p_from_user_id: user.id,
+        p_to_user_id: userData.id,
+        p_amount: amount,
+        p_message: tipMessage.trim() || null,
+      });
 
-      if (profileError) throw profileError;
-
-      if (!profile || profile.balance < amount) {
+      if (error) {
+        console.error('RPC Error:', error);
         toast({
-          title: "Insufficient Balance",
-          description: "You don't have enough balance to send this tip.",
+          title: "Failed to Send Tip",
+          description: "There was an error sending your tip. Please try again.",
           variant: "destructive",
         });
         return;
       }
 
-      // Send the tip
-      const { error: tipError } = await supabase
-        .from('tips')
-        .insert({
-          from_user_id: user.id,
-          to_user_id: userData.id,
-          amount: amount,
-          message: tipMessage.trim() || null,
+      // Check if the function returned success
+      if (!data || !data.success) {
+        toast({
+          title: "Tip Failed",
+          description: data?.error_message || "Unable to send tip.",
+          variant: "destructive",
         });
+        return;
+      }
 
-      if (tipError) throw tipError;
-
-      // Deduct from sender's balance
-      const { error: deductError } = await supabase
-        .from('profiles')
-        .update({ 
-          balance: profile.balance - amount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (deductError) throw deductError;
-
-      // Add to receiver's balance
-      const { data: receiverProfile, error: receiverError } = await supabase
-        .from('profiles')
-        .select('balance')
-        .eq('id', userData.id)
-        .single();
-
-      if (receiverError) throw receiverError;
-
-      const { error: addError } = await supabase
-        .from('profiles')
-        .update({ 
-          balance: receiverProfile.balance + amount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userData.id);
-
-      if (addError) throw addError;
-
+      // Success!
       toast({
         title: "Tip Sent Successfully! 🎉",
-        description: `You sent $${amount.toFixed(2)} to ${userData.username}${tipMessage ? ' with a message' : ''}.`,
+        description: `You sent $${amount.toFixed(2)} to ${userData.username}${tipMessage ? ' with a message' : ''}. Your new balance: $${data.sender_new_balance.toFixed(2)}`,
       });
 
       // Reset form and close modal
