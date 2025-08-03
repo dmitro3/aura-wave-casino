@@ -32,7 +32,7 @@ import { AnimatedBalance } from '@/components/AnimatedBalance';
 import { MaintenanceAwareGame } from '@/components/MaintenanceAwareGame';
 import AccountDeletionNotification from '@/components/AccountDeletionNotification';
 import AccountDeletionHandler from '@/components/AccountDeletionHandler';
-import { ModernNotificationsPanel } from '@/components/ModernNotificationsPanel';
+import { CyberpunkNotificationsPanel } from '@/components/CyberpunkNotificationsPanel';
 import { formatDistanceToNow } from 'date-fns';
 import { formatXP, formatXPProgress, calculateXPProgress } from '@/lib/xpUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -1223,9 +1223,9 @@ export default function Index({ initialGame }: IndexProps) {
                           </div>
                         </div>
                         
-                        {/* Modern Notifications Panel */}
-                        <div className="flex-1 p-6">
-                          <ModernNotificationsPanel
+                        {/* Cyberpunk Notifications Panel */}
+                        <div className="flex-1">
+                          <CyberpunkNotificationsPanel
                             notifications={notifications}
                             onMarkAsRead={markNotificationAsRead}
                             onDelete={deleteNotification}
