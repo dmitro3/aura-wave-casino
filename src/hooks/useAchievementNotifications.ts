@@ -18,6 +18,16 @@ export function useAchievementNotifications() {
   const [claimableAchievements, setClaimableAchievements] = useState<ClaimableAchievement[]>([]);
   const [hasNewClaimable, setHasNewClaimable] = useState(false);
 
+  // Debug what we're getting from the hooks
+  useEffect(() => {
+    console.log('🏆 DEBUG: Hook dependencies check:', {
+      user: user ? user.id : null,
+      userExists: !!user,
+      stats: stats,
+      statsExists: !!stats
+    });
+  }, [user, stats]);
+
   const calculateProgress = (achievement: any, userStats: any): number => {
     if (!userStats) return 0;
     
