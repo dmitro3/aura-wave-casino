@@ -963,23 +963,6 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                   </div>
                   
                   <TabsList className="relative grid w-full grid-cols-4 gap-3 bg-transparent border-0 p-0 h-auto">
-                    {/* Notification Badge - Positioned relative to achievements tab */}
-                    {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
-                      <div className="absolute top-0 left-[75%] transform -translate-x-1/2 -translate-y-3 group/badge z-[9999]">
-                        <div className="absolute -inset-1 bg-emerald-500/60 blur-sm animate-pulse"
-                             style={{
-                               clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px))'
-                             }} />
-                        <div className="relative w-7 h-7 bg-gradient-to-br from-emerald-500 to-green-600 border-2 border-white/30 backdrop-blur-sm flex items-center justify-center"
-                             style={{
-                               clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px))'
-                             }}>
-                          <span className="text-xs font-bold text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.8)] font-mono">
-                            {notificationClaimable.length}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                                       {/* Overview Tab Button */}
                     <div className="relative group/tab">
                       <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 to-blue-500/60 blur-sm opacity-0 group-hover/tab:opacity-100 transition-opacity duration-300"
