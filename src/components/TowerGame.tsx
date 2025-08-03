@@ -747,12 +747,22 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           <div className="text-xs text-slate-400">Max: {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO]?.maxMultiplier}</div>
                         </div>
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-800 border-slate-600">
+                      <SelectContent className="bg-slate-900 border-slate-600 shadow-xl">
                         {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
-                          <SelectItem key={key} value={key} className="text-white">
+                          <SelectItem 
+                            key={key} 
+                            value={key} 
+                            className={`text-white hover:bg-primary/10 focus:bg-primary/10 data-[highlighted]:bg-primary/10 cursor-pointer py-3 border-b border-slate-700/50 last:border-b-0 transition-colors duration-200 ${
+                              difficulty === key ? 'bg-primary/20 border-primary/30' : ''
+                            }`}
+                          >
                             <div className="text-center w-full">
-                              <div className="font-medium">{info.name}</div>
-                              <div className="text-xs text-slate-400">Max: {info.maxMultiplier}</div>
+                              <div className={`font-medium ${difficulty === key ? 'text-primary' : 'text-white'}`}>
+                                {info.name}
+                              </div>
+                              <div className={`text-xs ${difficulty === key ? 'text-primary/70' : 'text-slate-400'}`}>
+                                Max: {info.maxMultiplier}
+                              </div>
                             </div>
                           </SelectItem>
                         ))}
