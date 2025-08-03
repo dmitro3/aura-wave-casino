@@ -364,23 +364,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
     }
   };
 
-  // Debug logging for level stats display
-  console.log('📊 UserProfile level stats display:', {
-    username: userData.username,
-    isViewingOwnProfile,
-    hasStats: !!stats,
-    hasUserDataLevelStats: !!userData.levelStats,
-    statsSource: isViewingOwnProfile ? 'useUserLevelStats' : 'userData.levelStats',
-    rawUserDataLevelStats: userData.levelStats,
-    rawStats: stats ? { level: stats.current_level, xp: stats.current_level_xp, lifetime: stats.lifetime_xp } : null,
-    finalValues: {
-      currentLevel,
-      lifetimeXP,
-      currentXP,
-      xpToNext,
-      xpProgress: Math.round(xpProgress)
-    }
-  });
+
 
   const registrationDate = new Date(userData.registration_date).toLocaleDateString('en-US', {
     year: 'numeric',
