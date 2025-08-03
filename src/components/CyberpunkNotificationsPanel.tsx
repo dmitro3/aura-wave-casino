@@ -177,7 +177,6 @@ export function CyberpunkNotificationsPanel({
                 
                 {/* Corner tech indicators */}
                 <div className="absolute top-1 left-1 w-1 h-1 bg-primary/60 rounded-full animate-pulse" />
-                <div className="absolute top-1 right-1 w-1 h-1 bg-accent/60 rounded-full animate-pulse delay-500" />
                 <div className="absolute bottom-1 right-1 w-1 h-1 bg-primary/60 rounded-full animate-pulse delay-1500" />
               </div>
             </div>
@@ -200,7 +199,6 @@ export function CyberpunkNotificationsPanel({
                 <span className="text-sm text-slate-400 font-mono">
                   {unreadCount > 0 ? `${unreadCount} UNREAD SIGNALS` : 'ALL SYSTEMS CLEAR'}
                 </span>
-                <div className="w-1 h-1 bg-accent/60 rounded-full animate-pulse" />
                 <span className="text-xs text-slate-500 font-mono">{notifications.length} TOTAL</span>
               </div>
             </div>
