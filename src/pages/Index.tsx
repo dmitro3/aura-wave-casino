@@ -331,10 +331,21 @@ export default function Index({ initialGame }: IndexProps) {
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      await supabase
+      const { error } = await supabase
         .from('notifications')
         .delete()
         .eq('id', notificationId);
+
+      if (error) {
+        console.error('❌ Error deleting notification:', error);
+        toast({
+          title: "DELETE FAILED",
+          description: `Failed to delete notification: ${error.message}`,
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
 
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       
@@ -345,7 +356,13 @@ export default function Index({ initialGame }: IndexProps) {
         duration: 2000,
       });
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.error('❌ Error deleting notification:', error);
+      toast({
+        title: "DELETE FAILED",
+        description: "An unexpected error occurred while deleting the notification",
+        variant: "destructive",
+        duration: 3000,
+      });
     }
   };
 

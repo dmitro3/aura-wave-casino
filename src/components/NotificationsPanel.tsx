@@ -158,7 +158,7 @@ export default function NotificationsPanel() {
       console.log('🔔 Cleaning up notifications subscription');
       supabase.removeChannel(channel);
     };
-  }, [user, toast]);
+  }, [user]);
 
   const fetchNotifications = async () => {
     if (!user) return;
