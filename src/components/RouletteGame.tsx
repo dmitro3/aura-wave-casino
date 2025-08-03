@@ -571,60 +571,16 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
 
       console.log(`💰 Round results: Bet ${totalBetAmount}, Profit ${totalProfit}, Win: ${isWin}`);
 
-      // Stats and XP are automatically updated by the backend roulette engine
-      console.log('📊 Backend handles roulette statistics for:', {
-        user_id: user.id,
-        game_type: 'roulette',
-        bet_amount: totalBetAmount,
-        profit: totalProfit,
-        is_win: isWin,
-        winning_color: completedRound.result_color
-      });
-
-      // Small delay to let backend finish processing payouts
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Fetch the updated profile from backend with retry logic
-      let updatedProfile = null;
-      let error = null;
+      // Calculate new balance directly (like Tower game does)
+      const payout = isWin ? totalBetAmount + totalProfit : 0; // Total payout includes bet amount back + profit
+      const newBalance = profile.balance + payout; // Add payout (if any) to current balance
       
-      // Try up to 3 times to get the updated balance
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        console.log(`💰 Fetching updated balance (attempt ${attempt}/3)`);
-        
-        const result = await supabase
-          .from('profiles')
-          .select('balance')
-          .eq('id', user.id)
-          .single();
-          
-        if (result.error) {
-          error = result.error;
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            continue;
-          }
-        } else {
-          updatedProfile = result.data;
-          error = null;
-          break;
-        }
-      }
+      console.log(`💰 Balance update: ${profile.balance} + ${payout} = ${newBalance}`);
 
-      if (error) {
-        console.error('❌ Error fetching updated profile:', error);
-        return;
-      }
-
-      if (updatedProfile) {
-        const oldBalance = profile.balance;
-        const newBalance = updatedProfile.balance;
-        const balanceDifference = newBalance - oldBalance;
-
-        // Update frontend with the actual backend values
-        await onUpdateUser({
-          balance: newBalance
-        });
+      // Update frontend balance immediately (Tower game pattern)
+      await onUpdateUser({
+        balance: newBalance
+      });
 
         // Refresh XP and level stats after round completion (for both wins and losses)
         try {
@@ -634,17 +590,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
           console.error('❌ Error refreshing XP stats:', refreshError);
         }
 
-        // Show appropriate notification
-        if (balanceDifference > 0) {
-          // Check which color won to show in message
-          const winningBets = userBetsInRound.filter(([betColor]) => betColor === completedRound.result_color);
-          
-          toast({
-            title: "VICTORY ACHIEVED",
-            description: `+$${balanceDifference.toFixed(2)} • ${completedRound.result_color.toUpperCase()}`,
-            variant: "success",
-          });
-        }
+      // Show appropriate notification
+      if (payout > 0) {
+        toast({
+          title: "VICTORY ACHIEVED",
+          description: `+$${payout.toFixed(2)} • ${completedRound.result_color.toUpperCase()}`,
+          variant: "success",
+        });
       }
 
     } catch (error: any) {
