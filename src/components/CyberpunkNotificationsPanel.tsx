@@ -55,7 +55,7 @@ const getNotificationTheme = (type: string) => {
         bgColor: 'bg-emerald-500/5',
         iconColor: 'text-emerald-400',
         accentColor: 'emerald',
-        emoji: '💰'
+        emoji: ''
       };
     case 'tip_sent':
       return {
@@ -67,7 +67,7 @@ const getNotificationTheme = (type: string) => {
         bgColor: 'bg-blue-500/5',
         iconColor: 'text-blue-400',
         accentColor: 'blue',
-        emoji: '🎁'
+        emoji: ''
       };
     case 'achievement_unlocked':
       return {
@@ -79,7 +79,7 @@ const getNotificationTheme = (type: string) => {
         bgColor: 'bg-yellow-500/5',
         iconColor: 'text-yellow-400',
         accentColor: 'yellow',
-        emoji: '⭐'
+        emoji: ''
       };
     case 'level_up':
       return {
@@ -91,7 +91,7 @@ const getNotificationTheme = (type: string) => {
         bgColor: 'bg-purple-500/5',
         iconColor: 'text-purple-400',
         accentColor: 'purple',
-        emoji: '👑'
+        emoji: ''
       };
     case 'admin_message':
       return {
@@ -115,7 +115,7 @@ const getNotificationTheme = (type: string) => {
         bgColor: 'bg-slate-500/5',
         iconColor: 'text-slate-400',
         accentColor: 'slate',
-        emoji: '🔔'
+        emoji: ''
       };
   }
 };
@@ -178,7 +178,6 @@ export function CyberpunkNotificationsPanel({
                 {/* Corner tech indicators */}
                 <div className="absolute top-1 left-1 w-1 h-1 bg-primary/60 rounded-full animate-pulse" />
                 <div className="absolute top-1 right-1 w-1 h-1 bg-accent/60 rounded-full animate-pulse delay-500" />
-                <div className="absolute bottom-1 left-1 w-1 h-1 bg-accent/60 rounded-full animate-pulse delay-1000" />
                 <div className="absolute bottom-1 right-1 w-1 h-1 bg-primary/60 rounded-full animate-pulse delay-1500" />
               </div>
             </div>
