@@ -1041,6 +1041,20 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                           clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))'
                         }}
                       >
+                        {/* Achievement Notification Indicator - positioned on entire button */}
+                        {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
+                          <div className="absolute -top-1.5 -right-1.5 z-50 group/badge">
+                            <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
+                                 style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }} />
+                            <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
+                                 style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }}>
+                              <span className="text-[0.625rem] font-bold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] font-mono leading-none">
+                                {notificationClaimable.length}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="absolute inset-0 opacity-10">
                           <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(245,158,11,0.4)_25%,rgba(245,158,11,0.4)_26%,transparent_27%,transparent_74%,rgba(245,158,11,0.4)_75%,rgba(245,158,11,0.4)_76%,transparent_77%,transparent)] bg-[8px_8px] animate-grid-move-slow" />
                         </div>
@@ -1048,21 +1062,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/30 to-transparent translate-x-[-100%] group-data-[state=active]:translate-x-[100%] transition-transform duration-1000 ease-out" />
                         
                         <div className="relative z-10 flex flex-col items-center justify-center gap-2 p-3">
-                          <div className="relative">
-                            <Award className="w-6 h-6 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] group-data-[state=active]:animate-pulse" />
-                            {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
-                              <div className="absolute -top-1.5 -right-1.5 z-50 group/badge">
-                                <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
-                                     style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }} />
-                                <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
-                                     style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }}>
-                                  <span className="text-[0.625rem] font-bold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] font-mono leading-none">
-                                    {notificationClaimable.length}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <Award className="w-6 h-6 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] group-data-[state=active]:animate-pulse" />
                           <span className="text-xs font-bold font-mono tracking-wider">ACHIEVEMENTS</span>
                         </div>
                         
