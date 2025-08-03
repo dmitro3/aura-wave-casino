@@ -3,6 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +13,7 @@ import {
   Trophy, Target, TrendingUp, Calendar, Star, DollarSign, 
   Crown, Flame, Sparkles, Zap, Award, Medal, Gamepad2,
   BarChart3, Coins, X, Wallet, Gift, Globe, Users,
-  ChevronUp, ChevronDown, Eye, EyeOff, Loader2, Building, Shield
+  ChevronUp, ChevronDown, Eye, EyeOff, Loader2, Building, Shield, Send
 } from 'lucide-react';
 import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
 import { ProfileBorder } from './ProfileBorder';
@@ -102,6 +105,12 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
     balance: 0
   });
 
+  // Tip modal state
+  const [isTipModalOpen, setIsTipModalOpen] = useState(false);
+  const [tipAmount, setTipAmount] = useState('');
+  const [tipMessage, setTipMessage] = useState('');
+  const [isSendingTip, setIsSendingTip] = useState(false);
+
   // Determine which userData to use
   const userData = propUserData || fetchedUserData;
   
@@ -116,8 +125,121 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   
 
   const { isAdmin: profileUserIsAdmin } = useAdminStatus(profileUserId);
-  
+  const { toast } = useToast();
 
+  // Send tip function
+  const sendTip = async () => {
+    if (!user || !userData || !tipAmount || isOwnProfile) {
+      return;
+    }
+
+    const amount = parseFloat(tipAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid tip amount.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (amount < 0.01) {
+      toast({
+        title: "Amount Too Small",
+        description: "Minimum tip amount is $0.01.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingTip(true);
+    try {
+      // First check if user has sufficient balance
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      if (!profile || profile.balance < amount) {
+        toast({
+          title: "Insufficient Balance",
+          description: "You don't have enough balance to send this tip.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Send the tip
+      const { error: tipError } = await supabase
+        .from('tips')
+        .insert({
+          from_user_id: user.id,
+          to_user_id: userData.id,
+          amount: amount,
+          message: tipMessage.trim() || null,
+        });
+
+      if (tipError) throw tipError;
+
+      // Deduct from sender's balance
+      const { error: deductError } = await supabase
+        .from('profiles')
+        .update({ 
+          balance: profile.balance - amount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (deductError) throw deductError;
+
+      // Add to receiver's balance
+      const { data: receiverProfile, error: receiverError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('id', userData.id)
+        .single();
+
+      if (receiverError) throw receiverError;
+
+      const { error: addError } = await supabase
+        .from('profiles')
+        .update({ 
+          balance: receiverProfile.balance + amount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userData.id);
+
+      if (addError) throw addError;
+
+      toast({
+        title: "Tip Sent Successfully! 🎉",
+        description: `You sent $${amount.toFixed(2)} to ${userData.username}${tipMessage ? ' with a message' : ''}.`,
+      });
+
+      // Reset form and close modal
+      setTipAmount('');
+      setTipMessage('');
+      setIsTipModalOpen(false);
+
+      // Refresh user's own balance if callback provided
+      if (onUserDataUpdate) {
+        onUserDataUpdate();
+      }
+
+    } catch (error) {
+      console.error('Error sending tip:', error);
+      toast({
+        title: "Failed to Send Tip",
+        description: "There was an error sending your tip. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingTip(false);
+    }
+  };
 
   // Fetch user data when only username is provided or when opening from header (no username)
   useEffect(() => {
@@ -593,6 +715,36 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                       <span className="text-slate-300 font-mono text-sm">ID #{userData.id.slice(-6).toUpperCase()}</span>
                     </div>
                   </div>
+
+                  {/* Tip Button - Only show for other users' profiles */}
+                  {!isOwnProfile && !shouldShowOwnProfile && user && userData && (
+                    <div className="flex justify-center md:justify-start">
+                      <Button
+                        onClick={() => setIsTipModalOpen(true)}
+                        className="relative group/tip px-6 py-3 bg-gradient-to-r from-yellow-600/80 to-orange-600/80 hover:from-yellow-500/80 hover:to-orange-500/80 border border-yellow-500/50 text-white font-semibold transition-all duration-300 backdrop-blur-sm"
+                        style={{
+                          clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                        }}
+                      >
+                        {/* Glowing background effect */}
+                        <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500/40 to-orange-500/40 blur-sm opacity-0 group-hover/tip:opacity-100 transition-opacity duration-300" />
+                        
+                        {/* Button content */}
+                        <div className="relative flex items-center gap-2">
+                          <Gift className="w-5 h-5" />
+                          <span>Send Tip</span>
+                          <Send className="w-4 h-4" />
+                        </div>
+                        
+                        {/* Scan line effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent translate-x-[-100%] group-hover/tip:translate-x-[100%] transition-transform duration-700 ease-out" />
+                        
+                        {/* Tech corners */}
+                        <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-yellow-400/60" />
+                        <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-yellow-400/60" />
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Cyberpunk Level & XP Display */}
                   <div className="space-y-4">
@@ -1782,6 +1934,139 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
           </div>
         </div>
       </DialogContent>
+
+      {/* Tip Modal */}
+      <Dialog open={isTipModalOpen} onOpenChange={setIsTipModalOpen}>
+        <DialogContent className="max-w-md border-0 bg-transparent">
+          <div className="relative bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-primary/30 backdrop-blur-xl"
+               style={{
+                 clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+               }}>
+            
+            {/* Glowing border effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 blur-sm -z-10" />
+            
+            {/* Animated scanning lines */}
+            <div className="absolute inset-0 overflow-hidden"
+                 style={{
+                   clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+                 }}>
+              <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-cyber-scan-horizontal" />
+              <div className="absolute w-px h-full bg-gradient-to-b from-transparent via-accent/60 to-transparent animate-cyber-scan left-1/3" />
+            </div>
+            
+            {/* Tech Corner Details */}
+            <div className="absolute top-3 left-3 w-4 h-4 border-l-2 border-t-2 border-primary/60 rounded-tl-sm" />
+            <div className="absolute top-3 right-3 w-4 h-4 border-r-2 border-t-2 border-accent/60 rounded-tr-sm" />
+            <div className="absolute bottom-3 left-3 w-4 h-4 border-l-2 border-b-2 border-accent/60 rounded-bl-sm" />
+            <div className="absolute bottom-3 right-3 w-4 h-4 border-r-2 border-b-2 border-primary/60 rounded-br-sm" />
+            
+            <div className="relative p-6 space-y-6">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                  Send Tip to {userData?.username}
+                </DialogTitle>
+                <DialogDescription className="text-slate-400">
+                  Send a tip with an optional message to show your appreciation.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                {/* Tip Amount Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="tipAmount" className="text-sm font-medium text-slate-300">
+                    Amount ($)
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      id="tipAmount"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      value={tipAmount}
+                      onChange={(e) => setTipAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10 bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 focus:border-primary/50 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+
+                {/* Tip Message Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="tipMessage" className="text-sm font-medium text-slate-300">
+                    Message (Optional)
+                  </Label>
+                  <Textarea
+                    id="tipMessage"
+                    value={tipMessage}
+                    onChange={(e) => setTipMessage(e.target.value)}
+                    placeholder="Add a nice message with your tip..."
+                    className="bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 focus:border-primary/50 focus:ring-primary/20 resize-none"
+                    rows={3}
+                    maxLength={200}
+                  />
+                  <div className="text-xs text-slate-500 text-right">
+                    {tipMessage.length}/200
+                  </div>
+                </div>
+
+                {/* Quick Amount Buttons */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-300">Quick Amounts</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[1, 5, 10, 25, 50].map((amount) => (
+                      <Button
+                        key={amount}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setTipAmount(amount.toString())}
+                        className="bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                      >
+                        ${amount}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsTipModalOpen(false);
+                    setTipAmount('');
+                    setTipMessage('');
+                  }}
+                  className="bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={sendTip}
+                  disabled={!tipAmount || parseFloat(tipAmount) <= 0 || isSendingTip}
+                  className="relative bg-gradient-to-r from-yellow-600/80 to-orange-600/80 hover:from-yellow-500/80 hover:to-orange-500/80 border border-yellow-500/50 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSendingTip ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Tip
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
