@@ -580,7 +580,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     }
 
     // Modern tile styling
-    let tileClass = "relative w-full h-12 rounded-lg transition-all duration-200 ";
+    let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
     
     // State-based styling
     if (revealed?.safe) {
@@ -609,14 +609,14 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         <div className="flex items-center justify-center h-full">
           {revealed ? (
             revealed.safe ? (
-              <CheckCircle className="w-6 h-6 text-emerald-400" />
+              <CheckCircle className="w-5 h-5 text-emerald-400" />
             ) : (
-              <X className="w-6 h-6 text-red-400" />
+              <X className="w-5 h-5 text-red-400" />
             )
           ) : isCurrentLevel && game?.status === 'active' ? (
-            <div className="w-3 h-3 bg-slate-400 rounded-full opacity-50"></div>
+            <div className="w-2.5 h-2.5 bg-slate-400 rounded-full opacity-50"></div>
           ) : (
-            <div className="w-2 h-2 bg-slate-500 rounded-full opacity-30"></div>
+            <div className="w-1.5 h-1.5 bg-slate-500 rounded-full opacity-30"></div>
           )}
         </div>
 
@@ -641,7 +641,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     return (
       <div 
         key={levelIndex} 
-        className={`p-3 rounded-xl transition-all duration-300 ${
+        className={`p-2 rounded-lg transition-all duration-300 ${
           isPastLevel 
             ? 'bg-emerald-500/10 border border-emerald-500/30' 
             : isCurrentLevel 
@@ -649,9 +649,9 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
               : 'bg-slate-800/50 border border-slate-700/50'
         }`}
       >
-        {/* Multiplier and level info */}
-        <div className="flex items-center justify-between mb-2">
-          <div className={`px-2 py-1 rounded-lg text-xs font-semibold ${
+        {/* Multiplier display - centered */}
+        <div className="text-center mb-1">
+          <div className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
             isPastLevel 
               ? 'bg-emerald-500/20 text-emerald-300' 
               : isCurrentLevel 
@@ -660,13 +660,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           }`}>
             {multiplier ? multiplier.toFixed(2) : '1.00'}x
           </div>
-          <div className="text-xs text-slate-400">
-            Level {levelIndex + 1}
-          </div>
         </div>
         
         {/* Tiles - Modern grid */}
-        <div className={`grid gap-2 ${
+        <div className={`grid gap-1.5 ${
           tilesPerRow === 2 ? 'grid-cols-2' :
           tilesPerRow === 3 ? 'grid-cols-3' :
           tilesPerRow === 4 ? 'grid-cols-4' : 'grid-cols-3'
@@ -891,9 +888,9 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-1">
+              <div className="space-y-0">
                 {/* Tower levels - always visible, updates based on difficulty */}
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {(PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS] || [])
                     .slice()
                     .reverse()
