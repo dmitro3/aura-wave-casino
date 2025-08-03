@@ -1186,8 +1186,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
   if (loading) {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={isOpen ? "fixed inset-0 z-[10000]" : "hidden"}>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="max-w-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10001 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <Shield className="h-5 w-5 text-primary" />
@@ -1200,15 +1201,17 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               <div className="absolute inset-0 w-8 h-8 border-2 border-accent/30 rounded-full animate-spin-reverse" style={{ animationDuration: '2s' }}></div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
     );
   }
 
   if (!isAdmin) {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={isOpen ? "fixed inset-0 z-[10000]" : "hidden"}>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10001 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <Shield className="h-5 w-5 text-red-500" />
@@ -1227,8 +1230,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               You don't have permission to access the admin panel.
             </p>
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
     );
   }
 
@@ -1299,8 +1303,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={isOpen ? "fixed inset-0 z-[10000]" : "hidden"}>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10001 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <Shield className="h-5 w-5 text-primary" />
@@ -2321,8 +2326,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
     </>
   );
 }
