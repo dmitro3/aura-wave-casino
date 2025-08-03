@@ -717,22 +717,65 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                   {/* Bet Amount */}
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-slate-300">Bet Amount</label>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        value={betAmount}
-                        onChange={(e) => setBetAmount(e.target.value)}
-                        className="pl-10 pr-20 h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg"
-                        min="1"
-                        max={userData?.balance || 0}
-                        step="0.01"
-                        placeholder="0.00"
-                      />
-                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                        <Coins className="w-4 h-4 text-primary" />
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          value={betAmount}
+                          onChange={(e) => setBetAmount(e.target.value)}
+                          className="pl-10 pr-20 h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg"
+                          min="1"
+                          max={userData?.balance || 0}
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                          <Coins className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
+                          ${userData?.balance.toFixed(2) || '0.00'}
+                        </div>
                       </div>
-                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
-                        ${userData?.balance.toFixed(2) || '0.00'}
+                      
+                      {/* Bet Amount Shortcut Buttons */}
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const current = parseFloat(betAmount) || 0;
+                            setBetAmount((current / 2).toFixed(2));
+                          }}
+                          className="flex-1 h-8 bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50 hover:text-white text-xs"
+                        >
+                          ÷2
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const current = parseFloat(betAmount) || 0;
+                            const doubled = current * 2;
+                            const maxAmount = userData?.balance || 0;
+                            setBetAmount(Math.min(doubled, maxAmount).toFixed(2));
+                          }}
+                          className="flex-1 h-8 bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50 hover:text-white text-xs"
+                        >
+                          ×2
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setBetAmount((userData?.balance || 0).toFixed(2));
+                          }}
+                          className="flex-1 h-8 bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50 hover:text-white text-xs font-semibold"
+                        >
+                          MAX
+                        </Button>
                       </div>
                     </div>
                   </div>
