@@ -1288,8 +1288,18 @@ export default function Index({ initialGame }: IndexProps) {
                             
                             {/* Achievement Notification Indicator */}
                             {claimableAchievements.length > 0 && (
-                              <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse">
-                                <Gift className="w-3 h-3 text-white" />
+                              <div className="absolute -top-1 -right-1 z-50">
+                                {/* Glowing background effect */}
+                                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/30 via-green-500/40 to-emerald-500/30 rounded-full blur-sm animate-pulse" />
+                                
+                                {/* Main indicator */}
+                                <div className="relative w-6 h-6 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full border-2 border-slate-900 flex items-center justify-center">
+                                  <Gift className="w-3 h-3 text-white drop-shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                                  
+                                  {/* Tech corners */}
+                                  <div className="absolute top-0.5 left-0.5 w-1 h-1 border-l border-t border-emerald-300/60" />
+                                  <div className="absolute bottom-0.5 right-0.5 w-1 h-1 border-r border-b border-green-300/60" />
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1361,8 +1371,18 @@ export default function Index({ initialGame }: IndexProps) {
                           
                           {/* Achievement Notification Indicator */}
                           {claimableAchievements.length > 0 && (
-                            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full border border-slate-900 flex items-center justify-center animate-pulse">
-                              <Gift className="w-2 h-2 text-white" />
+                            <div className="absolute -top-0.5 -right-0.5 z-50">
+                              {/* Glowing background effect */}
+                              <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-500/30 via-green-500/40 to-emerald-500/30 rounded-full blur-sm animate-pulse" />
+                              
+                              {/* Main indicator */}
+                              <div className="relative w-4 h-4 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full border border-slate-900 flex items-center justify-center">
+                                <Gift className="w-2 h-2 text-white drop-shadow-[0_0_4px_rgba(16,185,129,0.8)]" />
+                                
+                                {/* Tech corners - smaller for mobile */}
+                                <div className="absolute top-0 left-0 w-0.5 h-0.5 border-l border-t border-emerald-300/60" />
+                                <div className="absolute bottom-0 right-0 w-0.5 h-0.5 border-r border-b border-green-300/60" />
+                              </div>
                             </div>
                           )}
                         </div>
