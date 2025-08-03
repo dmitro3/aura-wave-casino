@@ -1621,10 +1621,8 @@ export default function Index({ initialGame }: IndexProps) {
                     onClick={() => handleGameChange('roulette')}
                     disabled={gameSelectionLoading === 'roulette'}
                     variant="ghost"
-                    className={`relative w-full justify-start px-4 py-3 h-12 transition-all duration-300 overflow-hidden ${
-                      currentGame === 'roulette' 
-                        ? 'border-2 border-red-400/80 bg-gradient-to-r from-red-950/50 to-orange-950/50 text-white shadow-[0_0_20px_rgba(239,68,68,0.6)] backdrop-blur-sm' 
-                        : 'border border-slate-600/40 bg-slate-900/30 hover:border-red-400/60 hover:bg-slate-800/50 backdrop-blur-sm'
+                    className={`relative w-full justify-start px-4 py-3 h-12 overflow-hidden border border-red-500/40 bg-red-950/30 hover:bg-red-900/50 backdrop-blur-sm transition-all duration-300 disabled:opacity-60 ${
+                      currentGame === 'roulette' ? 'border-red-400 bg-red-900/40 shadow-lg shadow-red-500/20' : ''
                     } ${gameSelectionLoading === 'roulette' ? 'opacity-60' : ''}`}
                   >
                     {/* Cyberpunk scan line effect */}
@@ -1633,34 +1631,35 @@ export default function Index({ initialGame }: IndexProps) {
                     {/* Subtle inner glow on hover */}
                     <div className="absolute inset-0 bg-gradient-to-r from-red-400/5 via-red-400/10 to-red-400/5 opacity-0 group-hover/roulette:opacity-100 transition-opacity duration-300" />
                     
-                    {/* Edge pulse effect */}
-                    <div className="absolute inset-0 border border-red-400/0 group-hover/roulette:border-red-400/30 rounded-md transition-all duration-300" />
-                    
-                    <div className="flex items-center gap-3 relative z-10">
-                      <div className={`p-2 rounded-md border ${
+                    <div className="flex items-center gap-3 relative z-10 w-full">
+                      <div className={`p-2 rounded-md border transition-colors ${
                         currentGame === 'roulette' 
-                          ? 'bg-red-900/50 border-red-400/60 text-red-300' 
-                          : 'bg-slate-800/50 border-primary/30 text-primary'
-                      } transition-all duration-300`}>
+                          ? 'bg-red-500/20 border-red-400/50 text-red-300' 
+                          : 'bg-red-950/30 border-red-500/30 text-red-400'
+                      }`}>
                         {gameSelectionLoading === 'roulette' ? (
-                          <div className="w-4 h-4 flex items-center justify-center">
-                            <div className="w-3 h-3 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
-                          </div>
+                          <div className="w-4 h-4 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />
                         ) : (
-                          <Target className="w-4 h-4 drop-shadow-[0_0_6px_currentColor]" />
+                          <Target className="w-4 h-4" />
                         )}
                       </div>
-                      <span className={`font-bold text-sm font-mono ${
-                        currentGame === 'roulette' ? 'text-red-200' : 'text-slate-200'
-                      }`}>
-                        ROULETTE
-                      </span>
-
+                      <div className="flex-1 min-w-0">
+                        <span className={`font-bold text-sm font-mono block transition-colors ${
+                          currentGame === 'roulette' ? 'text-red-200' : 'text-red-300'
+                        }`}>
+                          ROULETTE
+                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse" />
+                          <span className="text-[10px] text-red-400/80 font-mono">SPIN PROTOCOL ACTIVE</span>
+                          <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse delay-500" />
+                        </div>
+                      </div>
                     </div>
                     
                     {/* Tech corner indicators */}
-                    <div className="absolute top-1 left-1 w-1.5 h-1.5 border-l border-t border-primary/40 group-hover/roulette:border-primary" />
-                    <div className="absolute bottom-1 right-1 w-1.5 h-1.5 border-r border-b border-accent/40 group-hover/roulette:border-accent" />
+                    <div className="absolute top-1 left-1 w-1.5 h-1.5 border-l border-t border-red-400/60 group-hover/roulette:border-red-300" />
+                    <div className="absolute bottom-1 right-1 w-1.5 h-1.5 border-r border-b border-red-400/60 group-hover/roulette:border-red-300" />
                   </Button>
                 </div>
               
