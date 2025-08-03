@@ -32,6 +32,7 @@ import { AnimatedBalance } from '@/components/AnimatedBalance';
 import { MaintenanceAwareGame } from '@/components/MaintenanceAwareGame';
 import AccountDeletionNotification from '@/components/AccountDeletionNotification';
 import AccountDeletionHandler from '@/components/AccountDeletionHandler';
+import { ModernNotificationsPanel } from '@/components/ModernNotificationsPanel';
 import { formatDistanceToNow } from 'date-fns';
 import { formatXP, formatXPProgress, calculateXPProgress } from '@/lib/xpUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -1222,212 +1223,15 @@ export default function Index({ initialGame }: IndexProps) {
                           </div>
                         </div>
                         
-                        {/* Content area with enhanced panel animations */}
-                        <div className={cn(
-                          "flex-1 overflow-hidden relative",
-                          notificationModalOpen ? "animate-notification-panel-open" : "animate-notification-panel-close"
-                        )}>
-                          <ScrollArea className="h-full">
-                            {notifications.length === 0 ? (
-                              <div className="flex items-center justify-center h-full min-h-[400px]">
-                                <div className="text-center space-y-8 animate-fade-in-up">
-                                  {/* Enhanced empty state */}
-                                  <div className="relative">
-                                    <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-2 border-primary/20 flex items-center justify-center relative overflow-hidden">
-                                      <div className="absolute inset-4 border border-primary/10 rounded-full" />
-                                      <Bell className="w-16 h-16 text-primary/40" />
-                                      
-                                      {/* Animated decorations */}
-                                      <div className="absolute top-2 right-8">
-                                        <Sparkles className="w-6 h-6 text-accent/60 animate-pulse" />
-                                      </div>
-                                      <div className="absolute bottom-8 left-4">
-                                        <Zap className="w-4 h-4 text-primary/60 animate-pulse delay-500" />
-                                      </div>
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="space-y-4">
-                                    <h3 className="text-3xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-                                      ALL SYSTEMS CLEAR
-                                    </h3>
-                                    <p className="text-slate-400 text-lg">No active notifications detected</p>
-                                    <p className="text-slate-500 text-sm font-mono">
-                                      System monitoring active • Awaiting new signals
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className={cn(
-                                "p-6 space-y-4",
-                                notificationModalOpen && "animate-notification-list-stagger"
-                              )}>
-                                {notifications.map((notification, index) => {
-                                  const theme = getNotificationTheme(notification.type);
-                                  const isNew = newNotificationIds.has(notification.id);
-                                  
-                                  return (
-                                    <div
-                                      key={notification.id}
-                                      className={cn(
-                                        "group relative overflow-hidden rounded-2xl transition-all duration-500 w-full",
-                                        "bg-gradient-to-r from-slate-900/60 via-slate-800/40 to-slate-900/60",
-                                        "border backdrop-blur-sm cursor-pointer",
-                                        notification.is_read 
-                                          ? "border-slate-700/50 hover:border-slate-600/70" 
-                                          : `border-primary/30 hover:border-primary/50 ${theme.glow}`,
-                                        "hover:scale-[1.02] hover:shadow-2xl",
-                                        isNew && "animate-cyber-notification-in",
-                                        hoveredNotification === notification.id && "scale-[1.02]",
-                                        // Add staggered entrance animation
-                                        notificationModalOpen && "animate-notification-item-enter"
-                                      )}
-                                      style={{ 
-                                        animationDelay: isNew ? `${index * 80}ms` : `${index * 30 + 200}ms`
-                                      }}
-                                      onMouseEnter={() => setHoveredNotification(notification.id)}
-                                      onMouseLeave={() => setHoveredNotification(null)}
-                                      onClick={() => !notification.is_read && markNotificationAsRead(notification.id)}
-                                    >
-                                      {/* Animated background pattern */}
-                                      <div className="absolute inset-0 opacity-10">
-                                        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(99,102,241,0.1)_25%,rgba(99,102,241,0.1)_26%,transparent_27%,transparent_74%,rgba(99,102,241,0.1)_75%,rgba(99,102,241,0.1)_76%,transparent_77%,transparent),linear-gradient(transparent_24%,rgba(99,102,241,0.1)_25%,rgba(99,102,241,0.1)_26%,transparent_27%,transparent_74%,rgba(99,102,241,0.1)_75%,rgba(99,102,241,0.1)_76%,transparent_77%,transparent)] bg-[8px_8px] animate-grid-move-slow" />
-                                      </div>
-                                      
-                                      {/* Corner accents */}
-                                      <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-primary/40 transition-all duration-300 group-hover:border-primary/70" />
-                                      <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-accent/40 transition-all duration-300 group-hover:border-accent/70" />
-                                      
-                                      {/* New notification indicator */}
-                                      {isNew && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10 animate-cyber-pulse" />
-                                      )}
-                                      
-                                      {/* Shine effect for unread */}
-                                      {!notification.is_read && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent -skew-x-12 animate-cyber-shine" />
-                                      )}
-                                      
-                                      <div className="relative z-10 p-5 flex items-start gap-4">
-                                        {/* Enhanced icon container */}
-                                        <div className={cn(
-                                          "flex-shrink-0 w-16 h-16 rounded-xl flex items-center justify-center relative overflow-hidden",
-                                          "bg-gradient-to-br from-slate-800/80 to-slate-900/80",
-                                          "border-2 transition-all duration-300",
-                                          notification.is_read 
-                                            ? "border-slate-600/30 opacity-60" 
-                                            : "border-primary/30 animate-cyber-icon",
-                                          theme.icon
-                                        )}>
-                                          {/* Inner circuit pattern */}
-                                          <div className="absolute inset-2 border border-current/20 rounded-lg opacity-30" />
-                                          
-                                          {theme.iconComponent}
-                                          
-                                          {/* Type indicator */}
-                                          <div className="absolute -top-1 -right-1 text-sm">
-                                            {theme.emoji}
-                                          </div>
-                                          
-
-                                        </div>
-                                        
-                                        {/* Content with proper text wrapping */}
-                                        <div className="flex-1 min-w-0 space-y-3 overflow-hidden">
-                                          <div className="flex items-start justify-between gap-4">
-                                            <h3 className={cn(
-                                              "font-bold text-lg leading-tight transition-all duration-300 break-words",
-                                              "flex-1 min-w-0 pr-3", // Ensure proper spacing from buttons
-                                              notification.is_read 
-                                                ? "text-slate-400" 
-                                                : "text-white"
-                                            )}>
-                                              {notification.title}
-                                            </h3>
-                                            
-                                            {/* Permanent action buttons with enhanced design */}
-                                            <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-all duration-300 flex-shrink-0">
-                                              {!notification.is_read && (
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    markNotificationAsRead(notification.id);
-                                                  }}
-                                                  className="group relative h-8 w-8 p-0 rounded-lg overflow-hidden bg-emerald-500/15 border border-emerald-400/30 hover:bg-emerald-500/25 hover:border-emerald-400/50 text-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.5)] transition-all duration-300"
-                                                >
-                                                  <div className="absolute inset-0 bg-emerald-400/20 scale-0 group-hover:scale-100 transition-transform duration-300 rounded-lg" />
-                                                  <Check className="relative z-10 w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
-                                                </Button>
-                                              )}
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  deleteNotification(notification.id);
-                                                }}
-                                                className="group relative h-8 w-8 p-0 rounded-lg overflow-hidden bg-red-500/10 border border-red-400/25 hover:bg-red-500/20 hover:border-red-400/60 text-red-400 hover:text-red-300 hover:shadow-[0_0_20px_rgba(239,68,68,0.6)] transition-all duration-300 active:scale-95"
-                                              >
-                                                {/* Enhanced background animation */}
-                                                <div className="absolute inset-0 bg-gradient-to-r from-red-500/0 via-red-400/30 to-red-500/0 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-center rounded-lg" />
-                                                
-                                                {/* Subtle pulse ring */}
-                                                <div className="absolute inset-0 bg-red-400/20 rounded-lg scale-75 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300" />
-                                                
-                                                {/* Icon with enhanced animation */}
-                                                <X className="relative z-10 w-4 h-4 transition-all duration-300 group-hover:scale-110 group-hover:rotate-90" />
-                                                
-                                                {/* Corner accents */}
-                                                <div className="absolute top-0 left-0 w-1 h-1 bg-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100" />
-                                                <div className="absolute top-0 right-0 w-1 h-1 bg-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-150" />
-                                                <div className="absolute bottom-0 left-0 w-1 h-1 bg-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-200" />
-                                                <div className="absolute bottom-0 right-0 w-1 h-1 bg-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-250" />
-                                              </Button>
-                                            </div>
-                                          </div>
-                                          
-                                                                    <p className={cn(
-                            "text-base leading-relaxed transition-all duration-300 break-words whitespace-pre-wrap",
-                            notification.is_read ? "text-slate-500" : "text-slate-300"
-                          )}>
-                            {notification.message}
-                          </p>
-                                          
-                                                                                      {/* Enhanced tip message with proper wrapping */}
-                                            {notification.data?.tip_message && (
-                                              <div className="relative p-4 rounded-lg bg-gradient-to-r from-primary/10 to-accent/10 border-l-4 border-primary/50 backdrop-blur-sm overflow-hidden">
-                                                <div className="absolute top-2 right-2 text-primary/40">💬</div>
-                                                <p className="text-sm italic text-primary/90 font-medium pr-8 break-words whitespace-pre-wrap">
-                                                  "{notification.data.tip_message}"
-                                                </p>
-                                              </div>
-                                            )}
-                                          
-                                          {/* Timestamp with enhanced design */}
-                                          <div className="flex items-center gap-3 pt-2">
-                                            <div className="flex items-center gap-2">
-                                              <div className="w-2 h-2 bg-accent rounded-full animate-cyber-pulse" />
-                                              <Clock className="w-4 h-4 text-accent/60" />
-                                              <span className="text-sm text-slate-500 font-mono">
-                                                {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-                                              </span>
-                                            </div>
-                                            <div className="flex-1 h-px bg-gradient-to-r from-accent/20 via-primary/10 to-transparent" />
-                                            <span className="text-xs text-slate-600 font-mono uppercase">
-                                              {notification.type.replace('_', ' ')}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </ScrollArea>
+                        {/* Modern Notifications Panel */}
+                        <div className="flex-1 p-6">
+                          <ModernNotificationsPanel
+                            notifications={notifications}
+                            onMarkAsRead={markNotificationAsRead}
+                            onDelete={deleteNotification}
+                            onMarkAllAsRead={markAllNotificationsAsRead}
+                            loading={false}
+                          />
                         </div>
                       </div>
                     </div>
