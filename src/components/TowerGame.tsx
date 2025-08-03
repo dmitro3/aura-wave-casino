@@ -752,11 +752,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           <SelectItem 
                             key={key} 
                             value={key} 
-                            className={`text-white hover:bg-primary/10 focus:bg-primary/10 data-[highlighted]:bg-primary/10 cursor-pointer py-3 border-b border-slate-700/50 last:border-b-0 transition-colors duration-200 ${
+                            className={`text-white hover:bg-primary/10 focus:bg-primary/10 data-[highlighted]:bg-primary/10 cursor-pointer py-3 border-b border-slate-700/50 last:border-b-0 transition-colors duration-200 flex justify-center ${
                               difficulty === key ? 'bg-primary/20 border-primary/30' : ''
                             }`}
                           >
-                            <div className="text-center w-full">
+                            <div className="text-center">
                               <div className={`font-medium ${difficulty === key ? 'text-primary' : 'text-white'}`}>
                                 {info.name}
                               </div>
