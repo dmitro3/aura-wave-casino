@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Zap, AlertTriangle, Coins, Cpu, Shield, Crown, TrendingUp, Target, Gamepad2, User, Bot, CheckCircle, X } from 'lucide-react';
+import { Building2, Zap, AlertTriangle, Coins, Cpu, Shield, Crown, TrendingUp, Target, Gamepad2, User, Bot, CheckCircle, X, ChevronUp, ChevronDown } from 'lucide-react';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { UserProfile } from '@/hooks/useUserProfile';
@@ -362,11 +362,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     }
     
     const amount = parseFloat(betAmount);
-    if (isNaN(amount) || amount <= 0) {
+    if (isNaN(amount) || amount < 0.01) {
       setLoading(false);
       toast({
         title: "Invalid bet amount",
-        description: "Please enter a valid bet amount",
+        description: "Minimum bet amount is $0.01",
         variant: "destructive"
       });
       return;
@@ -722,9 +722,22 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                         <Input
                           type="number"
                           value={betAmount}
-                          onChange={(e) => setBetAmount(e.target.value)}
-                          className="pl-10 pr-20 h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg"
-                          min="1"
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            const maxBalance = userData?.balance || 0;
+                            
+                            if (isNaN(value) || value === 0) {
+                              setBetAmount(e.target.value);
+                            } else if (value > maxBalance) {
+                              setBetAmount(maxBalance.toFixed(2));
+                            } else if (value < 0.01) {
+                              setBetAmount("0.01");
+                            } else {
+                              setBetAmount(e.target.value);
+                            }
+                          }}
+                          className="pl-10 pr-24 h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          min="0.01"
                           max={userData?.balance || 0}
                           step="0.01"
                           placeholder="0.00"
@@ -732,8 +745,35 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                         <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
                           <Coins className="w-4 h-4 text-primary" />
                         </div>
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
+                        <div className="absolute right-16 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
                           ${userData?.balance.toFixed(2) || '0.00'}
+                        </div>
+                        
+                        {/* Custom arrow buttons */}
+                        <div className="absolute right-1 top-1 bottom-1 flex flex-col">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseFloat(betAmount) || 0;
+                              const newValue = current + 0.01;
+                              const maxBalance = userData?.balance || 0;
+                              setBetAmount(Math.min(newValue, maxBalance).toFixed(2));
+                            }}
+                            className="flex-1 flex items-center justify-center w-8 rounded-tr-lg bg-slate-700/50 hover:bg-slate-600/50 border-l border-slate-600/50 text-slate-400 hover:text-white transition-colors"
+                          >
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = parseFloat(betAmount) || 0;
+                              const newValue = current - 0.01;
+                              setBetAmount(Math.max(newValue, 0.01).toFixed(2));
+                            }}
+                            className="flex-1 flex items-center justify-center w-8 rounded-br-lg bg-slate-700/50 hover:bg-slate-600/50 border-l border-t border-slate-600/50 text-slate-400 hover:text-white transition-colors"
+                          >
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
                         </div>
                       </div>
                       
@@ -745,7 +785,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           size="sm"
                           onClick={() => {
                             const current = parseFloat(betAmount) || 0;
-                            setBetAmount((current / 2).toFixed(2));
+                            const halved = current / 2;
+                            setBetAmount(Math.max(halved, 0.01).toFixed(2));
                           }}
                           className="flex-1 h-8 bg-slate-800/50 border-slate-600/50 text-slate-300 hover:bg-slate-700/50 hover:text-white text-xs"
                         >
