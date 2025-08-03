@@ -52,8 +52,10 @@ export function useAchievementNotifications() {
       case 'tower_highest_level': currentValue = userStats.tower_highest_level || 0; break;
       case 'tower_perfect_games': currentValue = userStats.tower_perfect_games || 0; break;
       case 'coinflip_wins': currentValue = userStats.coinflip_wins || 0; break;
+      case 'coinflip_games': currentValue = userStats.coinflip_games || 0; break;
       case 'total_cases_opened': currentValue = userStats.total_cases_opened || 0; break;
       case 'user_level': currentValue = userStats.current_level || 0; break;
+      case 'current_level': currentValue = userStats.current_level || 0; break;
       default: 
         // Handle other old format achievements
         currentValue = 0;
