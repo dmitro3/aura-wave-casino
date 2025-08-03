@@ -200,7 +200,7 @@ GRANT EXECUTE ON FUNCTION public.calculate_level_from_xp_new(NUMERIC) TO anon, a
 
 -- Update existing user levels based on their total XP
 UPDATE user_level_stats SET 
-  user_level = (SELECT level FROM calculate_level_from_xp_new(lifetime_xp))
+  current_level = (SELECT level FROM calculate_level_from_xp_new(lifetime_xp))
 WHERE lifetime_xp IS NOT NULL;
 
 -- Also update profiles table for consistency
