@@ -863,17 +863,17 @@
   
   /* Icon animations */
   .animate-cyber-icon {
-    animation: cyber-icon 3s ease-in-out infinite;
+    animation: cyber-icon 6s ease-in-out infinite;
   }
   
   @keyframes cyber-icon {
     0%, 100% { 
       border-color: rgba(99,102,241,0.3);
-      box-shadow: 0 0 10px rgba(99,102,241,0.2);
+      box-shadow: 0 0 8px rgba(99,102,241,0.15);
     }
     50% { 
-      border-color: rgba(99,102,241,0.7);
-      box-shadow: 0 0 20px rgba(99,102,241,0.4), 0 0 30px rgba(99,102,241,0.2);
+      border-color: rgba(99,102,241,0.5);
+      box-shadow: 0 0 15px rgba(99,102,241,0.25), 0 0 20px rgba(99,102,241,0.1);
     }
   }
   
