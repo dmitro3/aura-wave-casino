@@ -261,17 +261,11 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
         requestAnimationFrame(animate);
       };
 
-      // Use the correct XP source (prioritize stats for own profile, userData levelStats for others)
+      // Use the correct XP source (prioritize realtimeStats for any user, fallback to userData levelStats)
       const isViewingOwnProfile = (user && userData && user.id === userData.id) || (user && !username);
-      const currentLevel = isViewingOwnProfile 
-        ? (stats?.current_level || userData.levelStats?.current_level || 1)
-        : (userData.levelStats?.current_level || 1);
-      const currentXP = isViewingOwnProfile 
-        ? (stats?.current_level_xp || userData.levelStats?.current_level_xp || 0)
-        : (userData.levelStats?.current_level_xp || 0);
-      const lifetimeXP = isViewingOwnProfile 
-        ? (stats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0)
-        : (userData.levelStats?.lifetime_xp || 0);
+      const currentLevel = realtimeStats?.current_level || userData.levelStats?.current_level || 1;
+      const currentXP = realtimeStats?.current_level_xp || userData.levelStats?.current_level_xp || 0;
+      const lifetimeXP = realtimeStats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0;
 
       animateValue(0, currentLevel, 800, (val) => 
         setAnimatedStats(prev => ({ ...prev, level: val }))
@@ -283,7 +277,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
         setAnimatedStats(prev => ({ ...prev, balance: val }))
       );
     }
-  }, [isOpen, userData, stats]);
+  }, [isOpen, userData, stats, realtimeStats]);
   
   // Show loading state
   if (loading) {
@@ -310,23 +304,38 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   if (!userData) return null;
 
   // Move variable declarations here to fix initialization order
-  // For other users' profiles, ALWAYS use userData.levelStats (fetched data)
-  // For own profile, use stats (from useUserLevelStats hook) as primary source
+  // Prioritize realtimeStats for ALL users (real-time data), fallback to userData.levelStats
   const isViewingOwnProfile = isOwnProfile || shouldShowOwnProfile;
-  const currentLevel = isViewingOwnProfile 
-    ? (stats?.current_level || userData.levelStats?.current_level || 1)
-    : (userData.levelStats?.current_level || 1);
-  const lifetimeXP = isViewingOwnProfile 
-    ? (stats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0)
-    : (userData.levelStats?.lifetime_xp || 0);
-  const currentXP = isViewingOwnProfile 
-    ? (stats?.current_level_xp || userData.levelStats?.current_level_xp || 0)
-    : (userData.levelStats?.current_level_xp || 0);
-  const xpToNext = isViewingOwnProfile 
-    ? (stats?.xp_to_next_level || userData.levelStats?.xp_to_next_level || 100)
-    : (userData.levelStats?.xp_to_next_level || 100);
+  const currentLevel = realtimeStats?.current_level || userData.levelStats?.current_level || 1;
+  const lifetimeXP = realtimeStats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0;
+  const currentXP = realtimeStats?.current_level_xp || userData.levelStats?.current_level_xp || 0;
+  const xpToNext = realtimeStats?.xp_to_next_level || userData.levelStats?.xp_to_next_level || 100;
   const totalXP = currentXP + xpToNext;
   const xpProgress = calculateXPProgress(currentXP, xpToNext);
+
+  // Create real-time game stats (prioritize realtimeStats, fallback to userData.gameStats)
+  const gameStats = {
+    coinflip: {
+      wins: realtimeStats?.coinflip_wins || userData.gameStats?.coinflip?.wins || 0,
+      losses: Math.max(0, (realtimeStats?.coinflip_games || userData.gameStats?.coinflip?.wins + userData.gameStats?.coinflip?.losses || 0) - (realtimeStats?.coinflip_wins || userData.gameStats?.coinflip?.wins || 0)),
+      profit: realtimeStats?.coinflip_profit || userData.gameStats?.coinflip?.profit || 0
+    },
+    crash: {
+      wins: realtimeStats?.crash_wins || userData.gameStats?.crash?.wins || 0,
+      losses: Math.max(0, (realtimeStats?.crash_games || userData.gameStats?.crash?.wins + userData.gameStats?.crash?.losses || 0) - (realtimeStats?.crash_wins || userData.gameStats?.crash?.wins || 0)),
+      profit: realtimeStats?.crash_profit || userData.gameStats?.crash?.profit || 0
+    },
+    roulette: {
+      wins: realtimeStats?.roulette_wins || userData.gameStats?.roulette?.wins || 0,
+      losses: Math.max(0, (realtimeStats?.roulette_games || userData.gameStats?.roulette?.wins + userData.gameStats?.roulette?.losses || 0) - (realtimeStats?.roulette_wins || userData.gameStats?.roulette?.wins || 0)),
+      profit: realtimeStats?.roulette_profit || userData.gameStats?.roulette?.profit || 0
+    },
+    tower: {
+      wins: realtimeStats?.tower_wins || userData.gameStats?.tower?.wins || 0,
+      losses: Math.max(0, (realtimeStats?.tower_games || userData.gameStats?.tower?.wins + userData.gameStats?.tower?.losses || 0) - (realtimeStats?.tower_wins || userData.gameStats?.tower?.wins || 0)),
+      profit: realtimeStats?.tower_profit || userData.gameStats?.tower?.profit || 0
+    }
+  };
 
   // Debug logging for level stats display
   console.log('📊 UserProfile level stats display:', {
@@ -352,14 +361,15 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
     day: 'numeric'
   });
 
-  // Calculate total game stats
-  const totalGames = (userData.gameStats.coinflip?.wins || 0) + (userData.gameStats.coinflip?.losses || 0) + 
-                    (userData.gameStats.crash?.wins || 0) + (userData.gameStats.crash?.losses || 0) +
-                    (userData.gameStats.roulette?.wins || 0) + (userData.gameStats.roulette?.losses || 0);
+  // Calculate total game stats using real-time data
+  const totalGames = (gameStats.coinflip?.wins || 0) + (gameStats.coinflip?.losses || 0) + 
+                    (gameStats.crash?.wins || 0) + (gameStats.crash?.losses || 0) +
+                    (gameStats.roulette?.wins || 0) + (gameStats.roulette?.losses || 0) +
+                    (gameStats.tower?.wins || 0) + (gameStats.tower?.losses || 0);
   
-  const totalWins = (userData.gameStats.coinflip?.wins || 0) + (userData.gameStats.crash?.wins || 0) + (userData.gameStats.roulette?.wins || 0);
+  const totalWins = (gameStats.coinflip?.wins || 0) + (gameStats.crash?.wins || 0) + (gameStats.roulette?.wins || 0) + (gameStats.tower?.wins || 0);
   const winRate = totalGames > 0 ? (totalWins / totalGames * 100) : 0;
-  const totalProfit = (userData.gameStats.coinflip?.profit || 0) + (userData.gameStats.crash?.profit || 0) + (userData.gameStats.roulette?.profit || 0);
+  const totalProfit = (gameStats.coinflip?.profit || 0) + (gameStats.crash?.profit || 0) + (gameStats.roulette?.profit || 0) + (gameStats.tower?.profit || 0);
 
   const getBorderTier = (level: number) => {
     if (level >= 100) return 6;
@@ -1207,13 +1217,13 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div className="text-center">
                             <div className="text-3xl font-bold text-white font-mono drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">
-                              {(userData.gameStats.coinflip?.wins || 0) + (userData.gameStats.coinflip?.losses || 0)}
+                              {(gameStats.coinflip?.wins || 0) + (gameStats.coinflip?.losses || 0)}
                             </div>
                             <div className="text-sm text-amber-300/80 font-mono">GAMES</div>
                           </div>
                           <div className="text-center">
                             <div className="text-3xl font-bold text-green-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]">
-                              {userData.gameStats.coinflip?.wins || 0}
+                              {gameStats.coinflip?.wins || 0}
                             </div>
                             <div className="text-sm text-green-300/80 font-mono">WINS</div>
                           </div>
@@ -1222,15 +1232,15 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center">
                             <div className="text-2xl font-bold text-red-400 font-mono drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]">
-                              {userData.gameStats.coinflip?.losses || 0}
+                              {gameStats.coinflip?.losses || 0}
                             </div>
                             <div className="text-sm text-red-300/80 font-mono">LOSSES</div>
                           </div>
                           <div className="text-center">
-                            <div className={`text-2xl font-bold font-mono ${(userData.gameStats.coinflip?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
-                              {(userData.gameStats.coinflip?.profit || 0) >= 0 ? '+' : ''}${(userData.gameStats.coinflip?.profit || 0).toFixed(2)}
-                            </div>
-                            <div className={`text-sm font-mono ${(userData.gameStats.coinflip?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
+                                        <div className={`text-2xl font-bold font-mono ${(gameStats.coinflip?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
+              {(gameStats.coinflip?.profit || 0) >= 0 ? '+' : ''}${(gameStats.coinflip?.profit || 0).toFixed(2)}
+            </div>
+            <div className={`text-sm font-mono ${(gameStats.coinflip?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
                           </div>
                         </div>
                       </div>
@@ -1269,13 +1279,13 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div className="text-center">
                             <div className="text-3xl font-bold text-white font-mono drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">
-                              {(userData.gameStats.roulette?.wins || 0) + (userData.gameStats.roulette?.losses || 0)}
+                              {(gameStats.roulette?.wins || 0) + (gameStats.roulette?.losses || 0)}
                             </div>
                             <div className="text-sm text-red-300/80 font-mono">GAMES</div>
                           </div>
                           <div className="text-center">
                             <div className="text-3xl font-bold text-green-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]">
-                              {userData.gameStats.roulette?.wins || 0}
+                              {gameStats.roulette?.wins || 0}
                             </div>
                             <div className="text-sm text-green-300/80 font-mono">WINS</div>
                           </div>
@@ -1284,15 +1294,15 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center">
                             <div className="text-2xl font-bold text-red-400 font-mono drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]">
-                              {userData.gameStats.roulette?.losses || 0}
+                              {gameStats.roulette?.losses || 0}
                             </div>
                             <div className="text-sm text-red-300/80 font-mono">LOSSES</div>
                           </div>
                           <div className="text-center">
-                            <div className={`text-2xl font-bold font-mono ${(userData.gameStats.roulette?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
-                              {(userData.gameStats.roulette?.profit || 0) >= 0 ? '+' : ''}${(userData.gameStats.roulette?.profit || 0).toFixed(2)}
-                            </div>
-                            <div className={`text-sm font-mono ${(userData.gameStats.roulette?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
+                                        <div className={`text-2xl font-bold font-mono ${(gameStats.roulette?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
+              {(gameStats.roulette?.profit || 0) >= 0 ? '+' : ''}${(gameStats.roulette?.profit || 0).toFixed(2)}
+            </div>
+            <div className={`text-sm font-mono ${(gameStats.roulette?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
                           </div>
                         </div>
                       </div>
@@ -1330,13 +1340,13 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="grid grid-cols-3 gap-4 mb-4">
                           <div className="text-center">
                             <div className="text-2xl font-bold text-white font-mono drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">
-                              {(userData.gameStats.tower?.wins || 0) + (userData.gameStats.tower?.losses || 0)}
+                              {(gameStats.tower?.wins || 0) + (gameStats.tower?.losses || 0)}
                             </div>
                             <div className="text-xs text-emerald-300/80 font-mono">GAMES</div>
                           </div>
                           <div className="text-center">
                             <div className="text-2xl font-bold text-green-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]">
-                              {userData.gameStats.tower?.wins || 0}
+                              {gameStats.tower?.wins || 0}
                             </div>
                             <div className="text-xs text-green-300/80 font-mono">WINS</div>
                           </div>
@@ -1356,10 +1366,10 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                             <div className="text-sm text-purple-300/80 font-mono">PERFECT</div>
                           </div>
                           <div className="text-center">
-                            <div className={`text-2xl font-bold font-mono ${(userData.gameStats.tower?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
-                              {(userData.gameStats.tower?.profit || 0) >= 0 ? '+' : ''}${(userData.gameStats.tower?.profit || 0).toFixed(2)}
-                            </div>
-                            <div className={`text-sm font-mono ${(userData.gameStats.tower?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
+                                        <div className={`text-2xl font-bold font-mono ${(gameStats.tower?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
+              {(gameStats.tower?.profit || 0) >= 0 ? '+' : ''}${(gameStats.tower?.profit || 0).toFixed(2)}
+            </div>
+            <div className={`text-sm font-mono ${(gameStats.tower?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
                           </div>
                         </div>
                       </div>
@@ -1397,13 +1407,13 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div className="text-center">
                             <div className="text-3xl font-bold text-white font-mono drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">
-                              {(userData.gameStats.crash?.wins || 0) + (userData.gameStats.crash?.losses || 0)}
+                              {(gameStats.crash?.wins || 0) + (gameStats.crash?.losses || 0)}
                             </div>
                             <div className="text-sm text-cyan-300/80 font-mono">GAMES</div>
                           </div>
                           <div className="text-center">
                             <div className="text-3xl font-bold text-green-400 font-mono drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]">
-                              {userData.gameStats.crash?.wins || 0}
+                              {gameStats.crash?.wins || 0}
                             </div>
                             <div className="text-sm text-green-300/80 font-mono">WINS</div>
                           </div>
@@ -1412,15 +1422,15 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center">
                             <div className="text-2xl font-bold text-red-400 font-mono drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]">
-                              {userData.gameStats.crash?.losses || 0}
+                              {gameStats.crash?.losses || 0}
                             </div>
                             <div className="text-sm text-red-300/80 font-mono">LOSSES</div>
                           </div>
                           <div className="text-center">
-                            <div className={`text-2xl font-bold font-mono ${(userData.gameStats.crash?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
-                              {(userData.gameStats.crash?.profit || 0) >= 0 ? '+' : ''}${(userData.gameStats.crash?.profit || 0).toFixed(2)}
-                            </div>
-                            <div className={`text-sm font-mono ${(userData.gameStats.crash?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
+                                        <div className={`text-2xl font-bold font-mono ${(gameStats.crash?.profit || 0) >= 0 ? 'text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]'}`}>
+              {(gameStats.crash?.profit || 0) >= 0 ? '+' : ''}${(gameStats.crash?.profit || 0).toFixed(2)}
+            </div>
+            <div className={`text-sm font-mono ${(gameStats.crash?.profit || 0) >= 0 ? 'text-green-300/80' : 'text-red-300/80'}`}>PROFIT</div>
                           </div>
                         </div>
                       </div>
