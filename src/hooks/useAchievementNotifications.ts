@@ -41,6 +41,7 @@ export function useAchievementNotifications() {
       case 'tower_perfect_games': currentValue = userStats.tower_perfect_games || 0; break;
       case 'coinflip_wins': currentValue = userStats.coinflip_wins || 0; break;
       case 'total_cases_opened': currentValue = userStats.total_cases_opened || 0; break;
+      case 'user_level': currentValue = userStats.current_level || 0; break;
       default: currentValue = 0;
     }
 
