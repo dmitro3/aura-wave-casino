@@ -17,7 +17,7 @@ INSERT INTO public.achievements (
 ) VALUES 
 -- Tower Climber: Complete Neural Rookie (Easy) - Level 9
 (
-  'tower_climber_neural',
+  gen_random_uuid(),
   'Tower Climber', 
   'Reach the top as a Neural Rookie',
   'tower',
@@ -31,7 +31,7 @@ INSERT INTO public.achievements (
 
 -- Sky Scraper: Complete Cyber Operator (Medium) - Level 9  
 (
-  'tower_skyscraper_cyber',
+  gen_random_uuid(),
   'Sky Scraper',
   'Reach the top as a Cyber Operator', 
   'tower',
@@ -45,7 +45,7 @@ INSERT INTO public.achievements (
 
 -- Tower Master: Complete Elite Hacker (Hard) - Level 9
 (
-  'tower_master_elite',
+  gen_random_uuid(),
   'Tower Master',
   'Reach the top as an Elite Hacker',
   'tower', 
@@ -59,7 +59,7 @@ INSERT INTO public.achievements (
 
 -- Tower Legend: Complete Matrix Legend (Extreme) - Level 6
 (
-  'tower_legend_matrix',
+  gen_random_uuid(),
   'Tower Legend',
   'Reach the top as a Matrix Legend',
   'tower',
