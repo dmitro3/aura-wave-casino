@@ -22,28 +22,28 @@ const DIFFICULTY_CONFIGS: Record<string, DifficultyConfig> = {
     safeCount: 3,
     mineCount: 1,
     maxLevel: 9,
-    payoutMultipliers: [1.32, 1.74, 2.28, 3.00, 3.94, 5.19, 6.83, 9.01, 11.95]
+    payoutMultipliers: [1.32, 1.76, 2.34, 3.11, 4.14, 5.51, 7.34, 9.78, 13.04]
   },
   medium: {
     tilesPerRow: 3,
     safeCount: 2,
     mineCount: 1,
     maxLevel: 9,
-    payoutMultipliers: [1.48, 2.20, 3.26, 4.82, 7.12, 10.52, 15.56, 23.00, 33.99]
+    payoutMultipliers: [1.49, 2.24, 3.36, 5.04, 7.56, 11.34, 17.01, 25.52, 38.28]
   },
   hard: {
     tilesPerRow: 2,
     safeCount: 1,
     mineCount: 1,
     maxLevel: 9,
-    payoutMultipliers: [1.98, 3.92, 7.78, 15.44, 30.64, 60.80, 120.80, 239.66, 475.40]
+    payoutMultipliers: [1.98, 3.92, 7.76, 15.37, 30.46, 60.22, 119.64, 237.09, 469.81]
   },
   extreme: {
     tilesPerRow: 3,
     safeCount: 1,
     mineCount: 2,
     maxLevel: 6,
-    payoutMultipliers: [2.94, 8.64, 25.37, 74.51, 218.82, 643.10]
+    payoutMultipliers: [2.97, 8.82, 26.21, 77.88, 231.58, 688.84]
   }
 };
 
