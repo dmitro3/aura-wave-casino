@@ -958,7 +958,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             
             {/* Game End Overlay */}
             {game?.status !== 'active' && game?.status && (
-              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
+              <div className="absolute inset-0 flex items-center justify-center z-50 rounded-lg">
                 <div className="bg-slate-900/95 border border-slate-700/50 rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
                   {game.status === 'lost' ? (
                     <div className="space-y-4 animate-fade-in">
