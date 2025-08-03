@@ -75,8 +75,7 @@ export default function Index({ initialGame }: IndexProps) {
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
   const [hoveredNotification, setHoveredNotification] = useState<string | null>(null);
   const [newNotificationIds, setNewNotificationIds] = useState<Set<string>>(new Set());
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(true);
+
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   // Removed loading states for instant button responses
   const [gameSelectionLoading, setGameSelectionLoading] = useState<string | null>(null);
@@ -1225,7 +1224,7 @@ export default function Index({ initialGame }: IndexProps) {
                   )}
 
                   {/* Cyberpunk Admin Panel Button - Only show for admin users */}
-                  {user && !adminLoading && isAdmin && (
+                  {user && userIsAdmin && (
                     <div className="relative group/admin">
                       <Button
                         variant="ghost"

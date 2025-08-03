@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 // Global cache for admin status to prevent excessive queries
 const adminStatusCache = new Map<string, { isAdmin: boolean; timestamp: number }>();
@@ -17,6 +18,7 @@ export const useAdminStatus = (userId?: string) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const subscriptionRef = useRef<RealtimeChannel | null>(null);
 
   const targetUserId = userId || user?.id;
 
@@ -80,6 +82,54 @@ export const useAdminStatus = (userId?: string) => {
     }
   }, [targetUserId]);
 
+  // Set up real-time subscription for admin status changes
+  useEffect(() => {
+    if (!targetUserId) return;
+
+    // Clean up existing subscription
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+    }
+
+    // Set up new subscription for admin_users table changes
+    const channel = supabase
+      .channel(`admin_status_${targetUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'admin_users',
+          filter: `user_id=eq.${targetUserId}`
+        },
+        async (payload) => {
+          console.log('🔄 Admin status changed for user:', targetUserId, payload);
+          
+          // Clear cache for this user
+          adminStatusCache.delete(targetUserId);
+          
+          // Re-check admin status immediately
+          if (mountedRef.current) {
+            setLoading(true);
+            await checkAdminStatus();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Admin status subscription status:', status, 'for user:', targetUserId);
+      });
+
+    subscriptionRef.current = channel;
+
+    // Cleanup function
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+    };
+  }, [targetUserId, checkAdminStatus]);
+
   useEffect(() => {
     mountedRef.current = true;
 
@@ -103,6 +153,7 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
+  const subscriptionRef = useRef<RealtimeChannel | null>(null);
 
   const checkMultipleAdminStatus = useCallback(async () => {
     if (userIds.length === 0) {
@@ -162,7 +213,7 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
               });
             });
           } else {
-            // If RPC returns unexpected format, treat all as non-admin
+            // Handle case where RPC returns non-array (fallback)
             uncachedUserIds.forEach(userId => {
               statuses[userId] = false;
               adminStatusCache.set(userId, {
@@ -179,6 +230,7 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
       }
     } catch (err: any) {
       if (mountedRef.current) {
+        console.log('Multiple admin status check failed:', err);
         const statuses: Record<string, boolean> = { ...cachedStatuses };
         uncachedUserIds.forEach(userId => {
           statuses[userId] = false;
@@ -192,7 +244,59 @@ export const useMultipleAdminStatus = (userIds: string[]) => {
         setLoading(false);
       }
     }
-  }, [userIds.join(',')]);
+  }, [userIds]);
+
+  // Set up real-time subscription for admin status changes
+  useEffect(() => {
+    if (userIds.length === 0) return;
+
+    // Clean up existing subscription
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+    }
+
+    // Set up new subscription for admin_users table changes for any of the target users
+    const channel = supabase
+      .channel(`multiple_admin_status_${userIds.join('_')}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'admin_users'
+          // Note: No filter here because we want to catch changes for any of our target users
+        },
+        async (payload) => {
+          // Check if the change affects any of our target users
+          const affectedUserId = payload.new?.user_id || payload.old?.user_id;
+          if (affectedUserId && userIds.includes(affectedUserId)) {
+            console.log('🔄 Admin status changed for tracked user:', affectedUserId, payload);
+            
+            // Clear cache for affected user
+            adminStatusCache.delete(affectedUserId);
+            
+            // Re-check all admin statuses
+            if (mountedRef.current) {
+              setLoading(true);
+              await checkMultipleAdminStatus();
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Multiple admin status subscription status:', status, 'for users:', userIds);
+      });
+
+    subscriptionRef.current = channel;
+
+    // Cleanup function
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+    };
+  }, [userIds, checkMultipleAdminStatus]);
 
   useEffect(() => {
     mountedRef.current = true;
