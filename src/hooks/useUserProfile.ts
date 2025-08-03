@@ -57,10 +57,12 @@ export function useUserProfile() {
         (payload) => {
           console.log('💰 REAL-TIME BALANCE UPDATE:', payload);
           const newBalance = payload.new?.balance;
+          const oldBalance = payload.old?.balance;
           
           if (typeof newBalance === 'number') {
             setUserData(prev => {
               if (!prev) return null;
+              // Only update if balance actually changed to avoid unnecessary re-renders
               if (prev.balance !== newBalance) {
                 console.log('⚡ INSTANT BALANCE SYNC:', prev.balance, '→', newBalance);
                 return {
@@ -73,7 +75,9 @@ export function useUserProfile() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Balance subscription status:', status);
+      });
 
     return () => {
       console.log("[useUserProfile] Cleaning up balance subscription");

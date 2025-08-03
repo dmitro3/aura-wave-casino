@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useRealtimeBalance } from '@/hooks/useRealtimeBalance';
+import { Loader2 } from 'lucide-react';
 
 interface AnimatedBalanceProps {
-  balance: number;
   className?: string;
+  fallbackBalance?: number; // Optional fallback for cases where real-time isn't available
 }
 
-export function AnimatedBalance({ balance, className = "" }: AnimatedBalanceProps) {
+export function AnimatedBalance({ className = "", fallbackBalance }: AnimatedBalanceProps) {
+  const { balance: realtimeBalance, loading } = useRealtimeBalance();
+  const balance = realtimeBalance ?? fallbackBalance ?? 0;
   const [displayBalance, setDisplayBalance] = useState(balance);
   const [isAnimating, setIsAnimating] = useState(false);
   const previousBalance = useRef(balance);
@@ -57,6 +61,15 @@ export function AnimatedBalance({ balance, className = "" }: AnimatedBalanceProp
       }
     };
   }, [balance]);
+
+  if (loading && !fallbackBalance) {
+    return (
+      <span className={`${className} flex items-center gap-1`}>
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Loading...
+      </span>
+    );
+  }
 
   return (
     <span className={`${className} ${isAnimating ? 'animate-balance-increase' : ''}`}>
