@@ -1555,8 +1555,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
       </Dialog>
 
       {/* User Management Modal */}
-      <Dialog open={showUserManagement} onOpenChange={setShowUserManagement}>
-        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={showUserManagement ? "fixed inset-0 z-[10500]" : "hidden"}>
+        <Dialog open={showUserManagement} onOpenChange={setShowUserManagement}>
+          <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10501 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <Users className="h-5 w-5 text-blue-400" />
@@ -1836,12 +1837,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Private Notification Modal */}
-      <Dialog open={showPrivateNotification} onOpenChange={setShowPrivateNotification}>
-        <DialogContent className="max-w-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={showPrivateNotification ? "fixed inset-0 z-[10500]" : "hidden"}>
+        <Dialog open={showPrivateNotification} onOpenChange={setShowPrivateNotification}>
+          <DialogContent className="max-w-2xl bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10501 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <MessageSquare className="h-5 w-5 text-green-400" />
@@ -1983,12 +1986,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Reset Confirmation Modal */}
-      <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
-        <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={showResetConfirm ? "fixed inset-0 z-[10500]" : "hidden"}>
+        <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+          <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10501 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -2065,12 +2070,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={showDeleteConfirm ? "fixed inset-0 z-[10500]" : "hidden"}>
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10501 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -2161,12 +2168,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Instant Delete Confirmation Modal */}
-      <Dialog open={showInstantDeleteConfirm} onOpenChange={setShowInstantDeleteConfirm}>
-        <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-red-500/50">
+      <div className={showInstantDeleteConfirm ? "fixed inset-0 z-[10500]" : "hidden"}>
+        <Dialog open={showInstantDeleteConfirm} onOpenChange={setShowInstantDeleteConfirm}>
+          <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-red-500/50" style={{ zIndex: 10501 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <Zap className="h-5 w-5 text-red-600" />
@@ -2251,12 +2260,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Admin Role Confirmation Modal */}
-      <Dialog open={showAdminRoleModal} onOpenChange={setShowAdminRoleModal}>
-        <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50">
+      <div className={showAdminRoleModal ? "fixed inset-0 z-[10500]" : "hidden"}>
+        <Dialog open={showAdminRoleModal} onOpenChange={setShowAdminRoleModal}>
+          <DialogContent className="max-w-md bg-slate-900/95 backdrop-blur-xl border border-slate-700/50" style={{ zIndex: 10501 }}>
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2 text-white">
               <Shield className="h-5 w-5 text-blue-400" />
@@ -2326,8 +2337,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
               </Button>
             </div>
           </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </>
   );
