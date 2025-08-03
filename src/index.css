@@ -861,17 +861,19 @@
   
   /* Icon animations */
   .animate-cyber-icon {
-    animation: cyber-icon 10s ease-in-out infinite;
+    animation: cyber-icon 12s ease-in-out infinite;
   }
   
   @keyframes cyber-icon {
     0%, 100% { 
-      border-color: rgba(99,102,241,0.3);
-      box-shadow: 0 0 8px rgba(99,102,241,0.15);
+      opacity: 0.8;
+      transform: scale(1);
+      filter: brightness(1);
     }
     50% { 
-      border-color: rgba(99,102,241,0.5);
-      box-shadow: 0 0 15px rgba(99,102,241,0.25), 0 0 20px rgba(99,102,241,0.1);
+      opacity: 1;
+      transform: scale(1.02);
+      filter: brightness(1.2);
     }
   }
   
