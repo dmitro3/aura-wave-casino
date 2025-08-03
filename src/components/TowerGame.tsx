@@ -45,7 +45,7 @@ const DIFFICULTY_INFO = {
     glowColor: 'emerald',
     icon: <Shield className="w-4 h-4" />,
     description: '4 DATA NODES | 3 SAFE | 75% SUCCESS RATE',
-    maxMultiplier: '11.95x',
+    maxMultiplier: '13.04x',
     tilesPerRow: 4,
     safeCount: 3,
     mineCount: 1,
@@ -58,7 +58,7 @@ const DIFFICULTY_INFO = {
     glowColor: 'amber',
     icon: <Cpu className="w-4 h-4" />,
     description: '3 DATA NODES | 2 SAFE | 66.6% SUCCESS RATE',
-    maxMultiplier: '33.99x',
+    maxMultiplier: '38.28x',
     tilesPerRow: 3,
     safeCount: 2,
     mineCount: 1,
@@ -71,7 +71,7 @@ const DIFFICULTY_INFO = {
     glowColor: 'rose',
     icon: <Zap className="w-4 h-4" />,
     description: '2 DATA NODES | 1 SAFE | 50% SUCCESS RATE',
-    maxMultiplier: '475.40x',
+    maxMultiplier: '469.81x',
     tilesPerRow: 2,
     safeCount: 1,
     mineCount: 1,
@@ -84,7 +84,7 @@ const DIFFICULTY_INFO = {
     glowColor: 'violet',
     icon: <Target className="w-4 h-4" />,
     description: '3 DATA NODES | 1 SAFE | 33.3% SUCCESS RATE',
-    maxMultiplier: '643.10x',
+    maxMultiplier: '688.84x',
     tilesPerRow: 3,
     safeCount: 1,
     mineCount: 2,
@@ -94,10 +94,10 @@ const DIFFICULTY_INFO = {
 };
 
 const PAYOUT_MULTIPLIERS = {
-  easy: [1.32, 1.74, 2.28, 3.00, 3.94, 5.19, 6.83, 9.01, 11.95],
-  medium: [1.48, 2.20, 3.26, 4.82, 7.12, 10.52, 15.56, 23.00, 33.99],
-  hard: [1.98, 3.92, 7.78, 15.44, 30.64, 60.80, 120.80, 239.66, 475.40],
-  extreme: [2.94, 8.64, 25.37, 74.51, 218.82, 643.10]
+  easy: [1.32, 1.76, 2.34, 3.11, 4.14, 5.51, 7.34, 9.78, 13.04],
+  medium: [1.49, 2.24, 3.36, 5.04, 7.56, 11.34, 17.01, 25.52, 38.28],
+  hard: [1.98, 3.92, 7.76, 15.37, 30.46, 60.22, 119.64, 237.09, 469.81],
+  extreme: [2.97, 8.82, 26.21, 77.88, 231.58, 688.84]
 };
 
 const SAFE_TILES = ['✓', '💎', '🔒', '🛡️', '⭐'];
