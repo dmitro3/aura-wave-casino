@@ -129,7 +129,7 @@ BEGIN
   
   -- Return fixed XP requirement from table, default to max value for levels > 999
   RETURN COALESCE(
-    (SELECT xp_required FROM level_xp_requirements WHERE level = target_level),
+    (SELECT xp_required FROM level_xp_requirements WHERE level_xp_requirements.level = target_level),
     42024  -- Default for levels above 999
   );
 END;
@@ -156,12 +156,12 @@ BEGIN
   
   -- Calculate cumulative XP requirements and find current level
   FOR level_check IN 1..999 LOOP
-    cumulative_xp := cumulative_xp + (SELECT xp_required FROM level_xp_requirements WHERE level = level_check);
+    cumulative_xp := cumulative_xp + (SELECT xp_required FROM level_xp_requirements WHERE level_xp_requirements.level = level_check);
     
     IF cumulative_xp > total_xp THEN
       current_level_num := level_check;
       -- Calculate how much XP user has in current level
-      remaining_xp := (SELECT xp_required FROM level_xp_requirements WHERE level = level_check) - (cumulative_xp - total_xp);
+      remaining_xp := (SELECT xp_required FROM level_xp_requirements WHERE level_xp_requirements.level = level_check) - (cumulative_xp - total_xp);
       EXIT;
     END IF;
     
@@ -183,7 +183,7 @@ BEGIN
   IF current_level_num >= 999 THEN
     xp_for_next_level := 0;  -- Max level reached
   ELSE
-    xp_for_next_level := (SELECT xp_required FROM level_xp_requirements WHERE level = current_level_num + 1) - remaining_xp;
+    xp_for_next_level := (SELECT xp_required FROM level_xp_requirements WHERE level_xp_requirements.level = current_level_num + 1) - remaining_xp;
   END IF;
   
   RETURN QUERY SELECT 
