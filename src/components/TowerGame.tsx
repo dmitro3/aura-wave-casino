@@ -128,8 +128,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         return;
       }
 
+      console.log('🔍 TOWER: Starting active game check for user:', userData.id);
+      setLoadingActiveGame(true);
+
       try {
-        console.log('🔍 TOWER: Checking for active game for user:', userData.id);
+        console.log('🔍 TOWER: Querying for active games...');
         
         const { data: activeGames, error } = await supabase
           .from('tower_games')
@@ -145,7 +148,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           return;
         }
 
-        console.log('🔍 TOWER: Active games query result:', activeGames);
+        console.log('🔍 TOWER: Active games query result:', {
+          found: activeGames?.length || 0,
+          data: activeGames
+        });
 
         if (activeGames && activeGames.length > 0) {
           const activeGame = activeGames[0];
@@ -154,17 +160,22 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             difficulty: activeGame.difficulty,
             current_level: activeGame.current_level,
             status: activeGame.status,
-            bet_amount: activeGame.bet_amount
+            bet_amount: activeGame.bet_amount,
+            created_at: activeGame.created_at
           });
           
           // Also get the selected tiles from tower_levels
+          console.log('🔍 TOWER: Querying for tower levels...');
           const { data: levels, error: levelsError } = await supabase
             .from('tower_levels')
             .select('level_number, tile_selected, was_safe')
             .eq('game_id', activeGame.id)
             .order('level_number', { ascending: true });
 
-          console.log('🔍 TOWER: Tower levels query result:', levels);
+          console.log('🔍 TOWER: Tower levels query result:', {
+            found: levels?.length || 0,
+            data: levels
+          });
 
           if (levelsError) {
             console.error('❌ TOWER: Error fetching tower levels:', levelsError);
@@ -195,6 +206,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           toast({
             title: "🎮 Active Game Restored",
             description: `Resumed your ${DIFFICULTY_INFO[activeGame.difficulty as keyof typeof DIFFICULTY_INFO]?.name || activeGame.difficulty} tower game from level ${activeGame.current_level + 1}`,
+            duration: 5000,
           });
         } else {
           console.log('🎮 TOWER: No active game found');
@@ -207,13 +219,13 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       }
     };
 
-    // Only run if we haven't already loaded or if userData changed
-    if (loadingActiveGame && userData?.id) {
+    // Run the check whenever userData.id is available
+    if (userData?.id) {
       checkForActiveGame();
-    } else if (!userData?.id) {
+    } else {
       setLoadingActiveGame(false);
     }
-  }, [userData?.id, loadingActiveGame]);
+  }, [userData?.id]);
 
   // Reset game state
   const resetGame = () => {
@@ -616,6 +628,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
               <Building2 className="w-12 h-12 text-primary mx-auto" />
             </div>
             <p className="text-slate-300 font-mono">SCANNING FOR ACTIVE PROTOCOLS...</p>
+            <p className="text-slate-400 font-mono text-sm">User ID: {userData?.id || 'Loading...'}</p>
           </div>
         </div>
       </div>
@@ -709,6 +722,40 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                       </div>
                     )}
                   </Button>
+                  
+                  {/* Debug button for checking active games */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <Button 
+                      onClick={async () => {
+                        console.log('🔍 MANUAL CHECK: Checking for active games...');
+                        try {
+                          const { data: activeGames, error } = await supabase
+                            .from('tower_games')
+                            .select('*')
+                            .eq('user_id', userData?.id)
+                            .order('created_at', { ascending: false })
+                            .limit(5);
+                          
+                          console.log('🔍 MANUAL CHECK: All recent games:', activeGames);
+                          
+                          const activeOnly = await supabase
+                            .from('tower_games')
+                            .select('*')
+                            .eq('user_id', userData?.id)
+                            .eq('status', 'active')
+                            .order('created_at', { ascending: false });
+                            
+                          console.log('🔍 MANUAL CHECK: Active games only:', activeOnly.data);
+                        } catch (error) {
+                          console.error('🔍 MANUAL CHECK: Error:', error);
+                        }
+                      }}
+                      variant="outline"
+                      className="w-full font-mono text-xs mt-2"
+                    >
+                      🔍 DEBUG: CHECK ACTIVE GAMES
+                    </Button>
+                  )}
                 </>
               ) : (
                 <>
