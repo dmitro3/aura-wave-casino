@@ -532,12 +532,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         </div>
                       )}
                       
-                      {/* Level Badge */}
-                      <div className="absolute -bottom-2 -right-2 bg-gradient-to-br from-primary/90 via-primary/80 to-accent/90 border-2 border-white/20 rounded-full p-2 backdrop-blur-sm">
-                        <div className="text-white font-bold text-sm drop-shadow-[0_0_4px_rgba(0,0,0,0.8)]">
-                          L{currentLevel}
-                        </div>
-                      </div>
+
                     </div>
                   </ProfileBorder>
                   
