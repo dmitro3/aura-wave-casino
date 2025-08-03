@@ -1135,58 +1135,212 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                       <div className="flex-1 h-px bg-gradient-to-r from-primary/50 via-accent/30 to-transparent" />
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Best Streak Highlight */}
-                      <div className="relative group/streak">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 to-accent/60 blur-sm animate-pulse"
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* Total Wagered */}
+                      <div className="relative group/wagered">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/40 to-cyan-500/60 blur-sm animate-pulse"
                              style={{
-                               clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
                              }} />
                         
-                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-primary/60 backdrop-blur-sm p-6 overflow-hidden"
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-blue-500/60 backdrop-blur-sm p-4 overflow-hidden"
                              style={{
-                               clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
                              }}>
                           
-                          {/* Circuit Pattern */}
                           <div className="absolute inset-0 opacity-10">
-                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(99,102,241,0.4)_25%,rgba(99,102,241,0.4)_26%,transparent_27%,transparent_74%,rgba(99,102,241,0.4)_75%,rgba(99,102,241,0.4)_76%,transparent_77%,transparent)] bg-[16px_16px] animate-grid-move-slow" />
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(59,130,246,0.4)_25%,rgba(59,130,246,0.4)_26%,transparent_27%,transparent_74%,rgba(59,130,246,0.4)_75%,rgba(59,130,246,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
                           </div>
                           
-                          <h4 className="font-bold mb-3 text-primary font-mono tracking-wider text-lg relative z-10">BEST STREAK</h4>
-                          <p className="text-4xl font-bold font-mono text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.6)] relative z-10 mb-2">12</p>
-                          <p className="text-sm text-primary/80 font-mono tracking-wide relative z-10">CONSECUTIVE WINS IN COINFLIP</p>
+                          <h4 className="font-bold mb-2 text-blue-400 font-mono tracking-wider text-sm relative z-10">TOTAL WAGERED</h4>
+                          <p className="text-2xl font-bold font-mono text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] relative z-10">
+                            ${(freshStats?.total_wagered || userData.levelStats?.total_wagered || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
                           
-                          {/* Tech corners */}
-                          <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-primary/80" />
-                          <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-primary/80" />
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-blue-400/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-blue-400/80" />
                         </div>
                       </div>
-                      
-                      {/* Biggest Win Highlight */}
+
+                      {/* Best Coinflip Streak */}
+                      <div className="relative group/coinstreak">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 to-accent/60 blur-sm animate-pulse"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }} />
+                        
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-primary/60 backdrop-blur-sm p-4 overflow-hidden"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }}>
+                          
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(99,102,241,0.4)_25%,rgba(99,102,241,0.4)_26%,transparent_27%,transparent_74%,rgba(99,102,241,0.4)_75%,rgba(99,102,241,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
+                          </div>
+                          
+                          <h4 className="font-bold mb-2 text-primary font-mono tracking-wider text-sm relative z-10">COINFLIP STREAK</h4>
+                          <p className="text-2xl font-bold font-mono text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] relative z-10">
+                            {freshStats?.best_coinflip_streak || userData.levelStats?.best_coinflip_streak || 0}
+                          </p>
+                          
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-primary/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-primary/80" />
+                        </div>
+                      </div>
+
+                      {/* Roulette Best Streak */}
+                      <div className="relative group/roulettestreak">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-red-500/40 to-orange-500/60 blur-sm animate-pulse"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }} />
+                        
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-red-500/60 backdrop-blur-sm p-4 overflow-hidden"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }}>
+                          
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(239,68,68,0.4)_25%,rgba(239,68,68,0.4)_26%,transparent_27%,transparent_74%,rgba(239,68,68,0.4)_75%,rgba(239,68,68,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
+                          </div>
+                          
+                          <h4 className="font-bold mb-2 text-red-400 font-mono tracking-wider text-sm relative z-10">ROULETTE STREAK</h4>
+                          <p className="text-2xl font-bold font-mono text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] relative z-10">
+                            {freshStats?.roulette_best_streak || userData.levelStats?.roulette_best_streak || 0}
+                          </p>
+                          
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-red-400/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-red-400/80" />
+                        </div>
+                      </div>
+
+                      {/* Roulette Biggest Bet */}
+                      <div className="relative group/roulettebigbet">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-red-500/40 to-pink-500/60 blur-sm animate-pulse"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }} />
+                        
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-red-500/60 backdrop-blur-sm p-4 overflow-hidden"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }}>
+                          
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(236,72,153,0.4)_25%,rgba(236,72,153,0.4)_26%,transparent_27%,transparent_74%,rgba(236,72,153,0.4)_75%,rgba(236,72,153,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
+                          </div>
+                          
+                          <h4 className="font-bold mb-2 text-pink-400 font-mono tracking-wider text-sm relative z-10">ROULETTE BIG BET</h4>
+                          <p className="text-2xl font-bold font-mono text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] relative z-10">
+                            ${(freshStats?.roulette_biggest_bet || userData.levelStats?.roulette_biggest_bet || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-pink-400/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-pink-400/80" />
+                        </div>
+                      </div>
+
+                      {/* Total Games */}
+                      <div className="relative group/totalgames">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/40 to-violet-500/60 blur-sm animate-pulse"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }} />
+                        
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-purple-500/60 backdrop-blur-sm p-4 overflow-hidden"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }}>
+                          
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(147,51,234,0.4)_25%,rgba(147,51,234,0.4)_26%,transparent_27%,transparent_74%,rgba(147,51,234,0.4)_75%,rgba(147,51,234,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
+                          </div>
+                          
+                          <h4 className="font-bold mb-2 text-purple-400 font-mono tracking-wider text-sm relative z-10">TOTAL GAMES</h4>
+                          <p className="text-2xl font-bold font-mono text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] relative z-10">
+                            {(freshStats?.total_games || userData.levelStats?.total_games || 0).toLocaleString()}
+                          </p>
+                          
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-purple-400/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-purple-400/80" />
+                        </div>
+                      </div>
+
+                      {/* Biggest Win */}
                       <div className="relative group/bigwin">
                         <div className="absolute -inset-1 bg-gradient-to-r from-green-500/40 to-emerald-500/60 blur-sm animate-pulse"
                              style={{
-                               clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
                              }} />
                         
-                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-green-500/60 backdrop-blur-sm p-6 overflow-hidden"
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-green-500/60 backdrop-blur-sm p-4 overflow-hidden"
                              style={{
-                               clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
                              }}>
                           
-                          {/* Circuit Pattern */}
                           <div className="absolute inset-0 opacity-10">
-                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(34,197,94,0.4)_25%,rgba(34,197,94,0.4)_26%,transparent_27%,transparent_74%,rgba(34,197,94,0.4)_75%,rgba(34,197,94,0.4)_76%,transparent_77%,transparent)] bg-[16px_16px] animate-grid-move-slow" />
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(34,197,94,0.4)_25%,rgba(34,197,94,0.4)_26%,transparent_27%,transparent_74%,rgba(34,197,94,0.4)_75%,rgba(34,197,94,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
                           </div>
                           
-                          <h4 className="font-bold mb-3 text-green-400 font-mono tracking-wider text-lg relative z-10">BIGGEST WIN</h4>
-                          <p className="text-4xl font-bold text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.6)] font-mono relative z-10 mb-2">$2,450.00</p>
-                          <p className="text-sm text-green-300/80 font-mono tracking-wide relative z-10">JACKPOT IN ROULETTE</p>
+                          <h4 className="font-bold mb-2 text-green-400 font-mono tracking-wider text-sm relative z-10">BIGGEST WIN</h4>
+                          <p className="text-2xl font-bold text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.6)] font-mono relative z-10">
+                            ${(freshStats?.biggest_win || userData.levelStats?.biggest_win || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
                           
-                          {/* Tech corners */}
-                          <div className="absolute top-2 left-2 w-3 h-3 border-l border-t border-green-400/80" />
-                          <div className="absolute bottom-2 right-2 w-3 h-3 border-r border-b border-green-400/80" />
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-green-400/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-green-400/80" />
+                        </div>
+                      </div>
+
+                      {/* Biggest Loss */}
+                      <div className="relative group/bigloss">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-red-500/40 to-red-600/60 blur-sm animate-pulse"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }} />
+                        
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-red-500/60 backdrop-blur-sm p-4 overflow-hidden"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }}>
+                          
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(239,68,68,0.4)_25%,rgba(239,68,68,0.4)_26%,transparent_27%,transparent_74%,rgba(239,68,68,0.4)_75%,rgba(239,68,68,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
+                          </div>
+                          
+                          <h4 className="font-bold mb-2 text-red-400 font-mono tracking-wider text-sm relative z-10">BIGGEST LOSS</h4>
+                          <p className="text-2xl font-bold text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)] font-mono relative z-10">
+                            ${Math.abs(freshStats?.biggest_loss || userData.levelStats?.biggest_loss || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-red-400/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-red-400/80" />
+                        </div>
+                      </div>
+
+                      {/* Biggest Single Bet */}
+                      <div className="relative group/bigbet">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500/40 to-orange-500/60 blur-sm animate-pulse"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }} />
+                        
+                        <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-yellow-500/60 backdrop-blur-sm p-4 overflow-hidden"
+                             style={{
+                               clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                             }}>
+                          
+                          <div className="absolute inset-0 opacity-10">
+                            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(245,158,11,0.4)_25%,rgba(245,158,11,0.4)_26%,transparent_27%,transparent_74%,rgba(245,158,11,0.4)_75%,rgba(245,158,11,0.4)_76%,transparent_77%,transparent)] bg-[12px_12px] animate-grid-move-slow" />
+                          </div>
+                          
+                          <h4 className="font-bold mb-2 text-yellow-400 font-mono tracking-wider text-sm relative z-10">BIGGEST SINGLE BET</h4>
+                          <p className="text-2xl font-bold text-yellow-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] font-mono relative z-10">
+                            ${(freshStats?.biggest_single_bet || userData.levelStats?.biggest_single_bet || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                          
+                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-yellow-400/80" />
+                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-yellow-400/80" />
                         </div>
                       </div>
                     </div>
