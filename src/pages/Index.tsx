@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User, Wallet, Gamepad2, LogOut, TrendingUp, Target, Building, Gift, LogIn, Bell, BellDot, Shield, Star, Award, Megaphone, Clock, Sparkles, Zap, Users, DollarSign, AlertTriangle, Check, X, Terminal } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -1045,6 +1045,14 @@ export default function Index({ initialGame }: IndexProps) {
                     </div>
                   
                   <DialogContent className="max-w-4xl w-[95vw] h-[85vh] p-0 border-0 bg-transparent overflow-hidden">
+                    {/* Accessibility headers - hidden visually but accessible to screen readers */}
+                    <DialogHeader className="sr-only">
+                      <DialogTitle>Notifications Panel</DialogTitle>
+                      <DialogDescription>
+                        View and manage your notifications, tips, achievements, and system messages.
+                      </DialogDescription>
+                    </DialogHeader>
+
                     {/* Animated backdrop with cyberpunk effects */}
                     <div className={cn(
                       "fixed inset-0 bg-black/80 backdrop-blur-lg transition-all duration-800",
