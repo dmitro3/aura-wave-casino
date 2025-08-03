@@ -959,37 +959,41 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             {/* Game End Overlay */}
             {game?.status !== 'active' && game?.status && (
               <div className="absolute inset-0 flex items-center justify-center z-50 rounded-lg">
-                <div className="bg-slate-900/95 border border-slate-700/50 rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+                <div className={`bg-slate-900/95 rounded-lg p-6 max-w-sm mx-4 text-center shadow-2xl border-2 ${
+                  game.status === 'lost' 
+                    ? 'border-red-500/60 shadow-red-500/20' 
+                    : 'border-emerald-500/60 shadow-emerald-500/20'
+                }`}>
                   {game.status === 'lost' ? (
-                    <div className="space-y-4 animate-fade-in">
-                      <div className="text-4xl text-red-400 mb-4">
-                        <AlertTriangle className="w-16 h-16 mx-auto" />
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="text-3xl text-red-400">
+                        <AlertTriangle className="w-12 h-12 mx-auto" />
                       </div>
-                      <h3 className="text-2xl font-bold text-red-400">SECURITY BREACH DETECTED</h3>
-                      <p className="text-slate-300">
-                        Access denied on floor {game.current_level + 1}. System lockdown initiated.
+                      <h3 className="text-lg font-bold text-red-400">SECURITY BREACH</h3>
+                      <p className="text-slate-300 text-sm">
+                        Access denied on floor {game.current_level + 1}
                       </p>
-                      <div className="text-red-400 text-sm">
-                        Protocol terminated by {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name} security systems
+                      <div className="text-red-400 text-xs">
+                        Protocol terminated by {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name}
                       </div>
-                      <div className="text-slate-400 text-xs mt-2 animate-pulse">
-                        Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
+                      <div className="text-slate-400 text-xs animate-pulse">
+                        Resetting in {countdown || 3}s...
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4 animate-fade-in">
-                      <div className="text-4xl text-emerald-400 mb-4">
-                        <Crown className="w-16 h-16 mx-auto" />
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="text-3xl text-emerald-400">
+                        <Crown className="w-12 h-12 mx-auto" />
                       </div>
-                      <h3 className="text-2xl font-bold text-emerald-400">DATA EXTRACTION SUCCESSFUL</h3>
-                      <p className="text-slate-300">
-                        Successfully extracted ${(game.final_payout || 0).toFixed(2)} from floor {game.current_level}
+                      <h3 className="text-lg font-bold text-emerald-400">EXTRACTION SUCCESSFUL</h3>
+                      <p className="text-slate-300 text-sm">
+                        Extracted ${(game.final_payout || 0).toFixed(2)}
                       </p>
-                      <div className="text-emerald-400 text-sm">
+                      <div className="text-emerald-400 text-xs">
                         {(game.current_multiplier || 1).toFixed(2)}x multiplier achieved
                       </div>
-                      <div className="text-slate-400 text-xs mt-2 animate-pulse">
-                        Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
+                      <div className="text-slate-400 text-xs animate-pulse">
+                        Resetting in {countdown || 3}s...
                       </div>
                     </div>
                   )}
