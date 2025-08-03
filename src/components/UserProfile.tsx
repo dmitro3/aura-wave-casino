@@ -1034,6 +1034,20 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                              clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))'
                            }} />
                       
+                      {/* Achievement Notification Indicator - positioned outside button to avoid clipping */}
+                      {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
+                        <div className="absolute -top-2.5 -right-2.5 z-[100] group/badge">
+                          <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
+                               style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }} />
+                          <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
+                               style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }}>
+                            <span className="text-[0.625rem] font-bold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] font-mono leading-none">
+                              {notificationClaimable.length}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
                       <TabsTrigger 
                         value="achievements" 
                         className="relative w-full h-16 bg-gradient-to-br from-slate-800/80 to-slate-900/90 border border-slate-600/50 data-[state=active]:border-yellow-500/70 data-[state=active]:bg-gradient-to-br data-[state=active]:from-yellow-600/20 data-[state=active]:to-orange-600/30 text-slate-300 data-[state=active]:text-white hover:text-white hover:border-slate-500/70 transition-all duration-500 backdrop-blur-sm group overflow-hidden"
@@ -1041,19 +1055,6 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                           clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))'
                         }}
                       >
-                        {/* Achievement Notification Indicator - positioned on entire button */}
-                        {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
-                          <div className="absolute -top-2.5 -right-2.5 z-[100] group/badge">
-                            <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
-                                 style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }} />
-                            <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
-                                 style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }}>
-                              <span className="text-[0.625rem] font-bold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] font-mono leading-none">
-                                {notificationClaimable.length}
-                              </span>
-                            </div>
-                          </div>
-                        )}
                         
                         <div className="absolute inset-0 opacity-10">
                           <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(245,158,11,0.4)_25%,rgba(245,158,11,0.4)_26%,transparent_27%,transparent_74%,rgba(245,158,11,0.4)_75%,rgba(245,158,11,0.4)_76%,transparent_77%,transparent)] bg-[8px_8px] animate-grid-move-slow" />
