@@ -59,6 +59,7 @@ interface IndexProps {
 export default function Index({ initialGame }: IndexProps) {
   const { user, signOut, loading: authLoading } = useAuth();
   const { userData, loading: profileLoading, updateUserProfile } = useUserProfile();
+  const { stats: userLevelStats, refetch: refetchUserLevelStats } = useUserLevelStats();
   
   // Debug logging
   useEffect(() => {
@@ -688,7 +689,6 @@ export default function Index({ initialGame }: IndexProps) {
   };
 
   const { levelStats } = useLevelSync();
-  const { stats: userLevelStats, refetch: refetchUserLevelStats } = useUserLevelStats();
   const { forceFullRefresh } = useXPSync();
 
 
