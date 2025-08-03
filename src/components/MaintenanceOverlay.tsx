@@ -90,9 +90,14 @@ export default function MaintenanceOverlay() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-50 flex items-center justify-center pointer-events-none">
+      <div 
+        className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[9999] flex items-center justify-center pointer-events-auto"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        onKeyDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      >
         {/* Stunning Loading Environment */}
-        <div className="relative pointer-events-auto">
+        <div className="relative pointer-events-none">
           {/* Animated Circuit Board Background */}
           <div className="absolute inset-0 w-96 h-96">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(99,102,241,0.3)_1px,transparent_0)] bg-[20px_20px] animate-pulse"></div>
@@ -138,8 +143,31 @@ export default function MaintenanceOverlay() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-50 flex items-center justify-center p-4 pointer-events-none">
-      <div className="max-w-2xl w-full pointer-events-auto">
+    <div 
+      className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[9999] flex items-center justify-center p-4 pointer-events-auto"
+      onClick={(e) => {
+        // Block all clicks except for admin panel button and its children
+        if (!(e.target as HTMLElement).closest('.admin-panel-access')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      onMouseDown={(e) => {
+        // Block all mouse events
+        if (!(e.target as HTMLElement).closest('.admin-panel-access')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+      onKeyDown={(e) => {
+        // Block all keyboard events except for admin panel
+        if (!(e.target as HTMLElement).closest('.admin-panel-access')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+    >
+      <div className="max-w-2xl w-full">
         {/* Stunning Main Container */}
         <div className="relative overflow-hidden group">
           {/* Advanced Background System */}
@@ -194,7 +222,7 @@ export default function MaintenanceOverlay() {
             {user && !adminLoading && isAdmin && (
               <button
                 onClick={() => setShowAdminPanel(true)}
-                className="absolute top-6 right-6 p-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/25 transform hover:scale-105 z-10 border border-primary/30 pointer-events-auto"
+                className="admin-panel-access absolute top-6 right-6 p-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-primary/25 transform hover:scale-105 z-10 border border-primary/30 pointer-events-auto"
               >
                 <Shield className="h-5 w-5" />
               </button>
@@ -287,10 +315,12 @@ export default function MaintenanceOverlay() {
       
       {/* Admin Panel Modal */}
       {showAdminPanel && (
-        <AdminPanel
-          isOpen={showAdminPanel}
-          onClose={() => setShowAdminPanel(false)}
-        />
+        <div className="admin-panel-access">
+          <AdminPanel
+            isOpen={showAdminPanel}
+            onClose={() => setShowAdminPanel(false)}
+          />
+        </div>
       )}
     </div>
   );
