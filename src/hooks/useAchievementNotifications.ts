@@ -24,17 +24,15 @@ export function useAchievementNotifications(user?: any, stats?: any) {
   const [claimableAchievements, setClaimableAchievements] = useState<ClaimableAchievement[]>([]);
   const [hasNewClaimable, setHasNewClaimable] = useState(false);
 
-  // Debug what we're getting
+  // Debug critical issues only
   useEffect(() => {
-    console.log('🏆 DEBUG: Hook dependencies check:', {
-      userPassed: !!user,
-      statsPasssed: !!stats,
-      effectiveUser: effectiveUser ? effectiveUser.id : null,
-      effectiveUserExists: !!effectiveUser,
-      effectiveStats: effectiveStats,
-      effectiveStatsExists: !!effectiveStats
-    });
-  }, [user, stats, effectiveUser, effectiveStats]);
+    if (!effectiveUser || !effectiveStats) {
+      console.log('🏆 DEBUG: Missing dependencies:', {
+        effectiveUser: !!effectiveUser,
+        effectiveStats: !!effectiveStats
+      });
+    }
+  }, [effectiveUser, effectiveStats]);
 
   const calculateProgress = (achievement: any, userStats: any): number => {
     if (!userStats) return 0;
@@ -79,29 +77,20 @@ export function useAchievementNotifications(user?: any, stats?: any) {
         currentValue = 0;
     }
 
-    return Math.min(100, (currentValue / targetValue) * 100);
+    const progress = Math.min(100, (currentValue / targetValue) * 100);
+    return isNaN(progress) ? 0 : progress;
   };
 
   const checkForClaimableAchievements = async () => {
-    if (!effectiveUser || !effectiveStats) {
-      console.log('🏆 DEBUG: Missing effective user or stats', { 
-        effectiveUser: !!effectiveUser, 
-        effectiveStats: !!effectiveStats 
-      });
-      return;
-    }
+    if (!effectiveUser || !effectiveStats) return;
 
     try {
-      console.log('🏆 DEBUG: Starting achievement check for user:', effectiveUser.id);
-      console.log('🏆 DEBUG: User stats:', effectiveStats);
-
       // Fetch all achievements
       const { data: allAchievements, error: achievementsError } = await supabase
         .from('achievements')
         .select('*');
 
       if (achievementsError) throw achievementsError;
-      console.log('🏆 DEBUG: All achievements:', allAchievements?.length);
 
       // Fetch user's unlocked achievements
       const { data: unlockedAchievements, error: userError } = await supabase
@@ -110,25 +99,26 @@ export function useAchievementNotifications(user?: any, stats?: any) {
         .eq('user_id', effectiveUser.id);
 
       if (userError) throw userError;
-      console.log('🏆 DEBUG: Unlocked achievements:', unlockedAchievements?.length);
 
       // Find achievements that are ready to claim
-      const claimable = (allAchievements || []).filter(achievement => {
-        const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
-        if (isAlreadyUnlocked) {
-          console.log(`🏆 DEBUG: ${achievement.name} already unlocked`);
-          return false;
-        }
-        
-        const progress = calculateProgress(achievement, effectiveStats);
-        console.log(`🏆 DEBUG: ${achievement.name} progress: ${progress}%`, {
-          criteria: achievement.criteria,
-          currentStats: effectiveStats
+              const claimable = (allAchievements || []).filter(achievement => {
+          const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
+          if (isAlreadyUnlocked) return false;
+          
+          const progress = calculateProgress(achievement, effectiveStats);
+          const isClaimable = progress >= 100;
+          
+          // Only log claimable achievements to reduce noise
+          if (isClaimable) {
+            console.log(`🏆 CLAIMABLE: ${achievement.name} (${progress}%)`, achievement);
+          }
+          
+          return isClaimable;
         });
-        return progress >= 100;
-      });
 
-      console.log('🏆 DEBUG: Claimable achievements found:', claimable?.length, claimable);
+        if (claimable.length > 0) {
+          console.log('🏆 DEBUG: Found claimable achievements:', claimable.length, claimable);
+        }
 
       const previousCount = claimableAchievements.length;
       setClaimableAchievements(claimable);
