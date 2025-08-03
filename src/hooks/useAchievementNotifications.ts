@@ -65,15 +65,22 @@ export function useAchievementNotifications() {
   };
 
   const checkForClaimableAchievements = async () => {
-    if (!user || !stats) return;
+    if (!user || !stats) {
+      console.log('🏆 DEBUG: Missing user or stats', { user: !!user, stats: !!stats });
+      return;
+    }
 
     try {
+      console.log('🏆 DEBUG: Starting achievement check for user:', user.id);
+      console.log('🏆 DEBUG: User stats:', stats);
+
       // Fetch all achievements
       const { data: allAchievements, error: achievementsError } = await supabase
         .from('achievements')
         .select('*');
 
       if (achievementsError) throw achievementsError;
+      console.log('🏆 DEBUG: All achievements:', allAchievements?.length);
 
       // Fetch user's unlocked achievements
       const { data: unlockedAchievements, error: userError } = await supabase
@@ -82,15 +89,25 @@ export function useAchievementNotifications() {
         .eq('user_id', user.id);
 
       if (userError) throw userError;
+      console.log('🏆 DEBUG: Unlocked achievements:', unlockedAchievements?.length);
 
       // Find achievements that are ready to claim
       const claimable = (allAchievements || []).filter(achievement => {
         const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
-        if (isAlreadyUnlocked) return false;
+        if (isAlreadyUnlocked) {
+          console.log(`🏆 DEBUG: ${achievement.name} already unlocked`);
+          return false;
+        }
         
         const progress = calculateProgress(achievement, stats);
+        console.log(`🏆 DEBUG: ${achievement.name} progress: ${progress}%`, {
+          criteria: achievement.criteria,
+          currentStats: stats
+        });
         return progress >= 100;
       });
+
+      console.log('🏆 DEBUG: Claimable achievements found:', claimable?.length, claimable);
 
       const previousCount = claimableAchievements.length;
       setClaimableAchievements(claimable);
