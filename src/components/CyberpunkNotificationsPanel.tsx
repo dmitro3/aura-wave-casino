@@ -103,7 +103,7 @@ const getNotificationTheme = (type: string) => {
         bgColor: 'bg-red-500/10',
         iconColor: 'text-red-300',
         accentColor: 'red',
-        emoji: '⚠️'
+        emoji: ''
       };
     default:
       return {
