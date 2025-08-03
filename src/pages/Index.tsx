@@ -1347,7 +1347,7 @@ export default function Index({ initialGame }: IndexProps) {
                                 {userData.username}
                               </span>
                               {/* Admin Shield Icon */}
-                              {userIsAdmin && (
+                              {isAdmin && (
                                 <div className="flex items-center text-red-400 drop-shadow-[0_0_4px_rgba(239,68,68,0.8)]" title="Admin">
                                   <Shield className="w-3 h-3" />
                                 </div>
