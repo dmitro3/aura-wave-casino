@@ -254,7 +254,7 @@ export default function AccountDeletionOverlay() {
             <div className="flex items-center justify-center space-x-3">
               <Lock className="w-5 h-5 text-slate-400" />
               <p className="text-slate-300 text-center">
-                Your account is currently locked and cannot access the casino features
+                Your account is currently locked and cannot access the website
               </p>
             </div>
           </div>
