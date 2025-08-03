@@ -1643,18 +1643,11 @@ export default function Index({ initialGame }: IndexProps) {
                           <Target className="w-4 h-4" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={`font-bold text-sm font-mono block transition-colors ${
-                          currentGame === 'roulette' ? 'text-red-200' : 'text-red-300'
-                        }`}>
-                          ROULETTE
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse" />
-                          <span className="text-[10px] text-red-400/80 font-mono">SPIN PROTOCOL ACTIVE</span>
-                          <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse delay-500" />
-                        </div>
-                      </div>
+                      <span className={`font-bold text-sm font-mono transition-colors ${
+                        currentGame === 'roulette' ? 'text-red-200' : 'text-red-300'
+                      }`}>
+                        ROULETTE
+                      </span>
                     </div>
                     
                     {/* Tech corner indicators */}
@@ -1691,18 +1684,11 @@ export default function Index({ initialGame }: IndexProps) {
                           <Building className="w-4 h-4" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className={`font-bold text-sm font-mono block transition-colors ${
-                          currentGame === 'tower' ? 'text-emerald-200' : 'text-emerald-300'
-                        }`}>
-                          TOWER
-                        </span>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse" />
-                          <span className="text-[10px] text-emerald-400/80 font-mono">DATA TOWER PROTOCOL</span>
-                          <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse delay-500" />
-                        </div>
-                      </div>
+                      <span className={`font-bold text-sm font-mono transition-colors ${
+                        currentGame === 'tower' ? 'text-emerald-200' : 'text-emerald-300'
+                      }`}>
+                        TOWER
+                      </span>
                     </div>
                     
                     {/* Tech corner indicators */}
