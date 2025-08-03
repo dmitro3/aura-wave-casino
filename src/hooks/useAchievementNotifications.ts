@@ -58,7 +58,7 @@ export function useAchievementNotifications() {
         setHasNewClaimable(true);
       }
 
-      console.log('🏆 Unlocked achievements fetched:', data?.length || 0, data);
+
     } catch (error) {
       console.error('Error fetching unlocked achievements:', error);
     } finally {
@@ -85,7 +85,6 @@ export function useAchievementNotifications() {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('🏆 Real-time unlocked achievement change:', payload);
           fetchUnlockedAchievements();
         }
       )

@@ -88,16 +88,7 @@ export default function Index({ initialGame }: IndexProps) {
   // Achievement notifications hook
   const { claimableAchievements } = useAchievementNotifications();
   
-  // Temporary debug logging to see achievement status
-  useEffect(() => {
-    if (user) {
-      console.log('🏆 DEBUG: Achievement indicators check:', {
-        user: user.id,
-        claimableCount: claimableAchievements.length,
-        claimableAchievements: claimableAchievements
-      });
-    }
-  }, [user, claimableAchievements]);
+
   
   // XP Animation states
   const [animatedXP, setAnimatedXP] = useState(0); // For main lifetime XP display
