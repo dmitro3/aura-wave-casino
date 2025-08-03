@@ -21,12 +21,24 @@ export function useAchievementNotifications() {
   const calculateProgress = (achievement: any, userStats: any): number => {
     if (!userStats) return 0;
     
-    const criteria = achievement.criteria; // Use 'criteria' field from database
+    const criteria = achievement.criteria || achievement.unlock_criteria; // Support both field names
+    
+    // Handle new format: {"type": "user_level", "value": 10}
     const criteriaType = criteria?.type;
     const targetValue = criteria?.value || 0;
 
+    // Handle old format: {"level": 10}
+    const oldLevelValue = criteria?.level;
+
     let currentValue = 0;
     
+    // Check for old format level achievements first
+    if (oldLevelValue) {
+      currentValue = userStats.current_level || 0;
+      return Math.min(100, (currentValue / oldLevelValue) * 100);
+    }
+    
+    // Handle new format achievements
     switch (criteriaType) {
       case 'total_games': currentValue = userStats.total_games || 0; break;
       case 'total_wins': currentValue = userStats.total_wins || 0; break;
@@ -42,7 +54,9 @@ export function useAchievementNotifications() {
       case 'coinflip_wins': currentValue = userStats.coinflip_wins || 0; break;
       case 'total_cases_opened': currentValue = userStats.total_cases_opened || 0; break;
       case 'user_level': currentValue = userStats.current_level || 0; break;
-      default: currentValue = 0;
+      default: 
+        // Handle other old format achievements
+        currentValue = 0;
     }
 
     return Math.min(100, (currentValue / targetValue) * 100);
