@@ -95,15 +95,15 @@ const getNotificationTheme = (type: string) => {
       };
     case 'admin_message':
       return {
-        icon: Shield,
-        iconComponent: <Shield className="w-6 h-6" />,
+        icon: Terminal,
+        iconComponent: <Terminal className="w-6 h-6" />,
         color: 'red',
-        glow: 'shadow-[0_0_20px_rgba(239,68,68,0.4)]',
-        borderColor: 'border-red-500/30',
-        bgColor: 'bg-red-500/5',
-        iconColor: 'text-red-400',
+        glow: 'shadow-[0_0_30px_rgba(239,68,68,0.6)]',
+        borderColor: 'border-red-500/60',
+        bgColor: 'bg-red-500/10',
+        iconColor: 'text-red-300',
         accentColor: 'red',
-        emoji: '🛡️'
+        emoji: '⚠️'
       };
     default:
       return {
@@ -292,6 +292,8 @@ export function CyberpunkNotificationsPanel({
                       notification.is_read 
                         ? "border-slate-700/50 hover:border-slate-600/70" 
                         : `${theme.borderColor} hover:border-${theme.accentColor}-400/50 ${theme.glow}`,
+                      // Special enhanced styling for admin messages
+                      notification.type === 'admin_message' && !notification.is_read && "border-red-400/80 shadow-[0_0_40px_rgba(239,68,68,0.8)] ring-1 ring-red-500/30",
                       "hover:scale-[1.02] active:scale-[0.98]",
                       isHovered && "scale-[1.02]"
                     )}
@@ -393,7 +395,15 @@ export function CyberpunkNotificationsPanel({
                                 </span>
                               </div>
                               <div className="w-1 h-1 bg-accent/40 rounded-full" />
-                              <Badge variant="outline" className="text-xs font-mono border-slate-600/30 text-slate-500">
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "text-xs font-mono transition-all duration-300",
+                                  notification.type === 'admin_message' 
+                                    ? "border-red-400/60 text-red-300 bg-red-500/10 shadow-[0_0_10px_rgba(239,68,68,0.3)]" 
+                                    : "border-slate-600/30 text-slate-500"
+                                )}
+                              >
                                 {notification.type.replace('_', ' ').toUpperCase()}
                               </Badge>
                             </div>
