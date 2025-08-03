@@ -711,9 +711,8 @@ async function placeBet(supabase: any, userId: string, roundId: string, betColor
   });
 
   const { data: balanceResult, error: balanceError } = await supabase.rpc('atomic_bet_balance_check', {
-    p_user_id: userId,
-    p_bet_amount: betAmount,
-    p_round_id: roundId
+    user_uuid: userId,
+    bet_amount: betAmount
   });
 
   console.log('🔍 Atomic balance check result:', {
