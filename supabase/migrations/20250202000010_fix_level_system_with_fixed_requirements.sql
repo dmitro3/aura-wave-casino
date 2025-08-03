@@ -203,9 +203,9 @@ UPDATE user_level_stats SET
   current_level = (SELECT level FROM calculate_level_from_xp_new(lifetime_xp))
 WHERE lifetime_xp IS NOT NULL;
 
--- Also update profiles table for consistency
+-- Also update profiles table for consistency  
 UPDATE profiles SET 
-  user_level = (SELECT level FROM calculate_level_from_xp_new((SELECT lifetime_xp FROM user_level_stats WHERE user_id = profiles.id)))
+  level = (SELECT level FROM calculate_level_from_xp_new((SELECT lifetime_xp FROM user_level_stats WHERE user_id = profiles.id)))
 WHERE id IN (SELECT user_id FROM user_level_stats WHERE lifetime_xp IS NOT NULL);
 
 -- Test the fix with some examples
