@@ -111,6 +111,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const [animatingTiles, setAnimatingTiles] = useState<Set<string>>(new Set());
   const [selectedTiles, setSelectedTiles] = useState<number[]>([]); // Track selected tile at each level
   const [loadingActiveGame, setLoadingActiveGame] = useState(true); // Loading state for checking active games
+  const [countdown, setCountdown] = useState<number | null>(null); // Countdown for auto-reset
   const { toast } = useToast();
   const { isMaintenanceMode } = useMaintenance();
   const { forceRefresh } = useLevelSync();
@@ -227,12 +228,45 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     }
   }, [userData?.id]);
 
+  // Auto-reset game when it ends (cash out or mine hit)
+  useEffect(() => {
+    if (game?.status && game.status !== 'active') {
+      console.log('🔄 TOWER: Game ended with status:', game.status, '- Auto-resetting in 3 seconds...');
+      
+      // Start countdown
+      setCountdown(3);
+      
+      // Countdown timer
+      const countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev === null || prev <= 1) {
+            clearInterval(countdownInterval);
+            console.log('🔄 TOWER: Auto-resetting game...');
+            resetGame();
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Cleanup timer if component unmounts or game changes
+      return () => {
+        clearInterval(countdownInterval);
+        setCountdown(null);
+      };
+    } else {
+      setCountdown(null);
+    }
+  }, [game?.status]);
+
   // Reset game state
   const resetGame = () => {
+    console.log('🔄 TOWER: Resetting game state...');
     setGame(null);
     setAnimatingTiles(new Set());
     setSelectedTiles([]);
     setLoadingActiveGame(false);
+    setCountdown(null);
   };
 
   // Start new game
@@ -800,16 +834,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     </div>
                   )}
 
-                  {/* Reset Game */}
-                  {game.status !== 'active' && (
-                    <Button 
-                      onClick={resetGame} 
-                      variant="outline" 
-                      className="w-full border-slate-600 text-slate-300 hover:bg-slate-800 font-mono"
-                    >
-                      NEW PROTOCOL
-                    </Button>
-                  )}
+
                 </>
               )}
             </CardContent>
@@ -883,9 +908,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     <div className="text-red-400 font-mono text-sm">
                       Protocol terminated by {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO].name} security systems
                     </div>
-                    <Button onClick={resetGame} variant="outline" className="mt-4 font-mono border-red-500 text-red-400 hover:bg-red-500/20">
-                      REINITIALIZE PROTOCOL
-                    </Button>
+                    <div className="text-slate-400 font-mono text-xs mt-2 animate-pulse">
+                      Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
+                    </div>
+
                   </div>
                 ) : (
                   <div className="space-y-4 animate-fade-in">
@@ -899,9 +925,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     <div className="text-emerald-400 font-mono text-sm">
                       {(game.current_multiplier || 1).toFixed(2)}x multiplier achieved
                     </div>
-                    <Button onClick={resetGame} variant="outline" className="mt-4 font-mono border-emerald-500 text-emerald-400 hover:bg-emerald-500/20">
-                      NEW PROTOCOL
-                    </Button>
+                    <div className="text-slate-400 font-mono text-xs mt-2 animate-pulse">
+                      Auto-initializing new protocol in {countdown || 3} second{countdown !== 1 ? 's' : ''}...
+                    </div>
+
                   </div>
                 )}
               </CardContent>
