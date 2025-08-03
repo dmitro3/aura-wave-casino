@@ -331,7 +331,7 @@ export function CyberpunkNotificationsPanel({
                         "border-2 transition-all duration-300",
                         notification.is_read 
                           ? "border-slate-600/30 opacity-60" 
-                          : `${theme.borderColor} animate-cyber-icon`,
+                          : `${theme.borderColor}`,
                         !notification.is_read && theme.glow
                       )}>
                         {/* Inner tech pattern */}
