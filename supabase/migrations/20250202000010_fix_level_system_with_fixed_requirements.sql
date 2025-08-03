@@ -5,11 +5,8 @@
 DROP FUNCTION IF EXISTS public.calculate_xp_for_level_new(integer) CASCADE;
 DROP FUNCTION IF EXISTS public.calculate_level_from_xp_new(integer) CASCADE;
 
--- Create a fixed XP requirements table
-CREATE TABLE IF NOT EXISTS public.level_xp_requirements (
-  level INTEGER PRIMARY KEY,
-  xp_required INTEGER NOT NULL
-);
+-- Clear and recreate the XP requirements table with fixed values
+DELETE FROM public.level_xp_requirements;
 
 -- Insert the fixed XP requirements (exactly as specified)
 INSERT INTO public.level_xp_requirements (level, xp_required) VALUES
@@ -135,7 +132,7 @@ BEGIN
 END;
 $function$;
 
--- Create level calculation function that uses total XP to determine level
+-- Create optimized level calculation function using cumulative XP lookup
 CREATE OR REPLACE FUNCTION public.calculate_level_from_xp_new(total_xp NUMERIC)
 RETURNS TABLE(level integer, current_level_xp integer, xp_to_next integer)
 LANGUAGE plpgsql
@@ -143,53 +140,58 @@ STABLE SECURITY DEFINER
 SET search_path = 'public', 'pg_temp'
 AS $function$
 DECLARE
-  current_level_num INTEGER := 1;
-  cumulative_xp INTEGER := 0;
-  remaining_xp INTEGER;
-  xp_for_next_level INTEGER;
+  user_level INTEGER := 1;
+  xp_consumed INTEGER := 0;
+  current_xp INTEGER := 0;
+  next_level_xp INTEGER;
 BEGIN
   -- Handle edge cases
   IF total_xp <= 0 THEN
-    RETURN QUERY SELECT 1, 0, 651;  -- Level 1 needs 651 XP to reach level 2
+    RETURN QUERY SELECT 1, 0::integer, 651;
     RETURN;
   END IF;
   
-  -- Calculate cumulative XP requirements and find current level
-  FOR level_check IN 1..999 LOOP
-    cumulative_xp := cumulative_xp + (SELECT xp_required FROM level_xp_requirements WHERE level_xp_requirements.level = level_check);
-    
-    IF cumulative_xp > total_xp THEN
-      current_level_num := level_check;
-      -- Calculate how much XP user has in current level
-      remaining_xp := (SELECT xp_required FROM level_xp_requirements WHERE level_xp_requirements.level = level_check) - (cumulative_xp - total_xp);
-      EXIT;
-    END IF;
-    
-    -- If we've reached the total XP exactly, user is at the next level
-    IF cumulative_xp = total_xp THEN
-      current_level_num := level_check + 1;
-      remaining_xp := 0;
-      EXIT;
-    END IF;
-  END LOOP;
+  -- Use a single query with window functions to find the level efficiently
+  SELECT 
+    COALESCE(MAX(req_level), 1),
+    COALESCE(total_xp::integer - MAX(cumulative_xp), total_xp::integer),
+    COALESCE(MAX(cumulative_xp), 0)
+  INTO user_level, current_xp, xp_consumed
+  FROM (
+    SELECT 
+      level_xp_requirements.level as req_level,
+      SUM(xp_required) OVER (ORDER BY level_xp_requirements.level ROWS UNBOUNDED PRECEDING) as cumulative_xp
+    FROM level_xp_requirements 
+    WHERE level_xp_requirements.level <= 999
+  ) cumulative
+  WHERE cumulative_xp <= total_xp;
   
-  -- Cap at level 999
-  IF current_level_num > 999 THEN
-    current_level_num := 999;
-    remaining_xp := 0;
+  -- If we found no levels (total_xp is less than first level requirement)
+  -- then user is still at level 1
+  IF user_level IS NULL THEN
+    user_level := 1;
+    current_xp := total_xp::integer;
+    xp_consumed := 0;
   END IF;
   
-  -- Calculate XP needed to reach next level
-  IF current_level_num >= 999 THEN
-    xp_for_next_level := 0;  -- Max level reached
+  -- Cap at level 999
+  IF user_level >= 999 THEN
+    user_level := 999;
+    next_level_xp := 0;  -- Max level reached
   ELSE
-    xp_for_next_level := (SELECT xp_required FROM level_xp_requirements WHERE level_xp_requirements.level = current_level_num + 1) - remaining_xp;
+    -- Get XP requirement for next level
+    SELECT xp_required INTO next_level_xp 
+    FROM level_xp_requirements 
+    WHERE level_xp_requirements.level = user_level + 1;
+    
+    -- Calculate remaining XP needed for next level
+    next_level_xp := COALESCE(next_level_xp, 0) - current_xp;
   END IF;
   
   RETURN QUERY SELECT 
-    current_level_num,
-    remaining_xp,
-    xp_for_next_level;
+    user_level,
+    current_xp,
+    COALESCE(next_level_xp, 0);
 END;
 $function$;
 
@@ -203,10 +205,8 @@ UPDATE user_level_stats SET
   current_level = (SELECT level FROM calculate_level_from_xp_new(lifetime_xp))
 WHERE lifetime_xp IS NOT NULL;
 
--- Also update profiles table for consistency  
-UPDATE profiles SET 
-  level = (SELECT level FROM calculate_level_from_xp_new((SELECT lifetime_xp FROM user_level_stats WHERE user_id = profiles.id)))
-WHERE id IN (SELECT user_id FROM user_level_stats WHERE lifetime_xp IS NOT NULL);
+-- Note: profiles table doesn't have a level column in current schema
+-- All level data is stored in user_level_stats table
 
 -- Test the fix with some examples
 DO $$
