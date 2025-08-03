@@ -347,10 +347,7 @@ export function CyberpunkNotificationsPanel({
                           {theme.emoji}
                         </div>
                         
-                        {/* Pulsing dot for unread */}
-                        {!notification.is_read && (
-                          <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-gradient-to-r from-primary to-accent rounded-full animate-pulse" />
-                        )}
+
                       </div>
                       
                       {/* Content */}
