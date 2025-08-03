@@ -1316,13 +1316,13 @@ export default function Index({ initialGame }: IndexProps) {
                             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse drop-shadow-[0_0_4px_rgba(34,197,94,0.6)]" />
                             <span className="text-xs text-green-400 font-mono">ONLINE</span>
                           </div>
-                          
-                          {/* Tech corner indicators */}
-                          <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-primary/60 group-hover/profile:border-primary" />
-                          <div className="absolute top-1 right-1 w-2 h-2 border-r border-t border-accent/60 group-hover/profile:border-accent" />
-                          <div className="absolute bottom-1 left-1 w-2 h-2 border-l border-b border-accent/60 group-hover/profile:border-accent" />
-                          <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-primary/60 group-hover/profile:border-primary" />
                         </div>
+                        
+                        {/* Tech corner indicators - positioned relative to outer container */}
+                        <div className="absolute top-1.5 left-1.5 w-2 h-2 border-l border-t border-primary/60 group-hover/profile:border-primary" />
+                        <div className="absolute top-1.5 right-1.5 w-2 h-2 border-r border-t border-accent/60 group-hover/profile:border-accent" />
+                        <div className="absolute bottom-1.5 left-1.5 w-2 h-2 border-l border-b border-accent/60 group-hover/profile:border-accent" />
+                        <div className="absolute bottom-1.5 right-1.5 w-2 h-2 border-r border-b border-primary/60 group-hover/profile:border-primary" />
                       </div>
                       
                       {/* Mobile Version */}
