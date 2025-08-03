@@ -85,7 +85,7 @@ export default function Index({ initialGame }: IndexProps) {
   const [isUserLocked, setIsUserLocked] = useState(false);
   
   // Achievement notifications hook
-  const { claimableAchievements } = useAchievementNotifications();
+  const { claimableAchievements, hasNewClaimable, dismissNotification } = useAchievementNotifications();
   
   // XP Animation states
   const [animatedXP, setAnimatedXP] = useState(0); // For main lifetime XP display
@@ -1975,6 +1975,161 @@ export default function Index({ initialGame }: IndexProps) {
 
         {/* Live Level-Up Notifications - Only show for authenticated users */}
         {user && <LiveLevelUpNotification />}
+        
+        {/* Achievement Ready Notification Bubble - Desktop */}
+        {user && hasNewClaimable && claimableAchievements.length > 0 && (
+          <div className="hidden md:block fixed top-20 right-4 z-50 animate-in slide-in-from-right-5 duration-500">
+            <div className="relative group/achievement">
+              {/* Glowing background effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/40 to-green-500/60 blur-lg animate-pulse" />
+              
+              {/* Main notification bubble */}
+              <div className="relative bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 border border-emerald-500/60 backdrop-blur-md overflow-hidden"
+                   style={{
+                     clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))'
+                   }}>
+                
+                {/* Circuit pattern overlay */}
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(16,185,129,0.4)_25%,rgba(16,185,129,0.4)_26%,transparent_27%,transparent_74%,rgba(16,185,129,0.4)_75%,rgba(16,185,129,0.4)_76%,transparent_77%,transparent)] bg-[8px_8px] animate-grid-move-slow" />
+                </div>
+                
+                {/* Content */}
+                <div className="relative z-10 p-4 min-w-[280px]">
+                  <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <div className="relative flex-shrink-0">
+                      <div className="absolute -inset-1 bg-emerald-500/30 rounded-full blur-sm animate-pulse" />
+                      <div className="relative w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
+                        <Trophy className="w-6 h-6 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                      </div>
+                    </div>
+                    
+                    {/* Text content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-emerald-400 font-bold text-lg font-mono tracking-wider mb-1">
+                        🏆 ACHIEVEMENT{claimableAchievements.length > 1 ? 'S' : ''} READY!
+                      </h3>
+                      <p className="text-slate-300 text-sm leading-relaxed mb-2">
+                        {claimableAchievements.length === 1 
+                          ? 'You have 1 achievement ready to claim!'
+                          : `You have ${claimableAchievements.length} achievements ready to claim!`
+                        }
+                      </p>
+                      <p className="text-emerald-400/80 text-xs font-mono">
+                        Click your profile to claim rewards
+                      </p>
+                    </div>
+                    
+                    {/* Close button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={dismissNotification}
+                      className="flex-shrink-0 w-8 h-8 p-0 text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Action button */}
+                  <div className="mt-3 pt-3 border-t border-emerald-500/20">
+                    <Button
+                      onClick={() => {
+                        setShowProfile(true);
+                        dismissNotification();
+                      }}
+                      className="w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-mono text-sm border border-emerald-400/30 transition-all duration-200"
+                      style={{
+                        clipPath: 'polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px))'
+                      }}
+                    >
+                      <Trophy className="w-4 h-4 mr-2" />
+                      VIEW ACHIEVEMENTS
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Tech corner indicators */}
+                <div className="absolute top-1 left-1 w-2 h-2 border-l border-t border-emerald-400/60" />
+                <div className="absolute bottom-1 right-1 w-2 h-2 border-r border-b border-emerald-400/60" />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Achievement Ready Notification Bubble - Mobile */}
+        {user && hasNewClaimable && claimableAchievements.length > 0 && (
+          <div className="md:hidden fixed bottom-20 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-500">
+            <div className="relative group/achievement">
+              {/* Glowing background effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/40 to-green-500/60 blur-lg animate-pulse" />
+              
+              {/* Main notification bubble - Mobile optimized */}
+              <div className="relative bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 border border-emerald-500/60 backdrop-blur-md overflow-hidden"
+                   style={{
+                     clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px))'
+                   }}>
+                
+                {/* Circuit pattern overlay */}
+                <div className="absolute inset-0 opacity-20">
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_24%,rgba(16,185,129,0.4)_25%,rgba(16,185,129,0.4)_26%,transparent_27%,transparent_74%,rgba(16,185,129,0.4)_75%,rgba(16,185,129,0.4)_76%,transparent_77%,transparent)] bg-[6px_6px] animate-grid-move-slow" />
+                </div>
+                
+                {/* Content - Mobile optimized */}
+                <div className="relative z-10 p-3">
+                  <div className="flex items-center gap-3">
+                    {/* Compact icon */}
+                    <div className="relative flex-shrink-0">
+                      <div className="relative w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center">
+                        <Trophy className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                    
+                    {/* Compact text content */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-emerald-400 font-bold text-base font-mono tracking-wider">
+                        🏆 {claimableAchievements.length} Achievement{claimableAchievements.length > 1 ? 's' : ''} Ready!
+                      </h3>
+                      <p className="text-slate-300 text-sm">
+                        Tap your profile to claim rewards
+                      </p>
+                    </div>
+                    
+                    {/* Close button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={dismissNotification}
+                      className="flex-shrink-0 w-8 h-8 p-0 text-slate-400 hover:text-white hover:bg-slate-700/50"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Mobile action button */}
+                  <Button
+                    onClick={() => {
+                      setShowProfile(true);
+                      dismissNotification();
+                    }}
+                    className="w-full mt-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-mono text-sm border border-emerald-400/30"
+                    style={{
+                      clipPath: 'polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px))'
+                    }}
+                  >
+                    <Trophy className="w-4 h-4 mr-2" />
+                    VIEW ACHIEVEMENTS
+                  </Button>
+                </div>
+                
+                {/* Tech corner indicators */}
+                <div className="absolute top-1 left-1 w-1.5 h-1.5 border-l border-t border-emerald-400/60" />
+                <div className="absolute bottom-1 right-1 w-1.5 h-1.5 border-r border-b border-emerald-400/60" />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Footer */}
