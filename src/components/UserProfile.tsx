@@ -92,7 +92,7 @@ const difficultyColors = {
 export default function UserProfile({ isOpen, onClose, userData: propUserData, username, onUserDataUpdate }: UserProfileProps) {
   const { user } = useAuth();
   const { stats } = useUserLevelStats();
-  const { claimableAchievements: notificationClaimable, hasNewClaimable } = useAchievementNotifications(user, stats);
+  const { claimableAchievements: notificationClaimable, hasNewClaimable } = useAchievementNotifications();
   
   const [activeTab, setActiveTab] = useState('overview');
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
