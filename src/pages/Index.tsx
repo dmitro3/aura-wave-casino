@@ -23,6 +23,7 @@ import { LiveLevelUpNotification } from '@/components/LiveLevelUpNotification';
 import { ProfileBorder } from '@/components/ProfileBorder';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
+import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
 import { useXPSync } from '@/contexts/XPSyncContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { calculateAccurateXPProgress } from '@/lib/levelRequirements';
@@ -82,6 +83,9 @@ export default function Index({ initialGame }: IndexProps) {
   const [showAccountDeletionHandler, setShowAccountDeletionHandler] = useState(false);
   const [deletionTime, setDeletionTime] = useState<string>('');
   const [isUserLocked, setIsUserLocked] = useState(false);
+  
+  // Achievement notifications hook
+  const { claimableAchievements } = useAchievementNotifications();
   
   // XP Animation states
   const [animatedXP, setAnimatedXP] = useState(0); // For main lifetime XP display
@@ -1281,6 +1285,13 @@ export default function Index({ initialGame }: IndexProps) {
                                 {/* Removed loading overlay for instant response */}
                               </div>
                             </ProfileBorder>
+                            
+                            {/* Achievement Notification Indicator */}
+                            {claimableAchievements.length > 0 && (
+                              <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full border-2 border-slate-900 flex items-center justify-center animate-pulse">
+                                <Gift className="w-3 h-3 text-white" />
+                              </div>
+                            )}
                           </div>
                           
                           {/* Enhanced Username and Level */}
@@ -1347,6 +1358,13 @@ export default function Index({ initialGame }: IndexProps) {
                               {/* Removed loading overlay for instant response */}
                             </div>
                           </ProfileBorder>
+                          
+                          {/* Achievement Notification Indicator */}
+                          {claimableAchievements.length > 0 && (
+                            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full border border-slate-900 flex items-center justify-center animate-pulse">
+                              <Gift className="w-2 h-2 text-white" />
+                            </div>
+                          )}
                         </div>
                         <span className="font-semibold text-sm">{userData.username}</span>
                       </div>
