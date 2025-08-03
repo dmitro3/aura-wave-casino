@@ -12,21 +12,29 @@ interface ClaimableAchievement {
   reward_type: string;
 }
 
-export function useAchievementNotifications() {
-  const { user } = useAuth();
-  const { stats } = useUserLevelStats();
+export function useAchievementNotifications(user?: any, stats?: any) {
+  // If no parameters provided, use internal hooks (backward compatibility)
+  const { user: internalUser } = useAuth();
+  const { stats: internalStats } = useUserLevelStats();
+  
+  // Use passed parameters or fall back to internal hooks
+  const effectiveUser = user || internalUser;
+  const effectiveStats = stats || internalStats;
+  
   const [claimableAchievements, setClaimableAchievements] = useState<ClaimableAchievement[]>([]);
   const [hasNewClaimable, setHasNewClaimable] = useState(false);
 
-  // Debug what we're getting from the hooks
+  // Debug what we're getting
   useEffect(() => {
     console.log('🏆 DEBUG: Hook dependencies check:', {
-      user: user ? user.id : null,
-      userExists: !!user,
-      stats: stats,
-      statsExists: !!stats
+      userPassed: !!user,
+      statsPasssed: !!stats,
+      effectiveUser: effectiveUser ? effectiveUser.id : null,
+      effectiveUserExists: !!effectiveUser,
+      effectiveStats: effectiveStats,
+      effectiveStatsExists: !!effectiveStats
     });
-  }, [user, stats]);
+  }, [user, stats, effectiveUser, effectiveStats]);
 
   const calculateProgress = (achievement: any, userStats: any): number => {
     if (!userStats) return 0;
@@ -75,14 +83,17 @@ export function useAchievementNotifications() {
   };
 
   const checkForClaimableAchievements = async () => {
-    if (!user || !stats) {
-      console.log('🏆 DEBUG: Missing user or stats', { user: !!user, stats: !!stats });
+    if (!effectiveUser || !effectiveStats) {
+      console.log('🏆 DEBUG: Missing effective user or stats', { 
+        effectiveUser: !!effectiveUser, 
+        effectiveStats: !!effectiveStats 
+      });
       return;
     }
 
     try {
-      console.log('🏆 DEBUG: Starting achievement check for user:', user.id);
-      console.log('🏆 DEBUG: User stats:', stats);
+      console.log('🏆 DEBUG: Starting achievement check for user:', effectiveUser.id);
+      console.log('🏆 DEBUG: User stats:', effectiveStats);
 
       // Fetch all achievements
       const { data: allAchievements, error: achievementsError } = await supabase
@@ -96,7 +107,7 @@ export function useAchievementNotifications() {
       const { data: unlockedAchievements, error: userError } = await supabase
         .from('user_achievements')
         .select('achievement_id')
-        .eq('user_id', user.id);
+        .eq('user_id', effectiveUser.id);
 
       if (userError) throw userError;
       console.log('🏆 DEBUG: Unlocked achievements:', unlockedAchievements?.length);
@@ -109,10 +120,10 @@ export function useAchievementNotifications() {
           return false;
         }
         
-        const progress = calculateProgress(achievement, stats);
+        const progress = calculateProgress(achievement, effectiveStats);
         console.log(`🏆 DEBUG: ${achievement.name} progress: ${progress}%`, {
           criteria: achievement.criteria,
-          currentStats: stats
+          currentStats: effectiveStats
         });
         return progress >= 100;
       });
@@ -133,7 +144,7 @@ export function useAchievementNotifications() {
 
   useEffect(() => {
     checkForClaimableAchievements();
-  }, [stats, user]);
+  }, [effectiveStats, effectiveUser]);
 
   const dismissNotification = () => {
     setHasNewClaimable(false);

@@ -85,7 +85,7 @@ export default function Index({ initialGame }: IndexProps) {
   const [isUserLocked, setIsUserLocked] = useState(false);
   
   // Achievement notifications hook
-  const { claimableAchievements } = useAchievementNotifications();
+  const { claimableAchievements } = useAchievementNotifications(user, userLevelStats);
   
   // Temporary debug logging to see achievement status
   useEffect(() => {
