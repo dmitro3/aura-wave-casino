@@ -183,9 +183,10 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
       }
 
       // Success!
+      const messageText = tipMessage.trim();
       toast({
         title: "Tip Sent Successfully! 🎉",
-        description: `You sent $${amount.toFixed(2)} to ${userData.username}${tipMessage ? ' with a message' : ''}. Your new balance: $${data.sender_new_balance.toFixed(2)}`,
+        description: `You sent $${amount.toFixed(2)} to ${userData.username}${messageText ? ' with a message' : ' without a message'}. Your new balance: $${data.sender_new_balance.toFixed(2)}`,
       });
 
       // Reset form and close modal
@@ -1963,20 +1964,30 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
 
                 {/* Tip Message Input */}
                 <div className="space-y-2">
-                  <Label htmlFor="tipMessage" className="text-sm font-medium text-slate-300">
-                    Message (Optional)
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="tipMessage" className="text-sm font-medium text-slate-300">
+                      Message
+                    </Label>
+                    <span className="text-xs text-slate-500 bg-slate-800/50 px-2 py-0.5 rounded border border-slate-600/30">
+                      Optional
+                    </span>
+                  </div>
                   <Textarea
                     id="tipMessage"
                     value={tipMessage}
                     onChange={(e) => setTipMessage(e.target.value)}
-                    placeholder="Add a nice message with your tip..."
+                    placeholder="Add a nice message with your tip... (optional)"
                     className="bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 focus:border-primary/50 focus:ring-primary/20 resize-none"
                     rows={3}
                     maxLength={200}
                   />
-                  <div className="text-xs text-slate-500 text-right">
-                    {tipMessage.length}/200
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">
+                      {tipMessage.length === 0 ? "No message will be sent" : "Message will be included"}
+                    </span>
+                    <span className="text-slate-500">
+                      {tipMessage.length}/200
+                    </span>
                   </div>
                 </div>
 
