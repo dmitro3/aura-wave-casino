@@ -15,6 +15,7 @@ import {
 import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
 import { ProfileBorder } from './ProfileBorder';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
+import { useRealtimeUserLevelStats } from '@/hooks/useRealtimeUserLevelStats';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
@@ -90,6 +91,13 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   const { user } = useAuth();
   const { stats } = useUserLevelStats();
   const { claimableAchievements: notificationClaimable, hasNewClaimable } = useAchievementNotifications();
+  
+  // Determine which user profile we're viewing
+  const profileUserId = propUserData?.id || (username ? null : user?.id);
+  
+  // Set up real-time stats for the user being viewed
+  const { stats: realtimeStats, refreshStats } = useRealtimeUserLevelStats(profileUserId);
+  
   const [activeTab, setActiveTab] = useState('overview');
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [fetchedUserData, setFetchedUserData] = useState<UserProfileType | null>(null);
@@ -224,6 +232,14 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
       setActiveTab('overview');
     }
   }, [isOpen]);
+
+  // Refresh stats whenever modal opens
+  useEffect(() => {
+    if (isOpen && profileUserId) {
+      console.log('🔄 Profile modal opened - refreshing stats for user:', profileUserId);
+      refreshStats();
+    }
+  }, [isOpen, profileUserId, refreshStats]);
 
   // Animate numbers on mount
   useEffect(() => {
