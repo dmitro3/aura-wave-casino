@@ -1288,19 +1288,19 @@ export default function Index({ initialGame }: IndexProps) {
                             
                             {/* Achievement Notification Indicator */}
                             {claimableAchievements.length > 0 && (
-                              <div className="absolute -top-2 -right-2 z-50 group/badge">
+                              <div className="absolute -top-1.5 -right-1.5 z-50 group/badge">
                                 {/* Glowing background effect */}
-                                <div className="absolute -inset-1 bg-emerald-500/60 blur-sm animate-pulse"
+                                <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
                                      style={{
-                                       clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px))'
+                                       clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))'
                                      }} />
                                 
                                 {/* Main indicator */}
-                                <div className="relative w-7 h-7 bg-gradient-to-br from-emerald-500 to-green-600 border-2 border-white/30 backdrop-blur-sm flex items-center justify-center"
+                                <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
                                      style={{
-                                       clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px))'
+                                       clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))'
                                      }}>
-                                  <span className="text-xs font-bold text-white drop-shadow-[0_0_6px_rgba(0,0,0,0.8)] font-mono">
+                                  <span className="text-[0.625rem] font-bold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] font-mono leading-none">
                                     {claimableAchievements.length}
                                   </span>
                                 </div>
@@ -1375,19 +1375,19 @@ export default function Index({ initialGame }: IndexProps) {
                           
                           {/* Achievement Notification Indicator */}
                           {claimableAchievements.length > 0 && (
-                            <div className="absolute -top-1 -right-1 z-50 group/badge">
+                            <div className="absolute -top-0.5 -right-0.5 z-50 group/badge">
                               {/* Glowing background effect */}
                               <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
                                    style={{
-                                     clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))'
+                                     clipPath: 'polygon(0 0, calc(100% - 1px) 0, 100% 1px, 100% 100%, 1px 100%, 0 calc(100% - 1px))'
                                    }} />
                               
                               {/* Main indicator */}
-                              <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
+                              <div className="relative w-4 h-4 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
                                    style={{
-                                     clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))'
+                                     clipPath: 'polygon(0 0, calc(100% - 1px) 0, 100% 1px, 100% 100%, 1px 100%, 0 calc(100% - 1px))'
                                    }}>
-                                <span className="text-[0.625rem] font-bold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] font-mono leading-none">
+                                <span className="text-[0.5rem] font-bold text-white drop-shadow-[0_0_3px_rgba(0,0,0,0.8)] font-mono leading-none">
                                   {claimableAchievements.length}
                                 </span>
                               </div>
