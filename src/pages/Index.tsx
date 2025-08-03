@@ -234,6 +234,8 @@ export default function Index({ initialGame }: IndexProps) {
   const fetchNotifications = async () => {
     if (!user) return;
     
+    console.log('📥 Fetching notifications for user:', user.id);
+    
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -243,6 +245,10 @@ export default function Index({ initialGame }: IndexProps) {
         .limit(20);
 
       if (error) throw error;
+      
+      console.log('📥 Fetched notifications:', data?.length || 0, 'notifications');
+      console.log('📥 Notification IDs:', data?.map(n => n.id) || []);
+      
       setNotifications((data || []) as Notification[]);
       
       // Check for account deletion notifications
@@ -330,11 +336,20 @@ export default function Index({ initialGame }: IndexProps) {
   };
 
   const deleteNotification = async (notificationId: string) => {
+    console.log('🗑️ Attempting to delete notification:', notificationId);
+    
     try {
-      const { error } = await supabase
+      // Get the notification details before deletion for logging
+      const notificationToDelete = notifications.find(n => n.id === notificationId);
+      console.log('🗑️ Notification to delete:', notificationToDelete);
+      
+      const { error, data } = await supabase
         .from('notifications')
         .delete()
-        .eq('id', notificationId);
+        .eq('id', notificationId)
+        .select(); // Return the deleted rows
+
+      console.log('🗑️ Delete operation result:', { error, data });
 
       if (error) {
         console.error('❌ Error deleting notification:', error);
@@ -347,6 +362,18 @@ export default function Index({ initialGame }: IndexProps) {
         return;
       }
 
+      if (!data || data.length === 0) {
+        console.warn('⚠️ No rows were deleted. Notification may not exist or RLS policy blocked deletion');
+        toast({
+          title: "DELETE FAILED",
+          description: "Notification could not be deleted. It may not exist or you don't have permission.",
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
+      console.log('✅ Successfully deleted notification from database');
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       
       toast({
