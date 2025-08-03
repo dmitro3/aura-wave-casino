@@ -742,19 +742,17 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     <label className="text-sm font-medium text-slate-300">Difficulty</label>
                     <Select value={difficulty} onValueChange={setDifficulty}>
                       <SelectTrigger className="h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg">
-                        <SelectValue />
+                        <div className="text-center w-full">
+                          <div className="font-medium">{DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO]?.name}</div>
+                          <div className="text-xs text-slate-400">Max: {DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO]?.maxMultiplier}</div>
+                        </div>
                       </SelectTrigger>
                       <SelectContent className="bg-slate-800 border-slate-600">
                         {Object.entries(DIFFICULTY_INFO).map(([key, info]) => (
                           <SelectItem key={key} value={key} className="text-white">
-                            <div className="flex items-center gap-3">
-                              <div className="p-1 rounded bg-slate-700/50">
-                                {info.icon}
-                              </div>
-                              <div>
-                                <div className="font-medium">{info.name}</div>
-                                <div className="text-xs text-slate-400">Max: {info.maxMultiplier}</div>
-                              </div>
+                            <div className="text-center w-full">
+                              <div className="font-medium">{info.name}</div>
+                              <div className="text-xs text-slate-400">Max: {info.maxMultiplier}</div>
                             </div>
                           </SelectItem>
                         ))}
@@ -780,40 +778,6 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                       </div>
                     )}
                   </Button>
-                  
-                  {/* Debug button for checking active games */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <Button 
-                      onClick={async () => {
-                        console.log('🔍 MANUAL CHECK: Checking for active games...');
-                        try {
-                          const { data: activeGames, error } = await supabase
-                            .from('tower_games')
-                            .select('*')
-                            .eq('user_id', userData?.id)
-                            .order('created_at', { ascending: false })
-                            .limit(5);
-                          
-                          console.log('🔍 MANUAL CHECK: All recent games:', activeGames);
-                          
-                          const activeOnly = await supabase
-                            .from('tower_games')
-                            .select('*')
-                            .eq('user_id', userData?.id)
-                            .eq('status', 'active')
-                            .order('created_at', { ascending: false });
-                            
-                          console.log('🔍 MANUAL CHECK: Active games only:', activeOnly.data);
-                        } catch (error) {
-                          console.error('🔍 MANUAL CHECK: Error:', error);
-                        }
-                      }}
-                      variant="outline"
-                      className="w-full font-mono text-xs mt-2"
-                    >
-                      🔍 DEBUG: CHECK ACTIVE GAMES
-                    </Button>
-                  )}
                 </>
               ) : (
                 <>
