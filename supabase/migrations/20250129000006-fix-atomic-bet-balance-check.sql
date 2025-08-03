@@ -22,10 +22,10 @@ AS $$
 DECLARE
     user_balance NUMERIC;
     round_status TEXT;
-    betting_end_time TIMESTAMP WITH TIME ZONE;
+    round_betting_end_time TIMESTAMP WITH TIME ZONE;
 BEGIN
     -- Check if round exists and is in betting phase
-    SELECT status, betting_end_time INTO round_status, betting_end_time 
+    SELECT status, betting_end_time INTO round_status, round_betting_end_time 
     FROM public.roulette_rounds 
     WHERE id = p_round_id;
     
@@ -37,7 +37,7 @@ BEGIN
         RETURN json_build_object('success', false, 'error_message', 'Betting is not active for this round');
     END IF;
     
-    IF NOW() > betting_end_time THEN
+    IF NOW() > round_betting_end_time THEN
         RETURN json_build_object('success', false, 'error_message', 'Betting time has expired');
     END IF;
 
