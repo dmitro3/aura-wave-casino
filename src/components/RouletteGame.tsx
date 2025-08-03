@@ -130,6 +130,26 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
       balanceRef.current = profile.balance;
     }
   }, [profile?.balance]);
+
+  // Real-time balance sync: Update bet amount if it exceeds new balance
+  useEffect(() => {
+    if (profile?.balance !== undefined && betAmount !== '') {
+      const currentBet = Number(betAmount) || 0;
+      const newBalance = profile.balance;
+      
+      // If current bet amount exceeds new balance, adjust it
+      if (currentBet > newBalance) {
+        const adjustedBet = Math.min(currentBet, newBalance);
+        if (adjustedBet >= 0.01) {
+          setBetAmount(Number(adjustedBet.toFixed(2)));
+          console.log('🎰 Roulette bet amount adjusted for new balance:', currentBet, '→', adjustedBet);
+        } else {
+          setBetAmount('');
+          console.log('🎰 Roulette bet amount cleared due to insufficient balance');
+        }
+      }
+    }
+  }, [profile?.balance, betAmount]);
   
   // Filter roulette bets from live feed (only current round, show during betting and spinning)
   const rouletteBets = (liveBetFeed || []).filter(bet => 

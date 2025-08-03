@@ -120,6 +120,26 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const { history: gameHistory, refetch: refreshHistory } = useGameHistory('tower');
   const { recentBets } = useRealtimeFeeds();
 
+  // Real-time balance sync: Update bet amount if it exceeds new balance
+  useEffect(() => {
+    if (userData?.balance !== undefined) {
+      const currentBet = parseFloat(betAmount) || 0;
+      const newBalance = userData.balance;
+      
+      // If current bet amount exceeds new balance, adjust it
+      if (currentBet > newBalance) {
+        const adjustedBet = Math.min(currentBet, newBalance);
+        if (adjustedBet >= 0.01) {
+          setBetAmount(adjustedBet.toFixed(2));
+          console.log('🎯 Tower bet amount adjusted for new balance:', currentBet, '→', adjustedBet);
+        } else {
+          setBetAmount('0.01');
+          console.log('🎯 Tower bet amount reset to minimum due to insufficient balance');
+        }
+      }
+    }
+  }, [userData?.balance, betAmount]);
+
   // Check for active game on component mount
   useEffect(() => {
     const checkForActiveGame = async () => {
