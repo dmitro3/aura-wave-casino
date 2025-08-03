@@ -908,13 +908,22 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     <div className="space-y-2">
                       <Button 
                         onClick={cashOut} 
-                        disabled={loading}
-                        className="w-full h-12 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold rounded-lg transition-all duration-200"
+                        disabled={loading || game.current_level === 0}
+                        className={`w-full h-12 font-semibold rounded-lg transition-all duration-200 ${
+                          loading || game.current_level === 0
+                            ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white'
+                        }`}
                       >
                         {loading ? (
                           <div className="flex items-center gap-2">
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             Cashing Out...
+                          </div>
+                        ) : game.current_level === 0 ? (
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4" />
+                            Select a tile first
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
