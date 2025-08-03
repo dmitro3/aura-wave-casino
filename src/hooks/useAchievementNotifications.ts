@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserLevelStats } from './useUserLevelStats';
-import { useToast } from '@/hooks/use-toast';
 
 interface ClaimableAchievement {
   id: string;
@@ -16,12 +15,8 @@ interface ClaimableAchievement {
 export function useAchievementNotifications() {
   const { user } = useAuth();
   const { stats } = useUserLevelStats();
-  const { toast } = useToast();
   const [claimableAchievements, setClaimableAchievements] = useState<ClaimableAchievement[]>([]);
   const [hasNewClaimable, setHasNewClaimable] = useState(false);
-  const [fullStats, setFullStats] = useState<any>(null);
-  const lastStatsRef = useRef<string>('');
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const calculateProgress = (achievement: any, userStats: any): number => {
     if (!userStats) return 0;
@@ -52,28 +47,8 @@ export function useAchievementNotifications() {
     return Math.min(100, (currentValue / targetValue) * 100);
   };
 
-  // Fetch comprehensive stats for achievement checking
-  const fetchFullStats = async () => {
-    if (!user) return null;
-
-    try {
-      const { data, error } = await supabase
-        .from('user_level_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Error fetching full stats for achievements:', error);
-      return null;
-    }
-  };
-
-  const checkForClaimableAchievements = async (useFullStats?: any) => {
-    const statsToUse = useFullStats || fullStats || stats;
-    if (!user || !statsToUse) return;
+  const checkForClaimableAchievements = async () => {
+    if (!user || !stats) return;
 
     try {
       // Fetch all achievements
@@ -96,93 +71,25 @@ export function useAchievementNotifications() {
         const isAlreadyUnlocked = (unlockedAchievements || []).some(ua => ua.achievement_id === achievement.id);
         if (isAlreadyUnlocked) return false;
         
-        const progress = calculateProgress(achievement, statsToUse);
+        const progress = calculateProgress(achievement, stats);
         return progress >= 100;
       });
 
       const previousCount = claimableAchievements.length;
-      const newlyClaimable = claimable.filter(achievement => 
-        !claimableAchievements.some(existing => existing.id === achievement.id)
-      );
-
       setClaimableAchievements(claimable);
       
-      // Show notification and toast if new achievements are ready
-      if (newlyClaimable.length > 0) {
+      // Show notification if new achievements are ready
+      if (claimable.length > previousCount) {
         setHasNewClaimable(true);
-        
-        // Show toast notification for new achievements
-        newlyClaimable.forEach(achievement => {
-          toast({
-            title: "🏆 Achievement Ready!",
-            description: `"${achievement.name}" is ready to claim! Check your profile.`,
-            duration: 6000,
-          });
-        });
       }
     } catch (error) {
       console.error('Error checking claimable achievements:', error);
     }
   };
 
-  // Polling function to check for stats changes
-  const pollForStatsChanges = async () => {
-    if (!user) return;
-
-    const newFullStats = await fetchFullStats();
-    if (!newFullStats) return;
-
-    const newStatsString = JSON.stringify(newFullStats);
-    if (newStatsString !== lastStatsRef.current) {
-      // Stats changed, update and check achievements
-      setFullStats(newFullStats);
-      lastStatsRef.current = newStatsString;
-      
-      // Check for claimable achievements with the new stats
-      await checkForClaimableAchievements(newFullStats);
-    }
-  };
-
   useEffect(() => {
-    if (!user) {
-      setFullStats(null);
-      setClaimableAchievements([]);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
-    }
-
-    // Initial fetch and check
-    const initializeAchievements = async () => {
-      const initialStats = await fetchFullStats();
-      if (initialStats) {
-        setFullStats(initialStats);
-        lastStatsRef.current = JSON.stringify(initialStats);
-        await checkForClaimableAchievements(initialStats);
-      }
-    };
-
-    initializeAchievements();
-
-    // Set up polling every 3 seconds to check for stats changes
-    intervalRef.current = setInterval(pollForStatsChanges, 3000);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [user]);
-
-  // Also check when basic stats change (from the existing hook)
-  useEffect(() => {
-    if (stats && fullStats) {
-      checkForClaimableAchievements();
-    }
-  }, [stats]);
+    checkForClaimableAchievements();
+  }, [stats, user]);
 
   const dismissNotification = () => {
     setHasNewClaimable(false);
