@@ -92,12 +92,6 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   const { stats } = useUserLevelStats();
   const { claimableAchievements: notificationClaimable, hasNewClaimable } = useAchievementNotifications();
   
-  // Determine which user profile we're viewing
-  const profileUserId = propUserData?.id || (username ? null : user?.id);
-  
-  // Set up real-time stats for the user being viewed
-  const { stats: realtimeStats, refreshStats } = useRealtimeUserLevelStats(profileUserId);
-  
   const [activeTab, setActiveTab] = useState('overview');
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [fetchedUserData, setFetchedUserData] = useState<UserProfileType | null>(null);
@@ -119,6 +113,9 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   
   // Check admin status for the user whose profile is being viewed
   const profileUserId = userData?.id || (shouldShowOwnProfile ? user?.id : undefined);
+  
+  // Set up real-time stats for the user being viewed
+  const { stats: realtimeStats, refreshStats } = useRealtimeUserLevelStats(profileUserId);
   const { isAdmin: profileUserIsAdmin } = useAdminStatus(profileUserId);
   
 
