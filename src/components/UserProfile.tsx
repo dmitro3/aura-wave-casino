@@ -188,7 +188,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
       // Success!
       const messageText = tipMessage.trim();
       toast({
-        title: "Tip Sent Successfully! 🎉",
+        title: "Tip Sent Successfully!",
         description: `You sent $${amount.toFixed(2)} to ${userData.username}${messageText ? ' with a message' : ' without a message'}. Your new balance: $${result.sender_new_balance.toFixed(2)}`,
       });
 
