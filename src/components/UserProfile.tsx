@@ -172,11 +172,14 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
         return;
       }
 
+      // Since the function returns TABLE, data is an array - get the first result
+      const result = data && data.length > 0 ? data[0] : null;
+
       // Check if the function returned success
-      if (!data || !data.success) {
+      if (!result || !result.success) {
         toast({
           title: "Tip Failed",
-          description: data?.error_message || "Unable to send tip.",
+          description: result?.error_message || "Unable to send tip.",
           variant: "destructive",
         });
         return;
@@ -186,7 +189,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
       const messageText = tipMessage.trim();
       toast({
         title: "Tip Sent Successfully! 🎉",
-        description: `You sent $${amount.toFixed(2)} to ${userData.username}${messageText ? ' with a message' : ' without a message'}. Your new balance: $${data.sender_new_balance.toFixed(2)}`,
+        description: `You sent $${amount.toFixed(2)} to ${userData.username}${messageText ? ' with a message' : ' without a message'}. Your new balance: $${result.sender_new_balance.toFixed(2)}`,
       });
 
       // Reset form and close modal
