@@ -224,8 +224,8 @@ BEGIN
   -- Test level 11 (6510 XP = 10 * 651)
   SELECT * INTO test_result FROM calculate_level_from_xp_new(6510);
   RAISE NOTICE 'Level from 6510 XP: level=%, current_level_xp=%, xp_to_next=%', test_result.level, test_result.current_level_xp, test_result.xp_to_next;
+  
+  RAISE NOTICE '✅ Fixed level system implemented with fixed XP requirements';
+  RAISE NOTICE '🎯 XP requirements will never change - levels calculated from total XP';
+  RAISE NOTICE '📊 All existing user levels have been recalculated based on their total XP';
 END $$;
-
-RAISE NOTICE '✅ Fixed level system implemented with fixed XP requirements';
-RAISE NOTICE '🎯 XP requirements will never change - levels calculated from total XP';
-RAISE NOTICE '📊 All existing user levels have been recalculated based on their total XP';
