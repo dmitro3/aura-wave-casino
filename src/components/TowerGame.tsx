@@ -723,17 +723,27 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                           type="number"
                           value={betAmount}
                           onChange={(e) => {
-                            const value = parseFloat(e.target.value);
+                            let inputValue = e.target.value;
+                            
+                            // Prevent more than 2 decimal places
+                            if (inputValue.includes('.')) {
+                              const parts = inputValue.split('.');
+                              if (parts[1] && parts[1].length > 2) {
+                                inputValue = parts[0] + '.' + parts[1].substring(0, 2);
+                              }
+                            }
+                            
+                            const value = parseFloat(inputValue);
                             const maxBalance = userData?.balance || 0;
                             
-                            if (isNaN(value) || value === 0) {
-                              setBetAmount(e.target.value);
+                            if (isNaN(value) || inputValue === '' || inputValue === '.') {
+                              setBetAmount(inputValue);
                             } else if (value > maxBalance) {
                               setBetAmount(maxBalance.toFixed(2));
-                            } else if (value < 0.01) {
+                            } else if (value < 0.01 && inputValue !== '0' && inputValue !== '0.') {
                               setBetAmount("0.01");
                             } else {
-                              setBetAmount(e.target.value);
+                              setBetAmount(inputValue);
                             }
                           }}
                           className="pl-10 pr-24 h-12 bg-slate-800/80 border-slate-600/50 text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-lg [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
