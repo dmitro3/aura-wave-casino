@@ -45,6 +45,34 @@ export default function MaintenanceOverlay() {
     };
 
     checkAdminStatus();
+
+    // Real-time subscription for admin status changes
+    if (user) {
+      const adminChannel = supabase
+        .channel(`admin_status_maintenance_${user.id}`)
+        .on(
+          'postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'admin_users',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Admin status change detected (MaintenanceOverlay):', payload);
+            if (payload.eventType === 'INSERT') {
+              setIsAdmin(true);
+            } else if (payload.eventType === 'DELETE') {
+              setIsAdmin(false);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(adminChannel);
+      };
+    }
   }, [user]);
 
   // Disable scrolling when maintenance is active
