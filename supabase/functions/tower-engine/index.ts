@@ -291,6 +291,17 @@ serve(async (req) => {
         console.log(`🎯 Tile selected: ${tile_index}, Level: ${game.current_level}, Is Mine: ${isMine}`);
 
         if (isMine) {
+          // Record the tile selection in tower_levels before ending the game
+          await supabase
+            .from('tower_levels')
+            .insert({
+              game_id: game_id,
+              level_number: game.current_level,
+              tile_selected: tile_index,
+              was_safe: false,
+              multiplier_at_level: game.current_multiplier
+            });
+
           // Hit a mine - game over
           await supabase
             .from('tower_games')
@@ -360,6 +371,17 @@ serve(async (req) => {
             newStatus = 'cashed_out';
             finalPayout = game.bet_amount * multiplier;
           }
+
+          // Record the tile selection in tower_levels
+          await supabase
+            .from('tower_levels')
+            .insert({
+              game_id: game_id,
+              level_number: game.current_level,
+              tile_selected: tile_index,
+              was_safe: true,
+              multiplier_at_level: multiplier
+            });
 
           await supabase
             .from('tower_games')
