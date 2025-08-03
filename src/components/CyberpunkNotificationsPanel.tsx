@@ -145,7 +145,7 @@ export function CyberpunkNotificationsPanel({
       {/* Energy flows */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent animate-energy-flow" />
-        <div className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-accent/20 to-transparent animate-energy-flow delay-1000" />
+        <div className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-primary/20 to-transparent animate-energy-flow delay-1000" />
       </div>
       
       {/* Cyberpunk Header */}
@@ -160,7 +160,7 @@ export function CyberpunkNotificationsPanel({
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-primary/30 backdrop-blur-sm flex items-center justify-center relative overflow-hidden animate-cyber-container">
                 {/* Inner circuit pattern */}
                 <div className="absolute inset-2 border border-primary/20 rounded-lg" />
-                <div className="absolute inset-3 border border-accent/15 rounded-md" />
+                <div className="absolute inset-3 border border-primary/15 rounded-md" />
                 
                 {/* Icon */}
                 <div className="relative">
@@ -195,7 +195,7 @@ export function CyberpunkNotificationsPanel({
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <Terminal className="w-3 h-3 text-accent/60" />
+                <Terminal className="w-3 h-3 text-primary/60" />
                 <span className="text-sm text-slate-400 font-mono">
                   {unreadCount > 0 ? `${unreadCount} UNREAD SIGNALS` : 'ALL SYSTEMS CLEAR'}
                 </span>
@@ -254,7 +254,7 @@ export function CyberpunkNotificationsPanel({
                     
                     {/* Animated decorations */}
                     <div className="absolute top-4 right-6">
-                      <Sparkles className="w-6 h-6 text-accent/60 animate-pulse" />
+                      <Sparkles className="w-6 h-6 text-primary/60 animate-pulse" />
                     </div>
                     <div className="absolute bottom-6 left-4">
                       <Zap className="w-4 h-4 text-primary/60 animate-pulse delay-500" />
@@ -308,7 +308,7 @@ export function CyberpunkNotificationsPanel({
                     
                     {/* Unread pulse indicator */}
                     {!notification.is_read && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-accent/3 to-primary/5 animate-cyber-pulse" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/3 to-primary/5 animate-cyber-pulse" />
                     )}
                     
                     {/* Scan line animation for unread */}
@@ -318,7 +318,7 @@ export function CyberpunkNotificationsPanel({
                     
                     {/* Tech corner accents */}
                     <div className="absolute top-0 left-0 w-6 h-6 border-l-2 border-t-2 border-primary/40 transition-all duration-300 group-hover:border-primary/70" />
-                    <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-accent/40 transition-all duration-300 group-hover:border-accent/70" />
+                    <div className="absolute bottom-0 right-0 w-6 h-6 border-r-2 border-b-2 border-primary/40 transition-all duration-300 group-hover:border-primary/70" />
                     
                     <div className="relative z-10 p-4 flex items-center gap-4">
                       {/* Cyberpunk icon container */}
@@ -369,7 +369,7 @@ export function CyberpunkNotificationsPanel({
                             
                             {/* Tip message */}
                             {notification.data?.tip_message && (
-                              <div className="mb-3 p-3 bg-gradient-to-r from-primary/10 to-accent/10 border-l-2 border-primary/50 rounded-lg backdrop-blur-sm">
+                              <div className="mb-3 p-3 bg-gradient-to-r from-primary/10 to-primary/10 border-l-2 border-primary/50 rounded-lg backdrop-blur-sm">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Sparkles className="w-3 h-3 text-yellow-400" />
                                   <span className="text-xs font-mono text-yellow-400/80">MESSAGE</span>
@@ -383,12 +383,12 @@ export function CyberpunkNotificationsPanel({
                             {/* Timestamp and type */}
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-2">
-                                <Clock className="w-3 h-3 text-accent/60" />
+                                <Clock className="w-3 h-3 text-primary/60" />
                                 <span className="text-xs text-slate-500 font-mono">
                                   {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                                 </span>
                               </div>
-                              <div className="w-1 h-1 bg-accent/40 rounded-full" />
+                              <div className="w-1 h-1 bg-primary/40 rounded-full" />
                               <Badge 
                                 variant="outline" 
                                 className={cn(
@@ -470,7 +470,7 @@ export function CyberpunkNotificationsPanel({
                 {notifications.length} SIGNALS • {unreadCount} UNREAD
               </span>
             </div>
-            <div className="flex items-center gap-2 text-accent/60">
+            <div className="flex items-center gap-2 text-primary/60">
               <Terminal className="w-3 h-3" />
               <span>SYS.NOTIF.V2.1</span>
             </div>
