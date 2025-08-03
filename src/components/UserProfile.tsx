@@ -1043,7 +1043,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                       >
                         {/* Achievement Notification Indicator - positioned on entire button */}
                         {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
-                          <div className="absolute -top-1.5 -right-1.5 z-[100] group/badge">
+                          <div className="absolute -top-2.5 -right-2.5 z-[100] group/badge">
                             <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
                                  style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }} />
                             <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
