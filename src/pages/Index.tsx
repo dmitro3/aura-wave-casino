@@ -1170,7 +1170,6 @@ export default function Index({ initialGame }: IndexProps) {
                         
                         {/* Enhanced balance text */}
                         <div className="flex items-center space-x-1">
-                          <span className="text-slate-400 text-sm font-mono">$</span>
                           <AnimatedBalance
                             fallbackBalance={userData?.balance}
                             className="font-bold text-lg bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent"
