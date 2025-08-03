@@ -1065,7 +1065,21 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/30 to-transparent translate-x-[-100%] group-data-[state=active]:translate-x-[100%] transition-transform duration-1000 ease-out" />
                         
                         <div className="relative z-10 flex flex-col items-center justify-center gap-2 p-3">
-                          <Award className="w-6 h-6 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] group-data-[state=active]:animate-pulse" />
+                          <div className="relative">
+                            <Award className="w-6 h-6 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] group-data-[state=active]:animate-pulse" />
+                            {(isOwnProfile || shouldShowOwnProfile) && notificationClaimable.length > 0 && (
+                              <div className="absolute -top-1.5 -right-1.5 z-50 group/badge">
+                                <div className="absolute -inset-0.5 bg-emerald-500/60 blur-sm animate-pulse"
+                                     style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }} />
+                                <div className="relative w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 border border-white/30 backdrop-blur-sm flex items-center justify-center"
+                                     style={{ clipPath: 'polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px))' }}>
+                                  <span className="text-[0.625rem] font-bold text-white drop-shadow-[0_0_4px_rgba(0,0,0,0.8)] font-mono leading-none">
+                                    {notificationClaimable.length}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                           <span className="text-xs font-bold font-mono tracking-wider">ACHIEVEMENTS</span>
                         </div>
                         
@@ -2323,6 +2337,9 @@ function AchievementsSection({ isOwnProfile, userId, stats, propUserData, onUser
         currentValue = userStats.biggest_single_bet || 0; 
         break;
       case 'user_level': 
+        currentValue = userStats.current_level || 0; 
+        break;
+      case 'current_level': 
         currentValue = userStats.current_level || 0; 
         break;
       default: 
