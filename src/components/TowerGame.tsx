@@ -123,6 +123,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   useEffect(() => {
     const checkForActiveGame = async () => {
       if (!userData?.id) {
+        console.log('🔍 TOWER: No user ID, skipping active game check');
         setLoadingActiveGame(false);
         return;
       }
@@ -139,29 +140,39 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           .limit(1);
 
         if (error) {
-          console.error('Error checking for active game:', error);
+          console.error('❌ TOWER: Error checking for active game:', error);
           setLoadingActiveGame(false);
           return;
         }
 
+        console.log('🔍 TOWER: Active games query result:', activeGames);
+
         if (activeGames && activeGames.length > 0) {
           const activeGame = activeGames[0];
-          console.log('🎮 TOWER: Found active game:', activeGame);
+          console.log('🎮 TOWER: Found active game:', {
+            id: activeGame.id,
+            difficulty: activeGame.difficulty,
+            current_level: activeGame.current_level,
+            status: activeGame.status,
+            bet_amount: activeGame.bet_amount
+          });
           
           // Also get the selected tiles from tower_levels
           const { data: levels, error: levelsError } = await supabase
             .from('tower_levels')
-            .select('level_number, tile_selected')
+            .select('level_number, tile_selected, was_safe')
             .eq('game_id', activeGame.id)
             .order('level_number', { ascending: true });
 
+          console.log('🔍 TOWER: Tower levels query result:', levels);
+
           if (levelsError) {
-            console.error('Error fetching tower levels:', levelsError);
-          } else {
-            const selectedTilesArray = levels?.map(level => level.tile_selected) || [];
-            setSelectedTiles(selectedTilesArray);
-            console.log('🎯 TOWER: Restored selected tiles:', selectedTilesArray);
+            console.error('❌ TOWER: Error fetching tower levels:', levelsError);
           }
+
+          const selectedTilesArray = levels?.map(level => level.tile_selected) || [];
+          console.log('🎯 TOWER: Restored selected tiles:', selectedTilesArray);
+          setSelectedTiles(selectedTilesArray);
 
           // Convert the database game to our state format
           const gameState: TowerGameState = {
@@ -177,25 +188,32 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             selected_tiles: selectedTilesArray
           };
 
+          console.log('🎮 TOWER: Setting game state:', gameState);
           setGame(gameState);
           setDifficulty(activeGame.difficulty);
           
           toast({
-            title: "Active Game Restored",
-            description: `Resumed your ${DIFFICULTY_INFO[activeGame.difficulty as keyof typeof DIFFICULTY_INFO].name} tower game from level ${activeGame.current_level + 1}`,
+            title: "🎮 Active Game Restored",
+            description: `Resumed your ${DIFFICULTY_INFO[activeGame.difficulty as keyof typeof DIFFICULTY_INFO]?.name || activeGame.difficulty} tower game from level ${activeGame.current_level + 1}`,
           });
         } else {
           console.log('🎮 TOWER: No active game found');
         }
       } catch (error) {
-        console.error('Error checking for active game:', error);
+        console.error('❌ TOWER: Error checking for active game:', error);
       } finally {
         setLoadingActiveGame(false);
+        console.log('✅ TOWER: Active game check completed');
       }
     };
 
-    checkForActiveGame();
-  }, [userData?.id]);
+    // Only run if we haven't already loaded or if userData changed
+    if (loadingActiveGame && userData?.id) {
+      checkForActiveGame();
+    } else if (!userData?.id) {
+      setLoadingActiveGame(false);
+    }
+  }, [userData?.id, loadingActiveGame]);
 
   // Reset game state
   const resetGame = () => {
