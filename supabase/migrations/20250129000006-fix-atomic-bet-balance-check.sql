@@ -1,8 +1,10 @@
 -- Fix atomic_bet_balance_check function to match roulette backend expectations
 -- The roulette backend calls this with 3 parameters: p_user_id, p_bet_amount, p_round_id
 
--- Drop the old 2-parameter version
+-- Drop ALL existing versions of the function
 DROP FUNCTION IF EXISTS public.atomic_bet_balance_check(uuid, numeric);
+DROP FUNCTION IF EXISTS public.atomic_bet_balance_check(uuid, numeric, uuid);
+DROP FUNCTION IF EXISTS public.atomic_bet_balance_check(UUID, NUMERIC, UUID);
 
 -- Create the 3-parameter version that roulette backend expects
 CREATE OR REPLACE FUNCTION public.atomic_bet_balance_check(
