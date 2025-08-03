@@ -526,10 +526,7 @@ export default function Index({ initialGame }: IndexProps) {
                 console.log('Audio notification not available');
               }
 
-              // Scroll to top if modal is open
-              if (scrollAreaRef.current) {
-                scrollAreaRef.current.scrollTop = 0;
-              }
+              // Notification received and processed
             }
             
             if (payload.eventType === 'UPDATE') {
