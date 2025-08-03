@@ -77,7 +77,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
   useEffect(() => {
     if (isOpen && roundData) {
-      console.log('🔍 Modal opened with round data:', roundData);
+      // Modal opened with round data
       fetchRoundDetails();
     }
   }, [isOpen, roundData]);
@@ -92,7 +92,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
 
     setLoading(true);
     try {
-      console.log('🔍 Fetching round details for:', roundData.id);
+      // Fetching round details
       
       // Fetch verification data
       const { data: verification, error: verificationError } = await supabase.functions.invoke('roulette-engine', {
@@ -107,7 +107,7 @@ export function ProvablyFairModal({ isOpen, onClose, roundData, showCurrentRound
         throw verificationError;
       }
 
-      console.log('✅ Verification data received:', verification);
+              // Verification data received
 
       if (verification) {
         setVerificationData(verification);

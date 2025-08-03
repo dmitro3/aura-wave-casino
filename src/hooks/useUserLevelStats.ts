@@ -92,7 +92,7 @@ export function useUserLevelStats() {
     const ENABLE_REALTIME = false;
     
     if (!ENABLE_REALTIME) {
-      console.log('📊 USER_LEVEL_STATS: Realtime disabled, using polling fallback');
+      // Using polling fallback for stats
       return;
     }
     

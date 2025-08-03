@@ -39,7 +39,7 @@ export function useUserProfile() {
     }
 
     // Set up real-time balance subscription for instant updates
-    console.log("[useUserProfile] Setting up real-time balance subscription for user:", user.id);
+            // Setting up real-time balance subscription
     
     fetchUserProfile()
     
@@ -55,20 +55,13 @@ export function useUserProfile() {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('💰 REAL-TIME BALANCE UPDATE:', payload);
-          const newBalance = payload.new?.balance;
-          const oldBalance = payload.old?.balance;
-          
-          if (typeof newBalance === 'number') {
-            setUserData(prev => {
-              if (!prev) return null;
-              // Only update if balance actually changed to avoid unnecessary re-renders
-              if (prev.balance !== newBalance) {
+          if (payload.eventType === 'UPDATE' && payload.new?.balance !== undefined) {
+            console.log('💰 REAL-TIME BALANCE UPDATE:', payload);
+            const newBalance = parseFloat(payload.new.balance);
+            setUserData((prev) => {
+              if (prev && prev.balance !== newBalance) {
                 console.log('⚡ INSTANT BALANCE SYNC:', prev.balance, '→', newBalance);
-                return {
-                  ...prev,
-                  balance: newBalance,
-                };
+                return { ...prev, balance: newBalance };
               }
               return prev;
             });
@@ -80,7 +73,7 @@ export function useUserProfile() {
       });
 
     return () => {
-      console.log("[useUserProfile] Cleaning up balance subscription");
+              // Cleaning up balance subscription
       supabase.removeChannel(balanceSubscription);
     };
   }, [user])
@@ -91,7 +84,7 @@ export function useUserProfile() {
     }
 
     try {
-      console.log('[useUserProfile] Fetching profile for user:', user.id);
+      // Fetching profile silently
       
       // Fetch profile (without level/XP data)
       const { data: profile, error: profileError } = await supabase
@@ -160,21 +153,20 @@ export function useUserProfile() {
         finalProfile = profile;
       }
 
-      // Ensure user_level_stats exists
-      console.log('[useUserProfile] Ensuring user_level_stats exists...');
-      const { data: statsResult, error: statsError } = await supabase
+      // Ensure user_level_stats exists for this user
+      // Ensuring user_level_stats exists...
+      const { error: ensureError } = await supabase
         .rpc('ensure_user_level_stats', { user_uuid: user.id });
       
-      if (statsError) {
+      if (ensureError) {
         // Handle duplicate key constraint error gracefully
-        if (statsError.code === '23505' && statsError.message?.includes('user_level_stats_user_id_key')) {
-          console.log('[useUserProfile] User level stats already exists (duplicate key constraint)');
+        if (ensureError.code === '23505' && ensureError.message?.includes('user_level_stats_user_id_key')) {
+          // User level stats already exists
         } else {
-          console.error('[useUserProfile] Error ensuring user_level_stats:', statsError);
+          console.error('[useUserProfile] Error ensuring user level stats:', ensureError);
         }
-      } else {
-        console.log('[useUserProfile] User level stats ensured');
-      }
+              }
+        // User level stats ensured
 
       // Fetch level stats
       let { data: levelStats, error: levelStatsError } = await supabase
@@ -233,7 +225,7 @@ export function useUserProfile() {
         }
       }
 
-      console.log('[useUserProfile] Level stats fetched successfully');
+      // Level stats fetched successfully
 
       const combinedData = {
         ...finalProfile,
@@ -268,7 +260,7 @@ export function useUserProfile() {
         }
       };
 
-      console.log('[useUserProfile] Combined data created successfully');
+      // Combined data created successfully
       setUserData(combinedData);
       setLoading(false);
     } catch (error) {

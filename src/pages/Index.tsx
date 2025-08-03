@@ -61,12 +61,7 @@ export default function Index({ initialGame }: IndexProps) {
   
   // Debug logging
   useEffect(() => {
-    console.log('[Index] Auth state:', { 
-      user: user?.id, 
-      userData: userData?.id, 
-      authLoading, 
-      profileLoading 
-    });
+      // Auth state monitoring
   }, [user, userData, authLoading, profileLoading]);
   const { toast } = useToast();
   const { handleGameError } = useConnectionMonitor();
@@ -235,7 +230,7 @@ export default function Index({ initialGame }: IndexProps) {
   const fetchNotifications = async () => {
     if (!user) return;
     
-    console.log('📥 Fetching notifications for user:', user.id);
+          // Fetching notifications
     
     try {
       const { data, error } = await supabase
@@ -247,8 +242,7 @@ export default function Index({ initialGame }: IndexProps) {
 
       if (error) throw error;
       
-      console.log('📥 Fetched notifications:', data?.length || 0, 'notifications');
-      console.log('📥 Notification IDs:', data?.map(n => n.id) || []);
+              // Notifications fetched successfully
       
       setNotifications((data || []) as Notification[]);
       

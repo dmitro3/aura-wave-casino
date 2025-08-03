@@ -15,7 +15,7 @@ export function useRealtimeBalance() {
       return;
     }
 
-    console.log('🔄 Setting up dedicated balance subscription for user:', user.id);
+    // Setting up dedicated balance subscription
 
     // Fetch initial balance
     const fetchInitialBalance = async () => {
@@ -32,7 +32,7 @@ export function useRealtimeBalance() {
         }
 
         if (data) {
-          console.log('💰 Initial balance loaded:', data.balance);
+          // Initial balance loaded
           setBalance(data.balance);
         }
       } catch (error) {
@@ -56,18 +56,17 @@ export function useRealtimeBalance() {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('💰 DEDICATED BALANCE UPDATE:', payload);
+          // Balance update received
           const newBalance = payload.new?.balance;
           const oldBalance = payload.old?.balance;
 
           if (typeof newBalance === 'number' && newBalance !== oldBalance) {
-            console.log('⚡ BALANCE CHANGED:', oldBalance, '→', newBalance);
             setBalance(newBalance);
           }
         }
       )
       .subscribe((status, err) => {
-        console.log('📡 Dedicated balance subscription status:', status);
+        // Subscription status update
         if (err) {
           console.error('❌ Balance subscription error:', err);
         }
@@ -76,7 +75,7 @@ export function useRealtimeBalance() {
     subscriptionRef.current = channel;
 
     return () => {
-      console.log('🧹 Cleaning up dedicated balance subscription');
+      // Cleaning up balance subscription
       if (subscriptionRef.current) {
         supabase.removeChannel(subscriptionRef.current);
         subscriptionRef.current = null;
@@ -101,7 +100,7 @@ export function useRealtimeBalance() {
       }
 
       if (data && typeof data.balance === 'number') {
-        console.log('🔄 Balance manually refreshed:', data.balance);
+        // Balance manually refreshed
         setBalance(data.balance);
       }
     } catch (error) {

@@ -129,11 +129,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         return;
       }
 
-      console.log('🔍 TOWER: Starting active game check for user:', userData.id);
+      // Starting active game check
       setLoadingActiveGame(true);
 
       try {
-        console.log('🔍 TOWER: Querying for active games...');
+        // Querying for active games
         
         const { data: activeGames, error } = await supabase
           .from('tower_games')
@@ -149,10 +149,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           return;
         }
 
-        console.log('🔍 TOWER: Active games query result:', {
-          found: activeGames?.length || 0,
-          data: activeGames
-        });
+        // Active games query completed
 
         if (activeGames && activeGames.length > 0) {
           const activeGame = activeGames[0];
@@ -210,13 +207,13 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             duration: 5000,
           });
         } else {
-          console.log('🎮 TOWER: No active game found');
+          // No active game found
         }
       } catch (error) {
         console.error('❌ TOWER: Error checking for active game:', error);
       } finally {
         setLoadingActiveGame(false);
-        console.log('✅ TOWER: Active game check completed');
+        // Active game check completed
       }
     };
 
