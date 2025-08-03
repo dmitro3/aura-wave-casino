@@ -15,7 +15,6 @@ import {
 import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
 import { ProfileBorder } from './ProfileBorder';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
-import { useRealtimeUserLevelStats } from '@/hooks/useRealtimeUserLevelStats';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAchievementNotifications } from '@/hooks/useAchievementNotifications';
@@ -96,6 +95,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   const [isBalanceVisible, setIsBalanceVisible] = useState(true);
   const [fetchedUserData, setFetchedUserData] = useState<UserProfileType | null>(null);
   const [loading, setLoading] = useState(false);
+  const [freshStats, setFreshStats] = useState<any>(null);
   const [animatedStats, setAnimatedStats] = useState({
     level: 0,
     xp: 0,
@@ -114,8 +114,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   // Check admin status for the user whose profile is being viewed
   const profileUserId = userData?.id || (shouldShowOwnProfile ? user?.id : undefined);
   
-  // Set up real-time stats for the user being viewed
-  const { stats: realtimeStats, refreshStats } = useRealtimeUserLevelStats(profileUserId);
+
   const { isAdmin: profileUserIsAdmin } = useAdminStatus(profileUserId);
   
 
@@ -227,16 +226,44 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
     if (!isOpen) {
       setFetchedUserData(null);
       setActiveTab('overview');
+      setFreshStats(null); // Clear fresh stats when modal closes
     }
   }, [isOpen]);
 
-  // Refresh stats whenever modal opens
+  // Fetch fresh stats once when modal opens
   useEffect(() => {
-    if (isOpen && profileUserId) {
-      console.log('🔄 Profile modal opened - refreshing stats for user:', profileUserId);
-      refreshStats();
+    if (isOpen && profileUserId && !freshStats) {
+      console.log('🔄 Profile modal opened - fetching fresh stats once for user:', profileUserId);
+      
+      const fetchFreshStats = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('user_level_stats')
+            .select('*')
+            .eq('user_id', profileUserId)
+            .single();
+
+          if (error) {
+            if (error.code !== 'PGRST116') {
+              console.error('❌ Error fetching fresh stats:', error);
+            } else {
+              console.log('ℹ️ No stats found for user');
+            }
+            return;
+          }
+
+          if (data) {
+            console.log('📊 Fresh stats loaded for profile:', data);
+            setFreshStats(data);
+          }
+        } catch (error) {
+          console.error('❌ Error in fetchFreshStats:', error);
+        }
+      };
+
+      fetchFreshStats();
     }
-  }, [isOpen, profileUserId, refreshStats]);
+  }, [isOpen, profileUserId, freshStats]);
 
   // Animate numbers on mount
   useEffect(() => {
@@ -261,11 +288,11 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
         requestAnimationFrame(animate);
       };
 
-      // Use the correct XP source (prioritize realtimeStats for any user, fallback to userData levelStats)
+      // Use the correct XP source (prioritize freshStats for any user, fallback to userData levelStats)
       const isViewingOwnProfile = (user && userData && user.id === userData.id) || (user && !username);
-      const currentLevel = realtimeStats?.current_level || userData.levelStats?.current_level || 1;
-      const currentXP = realtimeStats?.current_level_xp || userData.levelStats?.current_level_xp || 0;
-      const lifetimeXP = realtimeStats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0;
+      const currentLevel = freshStats?.current_level || userData.levelStats?.current_level || 1;
+      const currentXP = freshStats?.current_level_xp || userData.levelStats?.current_level_xp || 0;
+      const lifetimeXP = freshStats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0;
 
       animateValue(0, currentLevel, 800, (val) => 
         setAnimatedStats(prev => ({ ...prev, level: val }))
@@ -277,7 +304,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
         setAnimatedStats(prev => ({ ...prev, balance: val }))
       );
     }
-  }, [isOpen, userData, stats, realtimeStats]);
+  }, [isOpen, userData, stats, freshStats]);
   
   // Show loading state
   if (loading) {
@@ -304,36 +331,36 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   if (!userData) return null;
 
   // Move variable declarations here to fix initialization order
-  // Prioritize realtimeStats for ALL users (real-time data), fallback to userData.levelStats
+  // Prioritize freshStats (fetched on modal open), fallback to userData.levelStats
   const isViewingOwnProfile = isOwnProfile || shouldShowOwnProfile;
-  const currentLevel = realtimeStats?.current_level || userData.levelStats?.current_level || 1;
-  const lifetimeXP = realtimeStats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0;
-  const currentXP = realtimeStats?.current_level_xp || userData.levelStats?.current_level_xp || 0;
-  const xpToNext = realtimeStats?.xp_to_next_level || userData.levelStats?.xp_to_next_level || 100;
+  const currentLevel = freshStats?.current_level || userData.levelStats?.current_level || 1;
+  const lifetimeXP = freshStats?.lifetime_xp || userData.levelStats?.lifetime_xp || 0;
+  const currentXP = freshStats?.current_level_xp || userData.levelStats?.current_level_xp || 0;
+  const xpToNext = freshStats?.xp_to_next_level || userData.levelStats?.xp_to_next_level || 100;
   const totalXP = currentXP + xpToNext;
   const xpProgress = calculateXPProgress(currentXP, xpToNext);
 
-  // Create real-time game stats (prioritize realtimeStats, fallback to userData.gameStats)
+  // Create fresh game stats (prioritize freshStats, fallback to userData.gameStats)
   const gameStats = {
     coinflip: {
-      wins: realtimeStats?.coinflip_wins || userData.gameStats?.coinflip?.wins || 0,
-      losses: Math.max(0, (realtimeStats?.coinflip_games || userData.gameStats?.coinflip?.wins + userData.gameStats?.coinflip?.losses || 0) - (realtimeStats?.coinflip_wins || userData.gameStats?.coinflip?.wins || 0)),
-      profit: realtimeStats?.coinflip_profit || userData.gameStats?.coinflip?.profit || 0
+      wins: freshStats?.coinflip_wins || userData.gameStats?.coinflip?.wins || 0,
+      losses: Math.max(0, (freshStats?.coinflip_games || userData.gameStats?.coinflip?.wins + userData.gameStats?.coinflip?.losses || 0) - (freshStats?.coinflip_wins || userData.gameStats?.coinflip?.wins || 0)),
+      profit: freshStats?.coinflip_profit || userData.gameStats?.coinflip?.profit || 0
     },
     crash: {
-      wins: realtimeStats?.crash_wins || userData.gameStats?.crash?.wins || 0,
-      losses: Math.max(0, (realtimeStats?.crash_games || userData.gameStats?.crash?.wins + userData.gameStats?.crash?.losses || 0) - (realtimeStats?.crash_wins || userData.gameStats?.crash?.wins || 0)),
-      profit: realtimeStats?.crash_profit || userData.gameStats?.crash?.profit || 0
+      wins: freshStats?.crash_wins || userData.gameStats?.crash?.wins || 0,
+      losses: Math.max(0, (freshStats?.crash_games || userData.gameStats?.crash?.wins + userData.gameStats?.crash?.losses || 0) - (freshStats?.crash_wins || userData.gameStats?.crash?.wins || 0)),
+      profit: freshStats?.crash_profit || userData.gameStats?.crash?.profit || 0
     },
     roulette: {
-      wins: realtimeStats?.roulette_wins || userData.gameStats?.roulette?.wins || 0,
-      losses: Math.max(0, (realtimeStats?.roulette_games || userData.gameStats?.roulette?.wins + userData.gameStats?.roulette?.losses || 0) - (realtimeStats?.roulette_wins || userData.gameStats?.roulette?.wins || 0)),
-      profit: realtimeStats?.roulette_profit || userData.gameStats?.roulette?.profit || 0
+      wins: freshStats?.roulette_wins || userData.gameStats?.roulette?.wins || 0,
+      losses: Math.max(0, (freshStats?.roulette_games || userData.gameStats?.roulette?.wins + userData.gameStats?.roulette?.losses || 0) - (freshStats?.roulette_wins || userData.gameStats?.roulette?.wins || 0)),
+      profit: freshStats?.roulette_profit || userData.gameStats?.roulette?.profit || 0
     },
     tower: {
-      wins: realtimeStats?.tower_wins || userData.gameStats?.tower?.wins || 0,
-      losses: Math.max(0, (realtimeStats?.tower_games || userData.gameStats?.tower?.wins + userData.gameStats?.tower?.losses || 0) - (realtimeStats?.tower_wins || userData.gameStats?.tower?.wins || 0)),
-      profit: realtimeStats?.tower_profit || userData.gameStats?.tower?.profit || 0
+      wins: freshStats?.tower_wins || userData.gameStats?.tower?.wins || 0,
+      losses: Math.max(0, (freshStats?.tower_games || userData.gameStats?.tower?.wins + userData.gameStats?.tower?.losses || 0) - (freshStats?.tower_wins || userData.gameStats?.tower?.wins || 0)),
+      profit: freshStats?.tower_profit || userData.gameStats?.tower?.profit || 0
     }
   };
 
