@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMaintenance } from '@/contexts/MaintenanceContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminStatus } from '@/hooks/useAdminStatus';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Wrench, Clock, Shield, Settings, RefreshCw, AlertTriangle, Zap, Terminal, Cpu, Database, Server, Wifi, WifiOff, Activity, BarChart3, TrendingUp, TrendingDown, DollarSign, Percent, Users, Award, Medal, Badge, ShieldCheck, ZapOff, Power, PowerOff, Settings2, Cog, Wrench2, Hammer, Screwdriver, Tool, Palette, Brush, Layers, Grid, Layout, Columns, Rows, Square, Circle, Triangle, Diamond, Pentagon, Hexagon2, Octagon, Star2, Heart, Lightning, Fire, Ice, Water, Earth, Air, Wind, Cloud, Sun, Moon, Planet, Galaxy, Universe, Atom, Dna, Brain, Eye, Ear, Nose, Mouth, Hand, Foot, Arm, Leg, Head, Body, Skull, Bone, Muscle, Vein, Blood, Heart2, Lungs, Stomach, Liver, Kidney, Brain2, Spine, Rib, Pelvis, Femur, Tibia, Fibula, Humerus, Radius, Ulna, Clavicle, Scapula, Sternum, Vertebra, Cartilage, Tendon, Ligament, Nerve, Synapse, Neuron, Axon, Dendrite, Receptor, Transmitter, Hormone, Enzyme, Protein, Amino, Vitamin, Mineral, Oxygen, Carbon, Hydrogen, Nitrogen, Phosphorus, Sulfur, Chlorine, Sodium, Potassium, Calcium, Magnesium, Iron, Zinc, Copper, Manganese, Selenium, Iodine, Chromium, Molybdenum, Cobalt, Nickel, Vanadium, Tungsten, Titanium, Aluminum, Silicon, Boron, Fluorine, Bromine, Iodine2, Astatine, Radon, Xenon, Krypton, Argon, Neon, Helium, Hydrogen2, Lithium, Beryllium, Boron2, Carbon2, Nitrogen2, Oxygen2, Fluorine2, Neon2, Sodium2, Magnesium2, Aluminum2, Silicon2, Phosphorus2, Sulfur2, Chlorine2, Potassium2, Calcium2, Scandium, Titanium2, Vanadium2, Chromium2, Manganese2, Iron2, Cobalt2, Nickel2, Copper2, Zinc2, Gallium, Germanium, Arsenic, Selenium2, Bromine2, Krypton2, Rubidium, Strontium, Yttrium, Zirconium, Niobium, Molybdenum2, Technetium, Ruthenium, Rhodium, Palladium, Silver, Cadmium, Indium, Tin, Antimony, Tellurium, Iodine3, Xenon2, Cesium, Barium, Lanthanum, Cerium, Praseodymium, Neodymium, Promethium, Samarium, Europium, Gadolinium, Terbium, Dysprosium, Holmium, Erbium, Thulium, Ytterbium, Lutetium, Hafnium, Tantalum, Tungsten2, Rhenium, Osmium, Iridium, Platinum, Gold, Mercury, Thallium, Lead, Bismuth, Polonium, Astatine2, Radon2, Francium, Radium, Actinium, Thorium, Protactinium, Uranium, Neptunium, Plutonium, Americium, Curium, Berkelium, Californium, Einsteinium, Fermium, Mendelevium, Nobelium, Lawrencium, Rutherfordium, Dubnium, Seaborgium, Bohrium, Hassium, Meitnerium, Darmstadtium, Roentgenium, Copernicium, Nihonium, Flerovium, Moscovium, Livermorium, Tennessine, Oganesson } from 'lucide-react';
 import AdminPanel from './AdminPanel';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,42 @@ export default function MaintenanceOverlay() {
   const { maintenanceStatus, loading, isMaintenanceMode } = useMaintenance();
   const { user } = useAuth();
   const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const { isAdmin, loading: adminLoading } = useAdminStatus();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
+
+  // Check admin status when user is authenticated
+  React.useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setAdminLoading(false);
+        return;
+      }
+
+      try {
+        // Use RPC function directly to avoid 406 errors
+        console.log('Admin status check (MaintenanceOverlay): Using RPC function directly');
+        const { data: adminCheck, error: adminError } = await supabase.rpc('check_admin_status_simple', {
+          user_uuid: user.id
+        });
+        
+        if (adminError) {
+          console.log('RPC admin check failed, treating as non-admin:', adminError);
+          setIsAdmin(false);
+        } else {
+          console.log('RPC admin check successful, admin status:', adminCheck);
+          setIsAdmin(!!adminCheck);
+        }
+      } catch (err) {
+        console.log('RPC admin check exception, treating as non-admin:', err);
+        setIsAdmin(false);
+      } finally {
+        setAdminLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   // Disable scrolling when maintenance is active
   React.useEffect(() => {

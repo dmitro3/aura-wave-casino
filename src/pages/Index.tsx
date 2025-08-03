@@ -39,7 +39,6 @@ import { formatXP, formatXPProgress, calculateXPProgress } from '@/lib/xpUtils';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useConnectionMonitor } from '@/hooks/useConnectionMonitor';
-import { useAdminStatus } from '@/hooks/useAdminStatus';
 
 interface Notification {
   id: string;
@@ -75,7 +74,8 @@ export default function Index({ initialGame }: IndexProps) {
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
   const [hoveredNotification, setHoveredNotification] = useState<string | null>(null);
   const [newNotificationIds, setNewNotificationIds] = useState<Set<string>>(new Set());
-
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   // Removed loading states for instant button responses
   const [gameSelectionLoading, setGameSelectionLoading] = useState<string | null>(null);
@@ -112,7 +112,6 @@ export default function Index({ initialGame }: IndexProps) {
 
   const [currentGame, setCurrentGame] = useState(getCurrentGame());
   const { increases, checkBalanceChange } = useBalanceAnimation();
-  const { isAdmin: userIsAdmin } = useAdminStatus();
 
   // Notification theme helper
   const getNotificationTheme = (type: string) => {
@@ -625,7 +624,39 @@ export default function Index({ initialGame }: IndexProps) {
     }
   }, [userData?.balance, checkBalanceChange]);
 
+  // Check admin status when user is authenticated
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setAdminLoading(false);
+        return;
+      }
 
+      try {
+        // Use RPC function directly to avoid 406 errors
+        console.log('Admin status check (Index): Using RPC function directly');
+        const { data: adminCheck, error: adminError } = await supabase.rpc('check_admin_status_simple', {
+          user_uuid: user.id
+        });
+        
+        if (adminError) {
+          console.log('RPC admin check failed, treating as non-admin:', adminError);
+          setIsAdmin(false);
+        } else {
+          console.log('RPC admin check successful, admin status:', adminCheck);
+          setIsAdmin(!!adminCheck);
+        }
+      } catch (err) {
+        console.log('RPC admin check exception, treating as non-admin:', err);
+        setIsAdmin(false);
+      } finally {
+        setAdminLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   const handleLogout = () => {
     setShowLogoutConfirmation(true);
@@ -1224,7 +1255,7 @@ export default function Index({ initialGame }: IndexProps) {
                   )}
 
                   {/* Cyberpunk Admin Panel Button - Only show for admin users */}
-                  {user && userIsAdmin && (
+                  {user && !adminLoading && isAdmin && (
                     <div className="relative group/admin">
                       <Button
                         variant="ghost"
