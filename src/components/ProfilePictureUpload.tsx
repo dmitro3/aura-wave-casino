@@ -33,11 +33,11 @@ export function ProfilePictureUpload({ userId, currentAvatarUrl, onAvatarUpdate 
       return;
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (1MB limit)
+    if (file.size > 1 * 1024 * 1024) {
       toast({
         title: "File Too Large",
-        description: "Please select an image smaller than 5MB.",
+        description: "Please select an image smaller than 1MB.",
         variant: "destructive",
       });
       return;
@@ -247,7 +247,7 @@ export function ProfilePictureUpload({ userId, currentAvatarUrl, onAvatarUpdate 
                 </Button>
 
                 <p className="text-xs text-muted-foreground text-center">
-                  Supported formats: JPEG, PNG, WebP, GIF (max 5MB)
+                  Supported formats: JPEG, PNG, WebP, GIF (max 1MB)
                 </p>
               </div>
 

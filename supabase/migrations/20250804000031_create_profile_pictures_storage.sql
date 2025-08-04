@@ -9,7 +9,7 @@ VALUES (
   'profile-pictures',
   'profile-pictures', 
   true,
-  5242880, -- 5MB limit
+  1048576, -- 1MB limit
   ARRAY['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
 ) ON CONFLICT (id) DO NOTHING;
 
