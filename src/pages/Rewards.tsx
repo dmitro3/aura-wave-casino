@@ -271,51 +271,91 @@ export default function Rewards() {
           </div>
         </header>
 
-        <div className="space-y-6">
+        {/* Compact Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[
-              { icon: Package, value: stats.totalCasesOpened, label: "Total Cases", color: "primary" },
-              { icon: Coins, value: `$${stats.totalRewards.toFixed(2)}`, label: "Total Rewards", color: "success" },
-              { icon: Trophy, value: levelDailyCases.filter(c => canOpenCase(c)).length, label: "Available Cases", color: "accent" },
-              { icon: Star, value: userData?.levelStats?.current_level || 0, label: "Your Level", color: "warning" }
-            ].map((stat, index) => (
-              <div key={index} className="relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-xl animate-cyber-header-pulse" />
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/30 to-primary/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
+          {/* Left Column - Stats & Free Cases */}
+          <div className="space-y-4">
+            {/* Stats Overview */}
+            <div className="relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-xl animate-cyber-header-pulse" />
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/30 to-primary/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
+              
+              <div className="relative z-10 p-4">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                    <Trophy className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Statistics</h3>
+                </div>
                 
-                <div className="relative z-10 p-4 text-center">
-                  <div className="relative mb-3">
-                    <stat.icon className={`w-8 h-8 mx-auto text-${stat.color}`} />
-                  </div>
-                  <div className={`text-2xl font-bold ${
-                    stat.color === 'primary' ? 'text-primary' :
-                    stat.color === 'success' ? 'text-green-400' :
-                    stat.color === 'accent' ? 'text-accent' :
-                    'text-yellow-400'
-                  } mb-1`}>
-                    {stat.value}
-                  </div>
-                  <div className="text-sm text-muted-foreground font-mono">{stat.label}</div>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { icon: Package, value: stats.totalCasesOpened, label: "Cases Opened", color: "primary" },
+                    { icon: Coins, value: `$${stats.totalRewards.toFixed(2)}`, label: "Total Rewards", color: "success" },
+                    { icon: Star, value: userData?.levelStats?.current_level || 0, label: "Your Level", color: "warning" },
+                    { icon: Crown, value: levelDailyCases.filter(c => canOpenCase(c)).length, label: "Available", color: "accent" }
+                  ].map((stat, index) => (
+                    <div key={index} className="flex items-center space-x-2 p-2 rounded-lg bg-slate-800/50">
+                      <stat.icon className={`w-4 h-4 text-${stat.color}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-white truncate">{stat.value}</div>
+                        <div className="text-xs text-muted-foreground">{stat.label}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Free Cases */}
+            <div className="relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-xl animate-cyber-header-pulse" />
+              <div className="absolute -inset-1 bg-gradient-to-r from-accent/20 via-primary/30 to-accent/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
+              
+              <div className="relative z-10 p-4">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
+                    <Gift className="w-5 h-5 text-accent" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Free Cases</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  {Object.entries(caseStatuses).map(([type, status]) => (
+                    <div key={type} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${status.canOpen ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className="text-sm font-medium capitalize">{type}</span>
+                      </div>
+                      <Button
+                        onClick={() => openFreeCaseModal(type as 'common' | 'rare' | 'epic')}
+                        disabled={!status.canOpen}
+                        size="sm"
+                        variant={status.canOpen ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {status.canOpen ? 'Open' : 'Locked'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Level Daily Cases */}
+          {/* Middle Column - Daily Cases */}
           <div className="relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-2xl animate-cyber-header-pulse" />
-            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/30 to-primary/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-xl animate-cyber-header-pulse" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/30 to-primary/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
             
-            <div className="relative z-10 p-6">
-              <div className="flex items-center justify-between mb-8">
+            <div className="relative z-10 p-4">
+              <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <Crown className="w-8 h-8 text-primary" />
+                  <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                    <Crown className="w-5 h-5 text-primary" />
                   </div>
-                  <h2 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">Daily Cases</h2>
-                  <span className="text-sm text-muted-foreground font-mono">• Reset Daily</span>
+                  <h3 className="text-lg font-semibold text-white">Daily Cases</h3>
                 </div>
                 
                 <Button
@@ -326,41 +366,41 @@ export default function Rewards() {
                 >
                   <div className="relative z-10 flex items-center space-x-2">
                     <Zap className="w-4 h-4" />
-                    <span>Test Reset</span>
+                    <span className="text-xs">Reset</span>
                   </div>
                 </Button>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+              <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
                 {levelDailyCases.map((caseData) => (
                   <div key={caseData.id} className="relative overflow-hidden group/case">
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-sm rounded-xl" />
-                    <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-transparent rounded-xl blur-md group-hover/case:blur-lg transition-all duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-sm rounded-lg" />
+                    <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-transparent rounded-lg blur-md group-hover/case:blur-lg transition-all duration-300" />
                     
-                    <div className="relative z-10 p-6 text-center space-y-4">
+                    <div className="relative z-10 p-3 text-center space-y-2">
                       <div className="relative">
-                        <div className={`w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg border border-purple-400/20 ${
+                        <div className={`w-12 h-12 mx-auto bg-gradient-to-br from-purple-500 via-pink-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg border border-purple-400/20 ${
                           caseData.user_level < caseData.level_required ? 'opacity-50' : 'group-hover/case:scale-105 transition-transform duration-200'
                         }`}>
                           {caseData.user_level < caseData.level_required ? (
-                            <Lock className="w-10 h-10 text-white" />
+                            <Lock className="w-6 h-6 text-white" />
                           ) : (
-                            <Gift className="w-10 h-10 text-white" />
+                            <Gift className="w-6 h-6 text-white" />
                           )}
                         </div>
-                        <div className="absolute -top-3 -right-3 bg-gradient-to-r from-primary to-accent text-white text-sm px-3 py-1 rounded-full font-bold shadow-lg border border-primary/20">
+                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-primary to-accent text-white text-xs px-2 py-1 rounded-full font-bold shadow-lg border border-primary/20">
                           {caseData.level_required}
                         </div>
                         {caseData.user_level >= caseData.level_required && caseData.is_available && (
-                          <div className="absolute -top-2 -left-2 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg border-2 border-white"></div>
+                          <div className="absolute -top-1 -left-1 w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg border border-white"></div>
                         )}
                       </div>
                       
-                      <div className="space-y-3">
-                        <div className="text-lg font-bold bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
-                          Level {caseData.level_required}
+                      <div className="space-y-2">
+                        <div className="text-sm font-bold bg-gradient-to-r from-white to-slate-200 bg-clip-text text-transparent">
+                          Lv.{caseData.level_required}
                         </div>
-                        <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                        <div className={`text-xs font-medium px-2 py-1 rounded-full ${
                           caseData.user_level < caseData.level_required 
                             ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
                             : !caseData.is_available 
@@ -373,7 +413,7 @@ export default function Rewards() {
                         {/* Show when case will be available again */}
                         {caseData.user_level >= caseData.level_required && !caseData.is_available && caseData.last_reset_date && (
                           <div className="text-xs text-muted-foreground">
-                            Resets in: {formatCountdown(countdown)}
+                            {formatCountdown(countdown)}
                           </div>
                         )}
                       </div>
@@ -422,55 +462,55 @@ export default function Rewards() {
             </div>
           </div>
 
-          {/* Case History */}
+          {/* Right Column - Case History */}
           <div className="relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-2xl animate-cyber-header-pulse" />
-            <div className="absolute -inset-1 bg-gradient-to-r from-accent/20 via-primary/30 to-accent/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-xl rounded-xl animate-cyber-header-pulse" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-accent/20 via-primary/30 to-accent/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
             
-            <div className="relative z-10 p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <div className="relative">
-                  <Clock className="w-6 h-6 text-accent" />
+            <div className="relative z-10 p-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
+                  <Clock className="w-5 h-5 text-accent" />
                 </div>
-                <h2 className="text-xl font-bold text-accent">Case History</h2>
+                <h3 className="text-lg font-semibold text-white">Case History</h3>
               </div>
               
               {history.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="relative mb-6">
-                    <Clock className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
-                    <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-accent/20 rounded-full animate-pulse"></div>
+                <div className="text-center py-8">
+                  <div className="relative mb-4">
+                    <Clock className="w-12 h-12 mx-auto text-muted-foreground opacity-50" />
+                    <div className="absolute inset-0 w-12 h-12 mx-auto border-2 border-accent/20 rounded-full animate-pulse"></div>
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">No Cases Opened Yet</h3>
-                  <p className="text-muted-foreground">
+                  <h4 className="text-sm font-semibold mb-2">No Cases Opened Yet</h4>
+                  <p className="text-xs text-muted-foreground">
                     Your opened cases will appear here.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {history.map((caseReward) => (
                     <div key={caseReward.id} className="relative overflow-hidden group/item">
                       <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-800/90 to-slate-900/95 backdrop-blur-sm rounded-lg" />
                       <div className="absolute -inset-1 bg-gradient-to-r from-accent/20 to-transparent rounded-lg blur-md group-hover/item:blur-lg transition-all duration-300" />
                       
-                      <div className="relative z-10 flex items-center justify-between p-4">
-                        <div className="flex items-center space-x-4">
+                      <div className="relative z-10 flex items-center justify-between p-3">
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
                           <div className="relative">
-                            <div className={`w-4 h-4 rounded-full ${getRarityColor(caseReward.rarity)}`} />
+                            <div className={`w-3 h-3 rounded-full ${getRarityColor(caseReward.rarity)}`} />
                           </div>
-                          <div>
-                            <div className="font-semibold">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold truncate">
                               {getCaseTypeDisplayName(caseReward.case_type, caseReward.level_unlocked)}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                               {caseReward.rarity.charAt(0).toUpperCase() + caseReward.rarity.slice(1)} • 
-                              Opened {formatDate(caseReward.opened_at || caseReward.created_at)}
+                              {formatDate(caseReward.opened_at || caseReward.created_at)}
                             </div>
                           </div>
                         </div>
                         
-                        <div className="text-right">
-                          <div className="font-semibold text-success">
+                        <div className="text-right ml-2">
+                          <div className="text-sm font-semibold text-success">
                             +${caseReward.reward_amount.toFixed(2)}
                           </div>
                         </div>
