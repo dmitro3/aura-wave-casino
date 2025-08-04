@@ -187,23 +187,23 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       // Use same styling logic as actual game
       let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
       
-      // Determine tile state for styling
-      if (isSelected && !isMine) {
-        // Safe tile that was selected (green - successful path)
-        tileClass += "bg-emerald-500/20 border-2 border-emerald-500/40 ";
-      } else if (isSelected && isMine) {
-        // Mine that was selected (red - game ending)
-        tileClass += "bg-red-500/20 border-2 border-red-500/40 ";
-      } else if (isMine) {
-        // Unrevealed mine (show for replay transparency)
-        tileClass += "bg-red-900/30 border-2 border-red-700/50 ";
-      } else if (wasPlayed) {
-        // Safe tiles on played levels (slightly dimmed)
-        tileClass += "bg-slate-700/30 border-2 border-slate-600/30 opacity-50 ";
-      } else {
-        // Future levels not reached
-        tileClass += "bg-slate-800/30 border-2 border-slate-700/30 opacity-30 ";
-      }
+             // Determine tile state for styling
+       if (isSelected && !isMine) {
+         // Safe tile that was selected (green - successful path) - HIGHLIGHTED
+         tileClass += "bg-emerald-500/40 border-2 border-emerald-400 shadow-lg shadow-emerald-500/30 ";
+       } else if (isSelected && isMine) {
+         // Mine that was selected (red - game ending) - HIGHLIGHTED
+         tileClass += "bg-red-500/40 border-2 border-red-400 shadow-lg shadow-red-500/30 ";
+       } else if (isMine) {
+         // Unrevealed mine (show for replay transparency)
+         tileClass += "bg-red-900/30 border-2 border-red-700/50 ";
+       } else if (wasPlayed) {
+         // Safe tiles on played levels (slightly dimmed)
+         tileClass += "bg-slate-700/30 border-2 border-slate-600/30 opacity-50 ";
+       } else {
+         // Future levels not reached
+         tileClass += "bg-slate-800/30 border-2 border-slate-700/30 opacity-30 ";
+       }
       
       return (
         <button key={tileIndex} className={tileClass} disabled>
@@ -224,10 +224,14 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
             )}
           </div>
           
-          {/* Selection highlight */}
-          {isSelected && (
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-          )}
+                     {/* Selection highlight - make selected tiles more prominent */}
+           {isSelected && (
+             <>
+               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+               <div className="absolute inset-0 border-2 border-white/40 rounded-lg"></div>
+               <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-yellow-300 animate-pulse"></div>
+             </>
+           )}
         </button>
       );
     };
@@ -1451,12 +1455,18 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                   <h3 className="text-lg font-bold text-white">Complete Tower Layout</h3>
                                      <div className="flex items-center gap-3 text-xs flex-wrap">
                      <div className="flex items-center gap-2">
-                       <CheckCircle className="w-3 h-3 text-emerald-400" />
-                       <span className="text-slate-400">Safe Path</span>
+                       <div className="relative">
+                         <CheckCircle className="w-3 h-3 text-emerald-400" />
+                         <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
+                       </div>
+                       <span className="text-slate-400">Selected Safe Path</span>
                      </div>
                      <div className="flex items-center gap-2">
-                       <X className="w-3 h-3 text-red-400" />
-                       <span className="text-slate-400">Hit Mine</span>
+                       <div className="relative">
+                         <X className="w-3 h-3 text-red-400" />
+                         <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
+                       </div>
+                       <span className="text-slate-400">Selected Mine (Loss)</span>
                      </div>
                      <div className="flex items-center gap-2">
                        <AlertTriangle className="w-3 h-3 text-red-500" />
@@ -1464,7 +1474,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                      </div>
                      <div className="flex items-center gap-2">
                        <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
-                       <span className="text-slate-400">Unselected</span>
+                       <span className="text-slate-400">Unselected Tiles</span>
                      </div>
                    </div>
                 </div>
