@@ -1294,7 +1294,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Badge 
-                                className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 cursor-help relative overflow-visible group-hover:z-10`}
+                                className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 cursor-help relative overflow-visible group-hover:z-10
+                                  ${difficulty === 'easy' ? 'group-hover:bg-emerald-500/30 group-hover:border-emerald-400/50' : 
+                                    difficulty === 'medium' ? 'group-hover:bg-yellow-500/30 group-hover:border-yellow-400/50' : 
+                                    difficulty === 'hard' ? 'group-hover:bg-orange-500/30 group-hover:border-orange-400/50' : 'group-hover:bg-red-500/30 group-hover:border-red-400/50'}`}
                                 title={difficultyInfo.name}
                               >
                                 <span className="group-hover:opacity-0 transition-opacity duration-300">{difficultyInfo.name.charAt(0)}</span>
@@ -1304,10 +1307,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                   translate-x-2 group-hover:translate-x-0
                                   transition-all duration-300 ease-out
                                   ${difficultyInfo.color} 
-                                  ${difficulty === 'easy' ? 'bg-emerald-500/20' : 
-                                    difficulty === 'medium' ? 'bg-yellow-500/20' : 
-                                    difficulty === 'hard' ? 'bg-orange-500/20' : 'bg-red-500/20'}
-                                  backdrop-blur-sm border border-current/30`}>
+                                  ${difficulty === 'easy' ? 'bg-emerald-500/30 border-emerald-400/50' : 
+                                    difficulty === 'medium' ? 'bg-yellow-500/30 border-yellow-400/50' : 
+                                    difficulty === 'hard' ? 'bg-orange-500/30 border-orange-400/50' : 'bg-red-500/30 border-red-400/50'}
+                                  backdrop-blur-sm`}>
                                   {difficultyInfo.name}
                                 </span>
                               </Badge>
