@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Building2, Zap, AlertTriangle, Coins, Cpu, Shield, Crown, TrendingUp, Target, Gamepad2, User, Bot, CheckCircle, X, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { UserProfile } from '@/hooks/useUserProfile';
@@ -114,6 +115,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const [selectedTiles, setSelectedTiles] = useState<number[]>([]); // Track selected tile at each level
   const [loadingActiveGame, setLoadingActiveGame] = useState(true); // Loading state for checking active games
   const [countdown, setCountdown] = useState<number | null>(null); // Countdown for auto-reset
+  const [selectedGameReplay, setSelectedGameReplay] = useState<any | null>(null); // For game replay modal
   const { toast } = useToast();
   const { isMaintenanceMode } = useMaintenance();
   const { forceRefresh } = useLevelSync();
@@ -160,6 +162,83 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       supabase.removeChannel(balanceChannel);
     };
   }, [userData?.id, realtimeBalance]);
+
+  // Function to render replay tower with all mines revealed
+  const renderReplayTower = (gameData: any) => {
+    if (!gameData) return null;
+    
+    const difficulty = gameData.difficulty || 'easy';
+    const minePositions = gameData.mine_positions || [];
+    const selectedTiles = gameData.selected_tiles || [];
+    const levelReached = gameData.level_reached || 0;
+    const maxLevel = gameData.max_level || 8;
+    
+    const difficultyConfig = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO] || DIFFICULTY_INFO.easy;
+    const tilesPerRow = difficultyConfig.tilesPerRow;
+    
+    return (
+      <div className="space-y-1">
+        {Array.from({ length: maxLevel }, (_, levelIndex) => {
+          const level = maxLevel - 1 - levelIndex; // Reverse order (top to bottom)
+          const levelMines = minePositions[level] || [];
+          const selectedTile = selectedTiles[level];
+          const wasPlayed = level <= levelReached;
+          
+          return (
+            <div key={level} className="flex justify-center gap-1">
+              {Array.from({ length: tilesPerRow }, (_, tileIndex) => {
+                const isMine = levelMines.includes(tileIndex);
+                const isSelected = selectedTile === tileIndex;
+                const isRevealed = true; // Always show everything in replay
+                
+                let tileClass = "w-12 h-12 border-2 rounded-lg flex items-center justify-center transition-all duration-300 text-sm font-bold relative overflow-hidden";
+                
+                if (isSelected && !isMine) {
+                  // Safe tile that was selected (green path)
+                  tileClass += " bg-emerald-500/30 border-emerald-400 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.5)]";
+                } else if (isSelected && isMine) {
+                  // Mine that was selected (player hit it - red)
+                  tileClass += " bg-red-500/30 border-red-400 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.5)]";
+                } else if (isMine) {
+                  // Unrevealed mine (dark red)
+                  tileClass += " bg-red-900/30 border-red-700 text-red-500";
+                } else {
+                  // Safe unrevealed tile
+                  tileClass += " bg-slate-700/30 border-slate-600 text-slate-400";
+                }
+                
+                // Add level indicator styling
+                if (!wasPlayed) {
+                  tileClass += " opacity-50";
+                }
+                
+                return (
+                  <div key={tileIndex} className={tileClass}>
+                    {/* Tile content */}
+                    {isMine ? (
+                      <AlertTriangle className="w-6 h-6" />
+                    ) : (
+                      <Coins className="w-5 h-5" />
+                    )}
+                    
+                    {/* Selection indicator */}
+                    {isSelected && (
+                      <div className="absolute inset-0 border-2 border-white/60 rounded-lg animate-pulse" />
+                    )}
+                    
+                    {/* Level number in corner */}
+                    <div className="absolute top-0.5 left-0.5 text-xs text-white/60 font-mono">
+                      {level + 1}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   // Real-time balance sync: Update bet amount if it exceeds new balance
   useEffect(() => {
@@ -1117,7 +1196,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                       return (
                         <div
                           key={bet.id}
-                          className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-3 hover:bg-slate-700/50 transition-colors"
+                          className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-3 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                          onClick={() => setSelectedGameReplay(bet)}
                         >
                           {/* User Info Row */}
                           <div className="flex items-center gap-3 mb-2">
@@ -1226,6 +1306,128 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           </Card>
         </div>
       </div>
+
+      {/* Game Replay Modal */}
+      <Dialog open={!!selectedGameReplay} onOpenChange={() => setSelectedGameReplay(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Building2 className="w-6 h-6 text-primary" />
+              <div>
+                <span className="text-xl font-bold text-white">Tower Game Replay</span>
+                {selectedGameReplay && (
+                  <p className="text-sm text-slate-400 font-normal">
+                    {selectedGameReplay.username}'s climb on {selectedGameReplay.game_data?.difficulty || 'easy'} difficulty
+                  </p>
+                )}
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedGameReplay && (
+            <div className="space-y-6">
+              {/* Game Summary */}
+              <div className="bg-slate-800/30 border border-slate-600/50 rounded-lg p-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-slate-400">Player:</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Avatar className="w-6 h-6">
+                        <AvatarImage src={selectedGameReplay.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedGameReplay.username}`} />
+                        <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-blue-500 text-white">
+                          {selectedGameReplay.username.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <ClickableUsername 
+                        username={selectedGameReplay.username}
+                        className="font-medium text-slate-200 hover:text-primary transition-colors"
+                      >
+                        {selectedGameReplay.username}
+                      </ClickableUsername>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Difficulty:</span>
+                    <div className="mt-1">
+                      {(() => {
+                        const diffInfo = DIFFICULTY_INFO[selectedGameReplay.game_data?.difficulty as keyof typeof DIFFICULTY_INFO] || DIFFICULTY_INFO.easy;
+                        return (
+                          <Badge className={`text-xs px-2 py-1 ${diffInfo.color}`}>
+                            {diffInfo.name}
+                          </Badge>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Bet Amount:</span>
+                    <p className="text-slate-200 font-medium mt-1">${selectedGameReplay.bet_amount.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Result:</span>
+                    <div className={`flex items-center gap-1 mt-1 text-sm font-medium ${
+                      selectedGameReplay.profit >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    }`}>
+                      {selectedGameReplay.profit >= 0 ? (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          <span>WIN (+${selectedGameReplay.profit.toFixed(2)})</span>
+                        </>
+                      ) : (
+                        <>
+                          <X className="w-4 h-4" />
+                          <span>LOSE (${selectedGameReplay.profit.toFixed(2)})</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Level Reached:</span>
+                    <p className="text-slate-200 font-medium mt-1">
+                      {(selectedGameReplay.game_data?.level_reached || 0) + 1}/{selectedGameReplay.game_data?.max_level || 8}
+                    </p>
+                  </div>
+                  {selectedGameReplay.multiplier && selectedGameReplay.multiplier > 1 && (
+                    <div>
+                      <span className="text-slate-400">Multiplier:</span>
+                      <p className="text-primary font-medium mt-1">{selectedGameReplay.multiplier.toFixed(2)}x</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Tower Layout */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white">Complete Tower Layout</h3>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-emerald-500/30 border border-emerald-400 rounded"></div>
+                      <span className="text-slate-400">Selected Path</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-red-900/30 border border-red-700 rounded"></div>
+                      <span className="text-slate-400">Mines</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-slate-700/30 border border-slate-600 rounded"></div>
+                      <span className="text-slate-400">Safe Tiles</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4 max-h-96 overflow-y-auto">
+                  {renderReplayTower(selectedGameReplay.game_data)}
+                </div>
+                
+                <p className="text-xs text-slate-500 text-center">
+                  🎯 Green path shows tiles selected by {selectedGameReplay.username} • Red triangles are mines • Numbers show level progression
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
