@@ -1183,6 +1183,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                 <div className="space-y-3">
                   {liveBetFeed
                     .filter(bet => bet.game_type === 'tower')
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .slice(0, 20)
                     .map((bet) => {
                       const gameData = bet.game_data || {};

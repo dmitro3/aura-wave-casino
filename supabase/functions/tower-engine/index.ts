@@ -349,6 +349,39 @@ serve(async (req) => {
 
           console.log(`💥 Player hit mine at level ${game.current_level + 1}`);
 
+          // Insert into live bet feed
+          try {
+            const { data: userProfile } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('id', user.id)
+              .single();
+
+            await supabase
+              .from('live_bet_feed')
+              .insert({
+                user_id: user.id,
+                username: userProfile?.username || 'Unknown',
+                avatar_url: userProfile?.avatar_url,
+                game_type: 'tower',
+                bet_amount: game.bet_amount,
+                result: 'loss',
+                profit: -game.bet_amount,
+                multiplier: game.current_multiplier,
+                game_data: {
+                  difficulty: game.difficulty,
+                  level_reached: game.current_level,
+                  max_level: DIFFICULTY_CONFIGS[game.difficulty].maxLevel,
+                  mine_positions: game.mine_positions,
+                  selected_tiles: game.selected_tiles || []
+                }
+              });
+
+            console.log('✅ Successfully inserted tower loss into live_bet_feed');
+          } catch (liveFeedError) {
+            console.error('❌ Failed to insert into live_bet_feed:', liveFeedError);
+          }
+
           // Return updated game state
           const { data: updatedGame } = await supabase
             .from('tower_games')
@@ -560,6 +593,39 @@ serve(async (req) => {
         }
 
         console.log(`💰 Player cashed out: ${payout} at level ${game.current_level}`);
+
+        // Insert into live bet feed
+        try {
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', user.id)
+            .single();
+
+          await supabase
+            .from('live_bet_feed')
+            .insert({
+              user_id: user.id,
+              username: userProfile?.username || 'Unknown',
+              avatar_url: userProfile?.avatar_url,
+              game_type: 'tower',
+              bet_amount: game.bet_amount,
+              result: 'win',
+              profit: payout - game.bet_amount,
+              multiplier: multiplier,
+              game_data: {
+                difficulty: game.difficulty,
+                level_reached: game.current_level,
+                max_level: config.maxLevel,
+                mine_positions: game.mine_positions,
+                selected_tiles: game.selected_tiles || []
+              }
+            });
+
+          console.log('✅ Successfully inserted tower win into live_bet_feed');
+        } catch (liveFeedError) {
+          console.error('❌ Failed to insert into live_bet_feed:', liveFeedError);
+        }
 
         // Return updated game state
         const { data: updatedGame } = await supabase
