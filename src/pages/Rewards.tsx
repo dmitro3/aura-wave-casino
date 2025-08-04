@@ -33,7 +33,7 @@ export default function Rewards() {
   const [selectedLevelCase, setSelectedLevelCase] = useState<any | null>(null);
 
   const handleLevelCaseOpened = async (caseId: string) => {
-    // Find the case data
+    // Find the case data and just open the modal (don't actually open the case yet)
     const caseData = levelDailyCases.find(c => c.id === caseId);
     if (caseData) {
       setSelectedLevelCase(caseData);
@@ -459,14 +459,12 @@ export default function Rewards() {
           caseId={selectedLevelCase.id}
           level={selectedLevelCase.level_required}
           onCaseOpened={async (reward) => {
-            // Open the case via the hook
-            const result = await openLevelCase(selectedLevelCase.id);
-            if (result) {
-              // Case was opened successfully
-              handleLevelCaseClosed();
-            }
+            // This will be called when the case is actually opened from within the modal
+            // The modal handles the case opening internally
+            handleLevelCaseClosed();
           }}
           isFreeCase={false}
+          openCaseFunction={openLevelCase}
         />
       )}
     </div>

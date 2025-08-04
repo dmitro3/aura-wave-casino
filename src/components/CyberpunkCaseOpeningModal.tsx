@@ -33,6 +33,7 @@ interface CyberpunkCaseOpeningModalProps {
   onCaseOpened: (reward: CaseReward) => void;
   isFreeCase?: boolean;
   freeCaseType?: 'common' | 'rare' | 'epic';
+  openCaseFunction?: (caseId: string) => Promise<any>;
 }
 
 interface CaseReward {
@@ -162,7 +163,8 @@ export const CyberpunkCaseOpeningModal = ({
   level, 
   onCaseOpened,
   isFreeCase = false,
-  freeCaseType 
+  freeCaseType,
+  openCaseFunction
 }: CyberpunkCaseOpeningModalProps) => {
   const [phase, setPhase] = useState<'preview' | 'opening' | 'spinning' | 'revealing' | 'complete'>('preview');
   const [reward, setReward] = useState<CaseReward | null>(null);
@@ -190,27 +192,46 @@ export const CyberpunkCaseOpeningModal = ({
     setPhase('opening');
 
     try {
-      // Call appropriate case opening endpoint
-      const endpoint = isFreeCase ? 'claim-free-case' : 'case-opening-engine';
-      const body = isFreeCase 
-        ? { caseType: freeCaseType }
-        : { caseId, level };
-
-      const { data, error } = await supabase.functions.invoke(endpoint, { body });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      let result;
+      
+      if (isFreeCase) {
+        // Handle free cases
+        const { data, error } = await supabase.functions.invoke('claim-free-case', { 
+          body: { caseType: freeCaseType } 
+        });
+        
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || 'Failed to open case');
+        
+        result = data;
+      } else {
+        // Handle level cases using the provided function
+        if (!openCaseFunction) {
+          throw new Error('No case opening function provided');
+        }
+        
+        result = await openCaseFunction(caseId);
+        if (!result) {
+          throw new Error('Failed to open case');
+        }
+      }
 
       // Handle different response formats
       const rewardData: CaseReward = isFreeCase 
         ? { 
             rarity: (freeCaseType || 'common') as 'common' | 'rare' | 'epic' | 'legendary', 
-            amount: data.amount, 
+            amount: result.amount, 
             level, 
             animationType: 'normal', 
             caseId 
           }
-        : data.reward as CaseReward;
+        : { 
+            rarity: 'common', // Default rarity for level cases
+            amount: result.reward_amount || 0, 
+            level, 
+            animationType: 'normal', 
+            caseId 
+          };
       
       // Start spinning animation
       setTimeout(() => {
