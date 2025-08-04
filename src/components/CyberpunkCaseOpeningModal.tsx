@@ -332,16 +332,35 @@ export const CyberpunkCaseOpeningModal = ({
     // Small delay to ensure the spinning phase is rendered
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Roulette-style animation configuration
+    // Roulette-style animation configuration (like the actual roulette game)
     const TILE_SIZE_PX = 136; // 128px card + 8px gap
     const SPIN_DURATION_MS = 3000; // 3 seconds as requested
+    const REWARDS_PER_CYCLE = 50; // We generate 50 rewards per cycle
+    const TILE_REPEATS = 40; // We repeat the cycle 40 times
     
-    // Calculate a random target position for smooth spinning
-    const wheelCyclePx = possibleRewards.length * TILE_SIZE_PX;
+    // Calculate wheel cycle based on the 50 rewards (not the total repeated tiles)
+    const wheelCyclePx = REWARDS_PER_CYCLE * TILE_SIZE_PX; // 50 * 136 = 6800px per cycle
     const startPosition = 0;
-    const targetPosition = startPosition - (Math.random() * 30 + 15) * wheelCyclePx; // Spin 15-45 cycles
     
-    console.log('Starting animation:', { startPosition, targetPosition, wheelCyclePx });
+    // Spin 15-45 cycles (like roulette) but ensure we have enough tiles
+    const spinCycles = Math.random() * 30 + 15; // 15-45 cycles
+    const targetPosition = startPosition - (spinCycles * wheelCyclePx);
+    
+    // Ensure we don't go beyond our tile generation bounds
+    const totalTilesGenerated = REWARDS_PER_CYCLE * TILE_REPEATS; // 50 * 40 = 2000 tiles
+    const maxSafePosition = -(totalTilesGenerated - 10) * TILE_SIZE_PX; // Leave 10 tiles buffer
+    
+    // Clamp target position to safe bounds
+    const clampedTargetPosition = Math.max(targetPosition, maxSafePosition);
+    
+    console.log('Starting animation:', { 
+      startPosition, 
+      targetPosition: clampedTargetPosition, 
+      wheelCyclePx, 
+      spinCycles,
+      totalTilesGenerated,
+      maxSafePosition
+    });
     
     // Get the reel element using ref
     const reelElement = reelRef.current;
@@ -365,8 +384,8 @@ export const CyberpunkCaseOpeningModal = ({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (reelElement) {
-          console.log('Applying transform:', targetPosition);
-          reelElement.style.transform = `translateX(${targetPosition}px)`;
+          console.log('Applying transform:', clampedTargetPosition);
+          reelElement.style.transform = `translateX(${clampedTargetPosition}px)`;
         }
       });
     });
