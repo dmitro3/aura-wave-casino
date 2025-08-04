@@ -171,7 +171,6 @@ export const CyberpunkCaseOpeningModal = ({
   const [isLocked, setIsLocked] = useState(false);
   const [possibleRewards, setPossibleRewards] = useState<RewardItem[]>([]);
   const [spinning, setSpinning] = useState(false);
-  const [reelPosition, setReelPosition] = useState(0);
   const { toast } = useToast();
 
   // Initialize possible rewards
@@ -186,131 +185,117 @@ export const CyberpunkCaseOpeningModal = ({
     if (isLocked) return;
     
     setIsLocked(true);
-    setPhase('opening');
-
-    // Start the opening animation first
-    setTimeout(() => {
-      setPhase('spinning');
-      startSpinningAnimation();
-    }, 1000);
+    setPhase('spinning');
+    startSpinningAnimation();
   };
 
   const startSpinningAnimation = async () => {
     setSpinning(true);
     
-    // Roulette-style animation with proper tile rendering
+    // Roulette-style animation configuration
     const TILE_SIZE_PX = 136; // 128px card + 8px gap
-    const VISIBLE_TILES = 9; // Show 9 tiles at once
-    const REEL_WIDTH_PX = VISIBLE_TILES * TILE_SIZE_PX;
-    const CENTER_MARKER_PX = REEL_WIDTH_PX / 2;
+    const SPIN_DURATION_MS = 4000; // 4 seconds exactly like roulette
     
-    // Create enough tiles for smooth infinite scrolling (like roulette)
-    const TILE_REPEATS = 40; // Repeat the possible rewards 40 times
-    const TOTAL_TILES = possibleRewards.length * TILE_REPEATS;
-    const TOTAL_REEL_WIDTH_PX = TOTAL_TILES * TILE_SIZE_PX;
+    // Calculate a random target position for smooth spinning
+    const wheelCyclePx = possibleRewards.length * TILE_SIZE_PX;
+    const startPosition = 0;
+    const targetPosition = startPosition - (Math.random() * 50 + 20) * wheelCyclePx; // Spin 20-70 cycles
     
-    // Fast spinning phase - similar to roulette
-    let currentSpeed = 100;
-    let currentPosition = 0;
-    let spinDuration = 0;
-    const totalSpinDuration = 4000; // 4 seconds total spin time
+    // Get the reel element
+    const reelElement = document.querySelector('.case-reel') as HTMLElement;
+    if (!reelElement) {
+      console.error('Reel element not found');
+      return;
+    }
     
-    const spinInterval = setInterval(() => {
-      spinDuration += 50;
-      currentPosition += currentSpeed;
+    // ROBUST ANIMATION SEQUENCE (like roulette)
+    // Step 1: Ensure no transition and set starting position
+    reelElement.style.transition = 'none';
+    reelElement.style.transform = `translateX(${startPosition}px)`;
+    
+    // Step 2: Force reflow
+    void reelElement.offsetHeight;
+    
+    // Step 3: Set transition with cubic-bezier easing (same as roulette)
+    reelElement.style.transition = `transform ${SPIN_DURATION_MS}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
+    
+    // Step 4: Start animation after next frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (reelElement) {
+          reelElement.style.transform = `translateX(${targetPosition}px)`;
+        }
+      });
+    });
+    
+    // Complete animation after exactly 4 seconds
+    setTimeout(async () => {
+      setSpinning(false);
       
-      // Normalize position to prevent tiles from disappearing
-      const wheelCyclePx = possibleRewards.length * TILE_SIZE_PX;
-      let normalizedPosition = currentPosition % wheelCyclePx;
-      
-      // Keep position within safe bounds
-      while (normalizedPosition < -wheelCyclePx * 10) {
-        normalizedPosition += wheelCyclePx;
-      }
-      while (normalizedPosition > wheelCyclePx * 10) {
-        normalizedPosition -= wheelCyclePx;
-      }
-      
-      setReelPosition(normalizedPosition);
-      
-      // Gradually slow down over time
-      const progress = spinDuration / totalSpinDuration;
-      if (progress > 0.3) {
-        currentSpeed = Math.max(5, currentSpeed * 0.98);
-      }
-      
-      // Stop after total duration
-      if (spinDuration >= totalSpinDuration) {
-        clearInterval(spinInterval);
-        setSpinning(false);
+      // Now call the backend to get the actual reward
+      try {
+        let result;
         
-        // Now call the backend to get the actual reward
-        setTimeout(async () => {
-          try {
-            let result;
-            
-            if (isFreeCase) {
-              // Handle free cases
-              const { data, error } = await supabase.functions.invoke('claim-free-case', { 
-                body: { caseType: freeCaseType } 
-              });
-              
-              if (error) throw error;
-              if (!data.success) throw new Error(data.error || 'Failed to open case');
-              
-              result = data;
-            } else {
-              // Handle level cases using the provided function
-              if (!openCaseFunction) {
-                throw new Error('No case opening function provided');
-              }
-              
-              result = await openCaseFunction(caseId);
-              if (!result) {
-                throw new Error('Failed to open case');
-              }
-            }
-
-            // Handle different response formats
-            const rewardData: CaseReward = isFreeCase 
-              ? { 
-                  rarity: (freeCaseType || 'common') as 'common' | 'rare' | 'epic' | 'legendary', 
-                  amount: result.amount, 
-                  level, 
-                  animationType: 'normal', 
-                  caseId 
-                }
-              : { 
-                  rarity: 'common', // Default rarity for level cases
-                  amount: result.reward_amount || 0, 
-                  level, 
-                  animationType: 'normal', 
-                  caseId 
-                };
-            
-            // Show revealing phase
-            setPhase('revealing');
-            setReward(rewardData);
-            
-            // Show complete phase
-            setTimeout(() => {
-              setPhase('complete');
-              onCaseOpened(rewardData);
-            }, 2000);
-            
-          } catch (error) {
-            console.error('Error opening case:', error);
-            toast({
-              title: 'Error',
-              description: 'Failed to open case. Please try again.',
-              variant: 'destructive'
-            });
-            setIsLocked(false);
-            setPhase('preview');
+        if (isFreeCase) {
+          // Handle free cases
+          const { data, error } = await supabase.functions.invoke('claim-free-case', { 
+            body: { caseType: freeCaseType } 
+          });
+          
+          if (error) throw error;
+          if (!data.success) throw new Error(data.error || 'Failed to open case');
+          
+          result = data;
+        } else {
+          // Handle level cases using the provided function
+          if (!openCaseFunction) {
+            throw new Error('No case opening function provided');
           }
-        }, 500);
+          
+          result = await openCaseFunction(caseId);
+          if (!result) {
+            throw new Error('Failed to open case');
+          }
+        }
+
+        // Handle different response formats
+        const rewardData: CaseReward = isFreeCase 
+          ? { 
+              rarity: (freeCaseType || 'common') as 'common' | 'rare' | 'epic' | 'legendary', 
+              amount: result.amount, 
+              level, 
+              animationType: 'normal', 
+              caseId 
+            }
+          : { 
+              rarity: 'common', // Default rarity for level cases
+              amount: result.reward_amount || 0, 
+              level, 
+              animationType: 'normal', 
+              caseId 
+            };
+        
+        // Show revealing phase
+        setPhase('revealing');
+        setReward(rewardData);
+        
+        // Show complete phase
+        setTimeout(() => {
+          setPhase('complete');
+          onCaseOpened(rewardData);
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Error opening case:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to open case. Please try again.',
+          variant: 'destructive'
+        });
+        setIsLocked(false);
+        setPhase('preview');
       }
-    }, 50);
+    }, SPIN_DURATION_MS);
   };
 
 
@@ -322,7 +307,6 @@ export const CyberpunkCaseOpeningModal = ({
     setReward(null);
     setIsLocked(false);
     setSpinning(false);
-    setReelPosition(0);
     onClose();
   };
 
@@ -360,7 +344,6 @@ export const CyberpunkCaseOpeningModal = ({
         setReward(null);
         setIsLocked(false);
         setSpinning(false);
-        setReelPosition(0);
       }, 300);
     }
   }, [isOpen]);
@@ -488,21 +471,7 @@ export const CyberpunkCaseOpeningModal = ({
                        </div>
                      )}
 
-                    {/* Opening Phase */}
-                    {phase === 'opening' && (
-                      <div className="text-center space-y-6">
-                        <div className="relative mx-auto w-32 h-32">
-                          <div className="w-full h-full rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary to-accent border-2 border-primary/30 shadow-2xl animate-bounce">
-                            <div className="text-center text-white">
-                              <Gift className="w-16 h-16 mx-auto mb-2 animate-spin" />
-                              <div className="text-lg font-bold">Opening...</div>
-                            </div>
-                          </div>
-                          <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl blur-xl animate-ping" />
-                        </div>
-                        <h3 className="text-xl font-bold animate-pulse">Initializing Reward System...</h3>
-                      </div>
-                    )}
+
 
                     {/* Spinning Phase */}
                     {phase === 'spinning' && (
@@ -518,8 +487,7 @@ export const CyberpunkCaseOpeningModal = ({
                         <div className="relative">
                           <div className="flex justify-center overflow-hidden">
                             <div 
-                              className="flex space-x-2 transition-transform duration-75 ease-out"
-                              style={{ transform: `translateX(-${reelPosition}px)` }}
+                              className="case-reel flex space-x-2"
                             >
                               {/* Render enough tiles for smooth infinite scrolling (like roulette) */}
                               {Array.from({ length: 40 }, (_, repeat) => 
