@@ -16,6 +16,7 @@ import { UserProfile } from '@/hooks/useUserProfile';
 import { useMaintenance } from '@/contexts/MaintenanceContext';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useXPSync } from '@/contexts/XPSyncContext';
+import { useRealtimeBalance } from '@/contexts/RealtimeBalanceContext';
 import ClickableUsername from './ClickableUsername';
 
 interface TowerGameProps {
@@ -123,45 +124,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   
   const { history: gameHistory, refetch: refreshHistory } = useGameHistory('tower');
   const { liveBetFeed } = useRealtimeFeeds();
-
-  // Real-time balance state for instant UI updates
-  const [realtimeBalance, setRealtimeBalance] = useState<number>(userData?.balance || 0);
-
-  // Sync realtime balance when userData changes
-  useEffect(() => {
-    if (userData?.balance !== undefined) {
-      setRealtimeBalance(userData.balance);
-    }
-  }, [userData?.balance]);
-
-  // Direct real-time balance subscription for instant updates
-  useEffect(() => {
-    if (!userData?.id) return;
-
-    const balanceChannel = supabase
-      .channel(`tower_balance_${userData.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${userData.id}`
-        },
-        (payload) => {
-          if (payload.eventType === 'UPDATE' && payload.new?.balance !== undefined) {
-            const newBalance = parseFloat(payload.new.balance);
-            console.log('🎯 Tower real-time balance update:', realtimeBalance, '→', newBalance);
-            setRealtimeBalance(newBalance);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(balanceChannel);
-    };
-  }, [userData?.id, realtimeBalance]);
+  const { realtimeBalance, refreshBalanceForBet } = useRealtimeBalance();
 
   // Function to render replay tower with all mines revealed - matching actual game design
   const renderReplayTower = (gameData: any) => {
@@ -582,7 +545,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       return;
     }
 
-    if (amount > userData.balance) {
+    if (amount > realtimeBalance) {
       setLoading(false);
       toast({
         title: "Insufficient balance",

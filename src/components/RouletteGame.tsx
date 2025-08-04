@@ -14,6 +14,7 @@ import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { useMaintenance } from '@/contexts/MaintenanceContext';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useXPSync } from '@/contexts/XPSyncContext';
+import { useRealtimeBalance } from '@/contexts/RealtimeBalanceContext';
 import { RouletteReel } from './RouletteReel';
 import { ProvablyFairModal } from './ProvablyFairModal';
 import { ProvablyFairHistoryModal } from './ProvablyFairHistoryModal';
@@ -124,53 +125,13 @@ export function RouletteGame({ userData, onUpdateUser }: RouletteGameProps) {
   const balanceRef = useRef<number>(0);
   const lastResultsFetchRef = useRef<number>(0);
 
-  // Real-time balance state for instant UI updates
-  const [realtimeBalance, setRealtimeBalance] = useState<number>(profile?.balance || 0);
+  const { realtimeBalance } = useRealtimeBalance();
 
-  // Sync realtime balance when profile changes
+  // Update balance ref when realtime balance changes (for backward compatibility)
   useEffect(() => {
-    if (profile?.balance !== undefined) {
-      setRealtimeBalance(profile.balance);
-    }
-  }, [profile?.balance]);
-
-  // Update balance ref when profile changes (for backward compatibility)
-  useEffect(() => {
-    if (profile?.balance !== undefined) {
-      balanceRef.current = profile.balance;
-      console.log('🎰 Roulette balanceRef synced with real-time balance:', profile.balance);
-    }
-  }, [profile?.balance]);
-
-  // Direct real-time balance subscription for instant updates
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const balanceChannel = supabase
-      .channel(`roulette_balance_${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${user.id}`
-        },
-        (payload) => {
-          if (payload.eventType === 'UPDATE' && payload.new?.balance !== undefined) {
-            const newBalance = parseFloat(payload.new.balance);
-            console.log('🎰 Roulette real-time balance update:', realtimeBalance, '→', newBalance);
-            setRealtimeBalance(newBalance);
-            balanceRef.current = newBalance; // Keep ref in sync too
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(balanceChannel);
-    };
-  }, [user?.id, realtimeBalance]);
+    balanceRef.current = realtimeBalance;
+    console.log('🎰 Roulette balanceRef synced with real-time balance:', realtimeBalance);
+  }, [realtimeBalance]);
 
   // Real-time balance sync: Update bet amount if it exceeds new balance
   useEffect(() => {

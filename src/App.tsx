@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LevelSyncProvider } from "@/contexts/LevelSyncContext";
 import { XPSyncProvider } from "@/contexts/XPSyncContext";
 import { MaintenanceProvider } from "@/contexts/MaintenanceContext";
+import { RealtimeBalanceProvider } from "@/contexts/RealtimeBalanceContext";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import AccountDeletionOverlay from "@/components/AccountDeletionOverlay";
 import InstantDeletionHandler from "@/components/InstantDeletionHandler";
@@ -25,27 +26,29 @@ const App = () => (
     <Toaster />
     <Sonner />
     <AuthProvider>
-      <LevelSyncProvider>
-        <XPSyncProvider>
-          <MaintenanceProvider>
-          <MaintenanceOverlay />
-          <AccountDeletionOverlay />
-          <InstantDeletionHandler />
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/roulette" element={<Index initialGame="roulette" />} />
-            <Route path="/coinflip" element={<Index initialGame="coinflip" />} />
-            <Route path="/tower" element={<Index initialGame="tower" />} />
-            <Route path="/rewards" element={<Rewards />} />
-            <Route path="/provably-fair" element={<ProvablyFair />} />
-            <Route path="/terms" element={<TermsAndConditions />} />
-            <Route path="/responsible-gambling" element={<ResponsibleGambling />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          </MaintenanceProvider>
-        </XPSyncProvider>
-      </LevelSyncProvider>
+      <RealtimeBalanceProvider>
+        <LevelSyncProvider>
+          <XPSyncProvider>
+            <MaintenanceProvider>
+            <MaintenanceOverlay />
+            <AccountDeletionOverlay />
+            <InstantDeletionHandler />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/roulette" element={<Index initialGame="roulette" />} />
+              <Route path="/coinflip" element={<Index initialGame="coinflip" />} />
+              <Route path="/tower" element={<Index initialGame="tower" />} />
+              <Route path="/rewards" element={<Rewards />} />
+              <Route path="/provably-fair" element={<ProvablyFair />} />
+              <Route path="/terms" element={<TermsAndConditions />} />
+              <Route path="/responsible-gambling" element={<ResponsibleGambling />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            </MaintenanceProvider>
+          </XPSyncProvider>
+        </LevelSyncProvider>
+      </RealtimeBalanceProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

@@ -10,6 +10,7 @@ import { UserProfile } from '@/hooks/useUserProfile';
 import { useMaintenance } from '@/contexts/MaintenanceContext';
 import { useLevelSync } from '@/contexts/LevelSyncContext';
 import { useXPSync } from '@/contexts/XPSyncContext';
+import { useRealtimeBalance } from '@/contexts/RealtimeBalanceContext';
 import { supabase } from '@/integrations/supabase/client';
 import CoinFlipAnimation from './CoinflipStreak/CoinFlipAnimation';
 import StreakTracker from './CoinflipStreak/StreakTracker';
@@ -69,6 +70,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
   const { isMaintenanceMode } = useMaintenance();
   const { forceRefresh } = useLevelSync();
   const { forceFullRefresh } = useXPSync();
+  const { realtimeBalance } = useRealtimeBalance();
 
   const handlePlaceBet = async () => {
     if (isMaintenanceMode) {
@@ -104,7 +106,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
 
     const bet = validation.sanitized;
 
-    if (bet > userData.balance) {
+    if (bet > realtimeBalance) {
       toast({
         title: "Insufficient Balance",
         description: "You don't have enough balance for this bet",
@@ -114,7 +116,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
     }
 
     // Update balance immediately and set game to betting phase
-    await onUpdateUser({ balance: userData.balance - bet });
+    await onUpdateUser({ balance: realtimeBalance - bet });
     
     setGameState(prev => ({
       ...prev,
@@ -378,7 +380,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
                       onChange={(e) => setBetInput(e.target.value)}
                       placeholder="Enter bet amount"
                       className="glass border-0"
-                      max={userData.balance}
+                      max={realtimeBalance}
                       min="0"
                       step="0.01"
                     />
@@ -402,7 +404,7 @@ export default function CoinflipGame({ userData, onUpdateUser }: CoinflipGamePro
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setBetInput(userData.balance.toString())}
+                        onClick={() => setBetInput(realtimeBalance.toString())}
                         className="glass border-0"
                       >
                         Max
