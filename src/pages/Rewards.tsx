@@ -46,10 +46,12 @@ export default function Rewards() {
     }
   };
 
-  const handleLevelCaseClosed = () => {
+  const handleLevelCaseClosed = (shouldRefresh = false) => {
     setSelectedLevelCase(null);
-    // Refresh the cases to update availability
-    refreshLevelCases();
+    // Only refresh if a case was actually opened
+    if (shouldRefresh) {
+      refreshLevelCases();
+    }
   };
 
   const handleTestReset = async () => {
@@ -505,7 +507,7 @@ export default function Rewards() {
           onCaseOpened={async (reward) => {
             // This will be called when the case is actually opened from within the modal
             // The modal handles the case opening internally
-            handleLevelCaseClosed();
+            handleLevelCaseClosed(true); // Refresh because a case was opened
           }}
           isFreeCase={false}
           openCaseFunction={openLevelCase}
