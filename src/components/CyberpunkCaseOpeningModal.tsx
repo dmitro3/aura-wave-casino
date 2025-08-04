@@ -65,7 +65,7 @@ const rarityConfig = {
     bgGradient: 'bg-gradient-to-br from-slate-800/90 to-slate-900/90',
     borderColor: 'border-slate-500/50',
     particles: '✨',
-    icon: '💵',
+    icon: '',
     shimmer: false
   },
   rare: {
@@ -75,7 +75,7 @@ const rarityConfig = {
     bgGradient: 'bg-gradient-to-br from-blue-800/90 to-blue-900/90',
     borderColor: 'border-blue-500/50',
     particles: '💫',
-    icon: '💎',
+    icon: '',
     shimmer: false
   },
   epic: {
@@ -85,7 +85,7 @@ const rarityConfig = {
     bgGradient: 'bg-gradient-to-br from-purple-800/90 to-purple-900/90',
     borderColor: 'border-purple-500/50',
     particles: '🌟',
-    icon: '⚡',
+    icon: '',
     shimmer: false
   },
   legendary: {
@@ -95,7 +95,7 @@ const rarityConfig = {
     bgGradient: 'bg-gradient-to-br from-orange-800/90 to-orange-900/90',
     borderColor: 'border-orange-500/50',
     particles: '🔥',
-    icon: '👑',
+    icon: '',
     shimmer: false
   }
 };
@@ -416,7 +416,7 @@ export const CyberpunkCaseOpeningModal = ({
                          {/* Static Reward Reel */}
                          <div className="relative">
                            <div className="flex justify-center overflow-hidden">
-                             <div className="flex space-x-4">
+                             <div className="flex space-x-2">
                                {possibleRewards.slice(0, 9).map((reward, index) => (
                                  <Card
                                    key={index}
@@ -426,7 +426,6 @@ export const CyberpunkCaseOpeningModal = ({
                                    `}
                                  >
                                    <CardContent className="p-4 text-center">
-                                     <div className="text-3xl mb-2">{reward.icon}</div>
                                      <div className="text-lg font-bold text-white mb-1">
                                        ${reward.amount.toLocaleString()}
                                      </div>
@@ -507,7 +506,6 @@ export const CyberpunkCaseOpeningModal = ({
                                   `}
                                 >
                                   <CardContent className="p-4 text-center">
-                                    <div className="text-3xl mb-2">{reward.icon}</div>
                                     <div className="text-lg font-bold text-white mb-1">
                                       ${reward.amount.toLocaleString()}
                                     </div>
@@ -586,8 +584,7 @@ export const CyberpunkCaseOpeningModal = ({
                           ${rarityConfig[reward.rarity].glow}
                         `}>
                           <div className="text-center text-white">
-                            <div className="text-6xl mb-4">{rarityConfig[reward.rarity].icon}</div>
-                            <div className="text-3xl font-bold">${reward.amount.toFixed(2)}</div>
+                            <div className="text-3xl font-bold mb-2">${reward.amount.toFixed(2)}</div>
                             <div className="text-lg capitalize">{reward.rarity}</div>
                           </div>
                         </div>
