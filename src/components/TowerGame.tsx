@@ -1327,9 +1327,9 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                             {/* Level Progress */}
                             <div className="space-y-1">
                               <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-400">Level Progress</span>
+                                <span className="text-slate-400">Levels Cleared</span>
                                 <span className="text-slate-300 font-medium">
-                                  {levelReached + 1}/{maxLevel}
+                                  {levelReached}/{maxLevel}
                                 </span>
                               </div>
                               <div className="w-full bg-slate-700 rounded-full h-2">
@@ -1338,7 +1338,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                     isWin ? 'bg-emerald-500' : 'bg-red-500'
                                   }`}
                                   style={{ 
-                                    width: `${Math.max(((levelReached + 1) / maxLevel) * 100, 5)}%` 
+                                    width: `${Math.max((levelReached / maxLevel) * 100, 5)}%` 
                                   }}
                                 />
                               </div>
@@ -1457,9 +1457,9 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-400">Level Reached:</span>
+                    <span className="text-slate-400">Levels Cleared:</span>
                     <p className="text-slate-200 font-medium mt-1">
-                      {(selectedGameReplay.game_data?.level_reached || 0) + 1}/{selectedGameReplay.game_data?.max_level || 8}
+                      {selectedGameReplay.game_data?.level_reached || 0}/{selectedGameReplay.game_data?.max_level || 8}
                     </p>
                   </div>
                   {selectedGameReplay.multiplier && selectedGameReplay.multiplier > 1 && (
@@ -1473,48 +1473,13 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
 
               {/* Tower Layout */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-white">Complete Tower Layout</h3>
-                                     <div className="flex items-center gap-3 text-xs flex-wrap">
-                     <div className="flex items-center gap-2">
-                       <div className="relative">
-                         <CheckCircle className="w-3 h-3 text-emerald-400" />
-                         <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
-                       </div>
-                       <span className="text-slate-400">Cleared Path</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <div className="relative">
-                         <X className="w-3 h-3 text-red-400" />
-                         <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
-                       </div>
-                       <span className="text-slate-400">Hit Mine</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <X className="w-3 h-3 text-red-400" />
-                       <span className="text-slate-400">All Mines</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <div className="relative">
-                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                         <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
-                       </div>
-                       <span className="text-slate-400">Selected (Hidden)</span>
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
-                       <span className="text-slate-400">Unselected</span>
-                     </div>
-                   </div>
-                </div>
+                <h3 className="text-lg font-bold text-white">Tower Layout</h3>
                 
                 <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4 max-h-96 overflow-y-auto">
                   {renderReplayTower(selectedGameReplay.game_data)}
                 </div>
                 
-                <p className="text-xs text-slate-500 text-center">
-                  🎯 Green path shows tiles selected by {selectedGameReplay.username} • Red triangles are mines • Numbers show level progression
-                </p>
+
               </div>
             </div>
           )}
