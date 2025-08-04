@@ -1438,8 +1438,12 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                     <div className="mt-1">
                       {(() => {
                         const diffInfo = DIFFICULTY_INFO[selectedGameReplay.game_data?.difficulty as keyof typeof DIFFICULTY_INFO] || DIFFICULTY_INFO.easy;
+                        const difficulty = selectedGameReplay.game_data?.difficulty || 'easy';
                         return (
-                          <Badge className={`text-xs px-2 py-1 ${diffInfo.color}`}>
+                          <Badge className={`text-xs px-2 py-1 ${diffInfo.color} transition-all duration-300 cursor-default
+                            ${difficulty === 'easy' ? 'hover:bg-emerald-500/30 hover:border-emerald-400/50' : 
+                              difficulty === 'medium' ? 'hover:bg-amber-500/30 hover:border-amber-400/50' : 
+                              difficulty === 'hard' ? 'hover:bg-rose-500/30 hover:border-rose-400/50' : 'hover:bg-violet-500/30 hover:border-violet-400/50'}`}>
                             {diffInfo.name}
                           </Badge>
                         );
