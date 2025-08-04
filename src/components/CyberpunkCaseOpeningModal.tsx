@@ -188,108 +188,108 @@ export const CyberpunkCaseOpeningModal = ({
     setIsLocked(true);
     setPhase('opening');
 
-    try {
-      let result;
-      
-      if (isFreeCase) {
-        // Handle free cases
-        const { data, error } = await supabase.functions.invoke('claim-free-case', { 
-          body: { caseType: freeCaseType } 
-        });
-        
-        if (error) throw error;
-        if (!data.success) throw new Error(data.error || 'Failed to open case');
-        
-        result = data;
-      } else {
-        // Handle level cases using the provided function
-        if (!openCaseFunction) {
-          throw new Error('No case opening function provided');
-        }
-        
-        result = await openCaseFunction(caseId);
-        if (!result) {
-          throw new Error('Failed to open case');
-        }
-      }
-
-      // Handle different response formats
-      const rewardData: CaseReward = isFreeCase 
-        ? { 
-            rarity: (freeCaseType || 'common') as 'common' | 'rare' | 'epic' | 'legendary', 
-            amount: result.amount, 
-            level, 
-            animationType: 'normal', 
-            caseId 
-          }
-        : { 
-            rarity: 'common', // Default rarity for level cases
-            amount: result.reward_amount || 0, 
-            level, 
-            animationType: 'normal', 
-            caseId 
-          };
-      
-      // Start spinning animation
-      setTimeout(() => {
-        setPhase('spinning');
-        startSpinningAnimation(rewardData);
-      }, 1000);
-
-    } catch (error) {
-      console.error('Error opening case:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to open case. Please try again.',
-        variant: 'destructive'
-      });
-      setIsLocked(false);
-      setPhase('preview');
-    }
+    // Start the opening animation first
+    setTimeout(() => {
+      setPhase('spinning');
+      startSpinningAnimation();
+    }, 1000);
   };
 
-  const startSpinningAnimation = (rewardData: CaseReward) => {
+  const startSpinningAnimation = async () => {
     setSpinning(true);
     
-    // Find the reward in our possible rewards list
-    const targetReward = possibleRewards.find(r => 
-      r.rarity === rewardData.rarity && 
-      Math.abs(r.amount - rewardData.amount) < 5
-    );
-    
-    const targetIndex = targetReward ? possibleRewards.indexOf(targetReward) : 4; // Center position (4th item)
-    
-    // Fast spinning phase
-    let currentSpeed = 50;
+    // Fast spinning phase - similar to roulette
+    let currentSpeed = 100;
     let currentPosition = 0;
+    let spinDuration = 0;
+    const totalSpinDuration = 4000; // 4 seconds total spin time
     
     const spinInterval = setInterval(() => {
+      spinDuration += 50;
       currentPosition += currentSpeed;
       setReelPosition(currentPosition);
       
-      // Gradually slow down
-      if (currentSpeed > 5) {
-        currentSpeed *= 0.98;
+      // Gradually slow down over time
+      const progress = spinDuration / totalSpinDuration;
+      if (progress > 0.3) {
+        currentSpeed = Math.max(5, currentSpeed * 0.98);
       }
       
-      // Stop when we reach the target (center the winning reward)
-      const targetPosition = targetIndex * 136; // 136px per item (128px card + 8px gap)
-      if (currentSpeed <= 5 && Math.abs(currentPosition - targetPosition) < 10) {
+      // Stop after total duration
+      if (spinDuration >= totalSpinDuration) {
         clearInterval(spinInterval);
         setSpinning(false);
         
-        setTimeout(() => {
-          setPhase('revealing');
-          setReward(rewardData);
-          
-          setTimeout(() => {
-            setPhase('complete');
-            onCaseOpened(rewardData);
-          }, 2000);
+        // Now call the backend to get the actual reward
+        setTimeout(async () => {
+          try {
+            let result;
+            
+            if (isFreeCase) {
+              // Handle free cases
+              const { data, error } = await supabase.functions.invoke('claim-free-case', { 
+                body: { caseType: freeCaseType } 
+              });
+              
+              if (error) throw error;
+              if (!data.success) throw new Error(data.error || 'Failed to open case');
+              
+              result = data;
+            } else {
+              // Handle level cases using the provided function
+              if (!openCaseFunction) {
+                throw new Error('No case opening function provided');
+              }
+              
+              result = await openCaseFunction(caseId);
+              if (!result) {
+                throw new Error('Failed to open case');
+              }
+            }
+
+            // Handle different response formats
+            const rewardData: CaseReward = isFreeCase 
+              ? { 
+                  rarity: (freeCaseType || 'common') as 'common' | 'rare' | 'epic' | 'legendary', 
+                  amount: result.amount, 
+                  level, 
+                  animationType: 'normal', 
+                  caseId 
+                }
+              : { 
+                  rarity: 'common', // Default rarity for level cases
+                  amount: result.reward_amount || 0, 
+                  level, 
+                  animationType: 'normal', 
+                  caseId 
+                };
+            
+            // Show revealing phase
+            setPhase('revealing');
+            setReward(rewardData);
+            
+            // Show complete phase
+            setTimeout(() => {
+              setPhase('complete');
+              onCaseOpened(rewardData);
+            }, 2000);
+            
+          } catch (error) {
+            console.error('Error opening case:', error);
+            toast({
+              title: 'Error',
+              description: 'Failed to open case. Please try again.',
+              variant: 'destructive'
+            });
+            setIsLocked(false);
+            setPhase('preview');
+          }
         }, 500);
       }
     }, 50);
   };
+
+
 
   const handleClose = () => {
     if (isLocked && phase !== 'complete') return;
@@ -494,7 +494,7 @@ export const CyberpunkCaseOpeningModal = ({
                         <div className="relative">
                           <div className="flex justify-center overflow-hidden">
                             <div 
-                              className="flex space-x-4 transition-transform duration-100 ease-linear"
+                              className="flex space-x-2 transition-transform duration-75 ease-out"
                               style={{ transform: `translateX(-${reelPosition}px)` }}
                             >
                               {possibleRewards.map((reward, index) => (
