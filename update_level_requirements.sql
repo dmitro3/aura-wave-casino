@@ -1,10 +1,17 @@
 -- Update level daily cases to use new level requirements
 -- New levels: 2, 5, 25, 50, 75, 100, 125, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000
 
--- 1. First, delete all existing level daily cases
+-- 1. First, drop the existing check constraint that limits levels to 10-100
+ALTER TABLE public.level_daily_cases DROP CONSTRAINT IF EXISTS level_daily_cases_level_required_check;
+
+-- 2. Add new check constraint for the expanded level range (2-1000)
+ALTER TABLE public.level_daily_cases ADD CONSTRAINT level_daily_cases_level_required_check 
+CHECK (level_required >= 2 AND level_required <= 1000);
+
+-- 3. Delete all existing level daily cases
 DELETE FROM public.level_daily_cases;
 
--- 2. Update the initialize_level_daily_cases function to use new level requirements
+-- 4. Update the initialize_level_daily_cases function to use new level requirements
 CREATE OR REPLACE FUNCTION public.initialize_level_daily_cases(user_uuid UUID)
 RETURNS VOID AS $$
 DECLARE
@@ -55,7 +62,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Update the get_user_level_daily_cases function to work with new levels
+-- 5. Update the get_user_level_daily_cases function to work with new levels
 CREATE OR REPLACE FUNCTION public.get_user_level_daily_cases(user_uuid UUID)
 RETURNS TABLE (
     id UUID,
@@ -86,7 +93,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. Reinitialize cases for all existing users to ensure consistency
+-- 6. Reinitialize cases for all existing users to ensure consistency
 DO $$
 DECLARE
     user_record RECORD;
@@ -99,7 +106,7 @@ BEGIN
     RAISE NOTICE 'Reinitialized level daily cases for all users with new level requirements';
 END $$;
 
--- 5. Verification
+-- 7. Verification
 SELECT 'Level daily cases updated with new requirements' as status;
 
 SELECT 
