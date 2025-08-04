@@ -65,7 +65,7 @@ const rarityConfig = {
     bgGradient: 'bg-gradient-to-br from-slate-800/90 to-slate-900/90',
     borderColor: 'border-slate-500/50',
     particles: '✨',
-    icon: '💰',
+    icon: '💵',
     shimmer: false
   },
   rare: {
@@ -76,7 +76,7 @@ const rarityConfig = {
     borderColor: 'border-blue-500/50',
     particles: '💫',
     icon: '💎',
-    shimmer: true
+    shimmer: false
   },
   epic: {
     color: 'from-purple-400 to-purple-600',
@@ -85,8 +85,8 @@ const rarityConfig = {
     bgGradient: 'bg-gradient-to-br from-purple-800/90 to-purple-900/90',
     borderColor: 'border-purple-500/50',
     particles: '🌟',
-    icon: '⭐',
-    shimmer: true
+    icon: '⚡',
+    shimmer: false
   },
   legendary: {
     color: 'from-orange-400 to-orange-600',
@@ -96,7 +96,7 @@ const rarityConfig = {
     borderColor: 'border-orange-500/50',
     particles: '🔥',
     icon: '👑',
-    shimmer: true
+    shimmer: false
   }
 };
 
@@ -414,45 +414,35 @@ export const CyberpunkCaseOpeningModal = ({
                      {phase === 'preview' && (
                        <div className="space-y-6">
                          {/* Static Reward Reel */}
-                         <div className="space-y-4">
-                           <h4 className="text-lg font-semibold text-center">Possible Rewards</h4>
+                         <div className="relative">
+                           <div className="flex justify-center overflow-hidden">
+                             <div className="flex space-x-4">
+                               {possibleRewards.slice(0, 9).map((reward, index) => (
+                                 <Card
+                                   key={index}
+                                   className={`
+                                     w-32 h-32 flex-shrink-0 relative overflow-hidden
+                                     ${reward.bgGradient} border-2 ${reward.borderColor}
+                                   `}
+                                 >
+                                   <CardContent className="p-4 text-center">
+                                     <div className="text-3xl mb-2">{reward.icon}</div>
+                                     <div className="text-lg font-bold text-white mb-1">
+                                       ${reward.amount.toLocaleString()}
+                                     </div>
+                                     <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
+                                       {reward.rarity}
+                                     </div>
+                                   </CardContent>
+                                 </Card>
+                               ))}
+                             </div>
+                           </div>
                            
-                           {/* Reward Display */}
-                           <div className="relative">
-                             <div className="flex justify-center overflow-hidden">
-                               <div className="flex space-x-4">
-                                 {possibleRewards.slice(0, 9).map((reward, index) => (
-                                   <Card
-                                     key={index}
-                                     className={`
-                                       w-32 h-40 flex-shrink-0 relative overflow-hidden
-                                       ${reward.bgGradient} border-2 ${reward.borderColor}
-                                       ${reward.shimmer ? 'animate-pulse' : ''}
-                                     `}
-                                   >
-                                     <CardContent className="p-4 text-center">
-                                       <div className="text-3xl mb-2">{reward.icon}</div>
-                                       <div className="text-lg font-bold text-white mb-1">
-                                         ${reward.amount.toLocaleString()}
-                                       </div>
-                                       <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
-                                         {reward.rarity}
-                                       </div>
-                                     </CardContent>
-                                     
-                                     {reward.shimmer && (
-                                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-pulse" />
-                                     )}
-                                   </Card>
-                                 ))}
-                               </div>
-                             </div>
-                             
-                             {/* Center Indicator */}
-                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-full bg-gradient-to-b from-primary/80 to-primary/40 z-20">
-                               <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
-                               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
-                             </div>
+                           {/* Center Indicator */}
+                           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-full bg-gradient-to-b from-primary/80 to-primary/40 z-20">
+                             <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
+                             <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
                            </div>
                          </div>
 
@@ -512,9 +502,8 @@ export const CyberpunkCaseOpeningModal = ({
                                 <Card
                                   key={index}
                                   className={`
-                                    w-32 h-40 flex-shrink-0 relative overflow-hidden
+                                    w-32 h-32 flex-shrink-0 relative overflow-hidden
                                     ${reward.bgGradient} border-2 ${reward.borderColor}
-                                    ${reward.shimmer ? 'animate-pulse' : ''}
                                   `}
                                 >
                                   <CardContent className="p-4 text-center">
@@ -526,10 +515,6 @@ export const CyberpunkCaseOpeningModal = ({
                                       {reward.rarity}
                                     </div>
                                   </CardContent>
-                                  
-                                  {reward.shimmer && (
-                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-pulse" />
-                                  )}
                                 </Card>
                               ))}
                             </div>
@@ -601,7 +586,7 @@ export const CyberpunkCaseOpeningModal = ({
                           ${rarityConfig[reward.rarity].glow}
                         `}>
                           <div className="text-center text-white">
-                            <DollarSign className="w-16 h-16 mx-auto mb-4" />
+                            <div className="text-6xl mb-4">{rarityConfig[reward.rarity].icon}</div>
                             <div className="text-3xl font-bold">${reward.amount.toFixed(2)}</div>
                             <div className="text-lg capitalize">{reward.rarity}</div>
                           </div>
