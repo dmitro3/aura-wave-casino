@@ -166,8 +166,27 @@ export function useLevelDailyCases() {
       )
       .subscribe();
 
+    // Also listen for user level changes to update case availability
+    const levelChannel = supabase
+      .channel('user_level_stats')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_level_stats',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Refresh cases when user levels up to check for new availability
+          fetchCases();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(levelChannel);
     };
   }, [user]);
 
@@ -180,6 +199,7 @@ export function useLevelDailyCases() {
     getCaseStatusText,
     getCaseStatusColor,
     getCaseButtonVariant,
-    refreshCases: fetchCases
+    refreshCases: fetchCases,
+    fetchCases
   };
 }

@@ -24,7 +24,8 @@ export default function Rewards() {
     canOpenCase, 
     getCaseStatusText, 
     getCaseStatusColor, 
-    getCaseButtonVariant 
+    getCaseButtonVariant,
+    fetchCases: refreshLevelCases
   } = useLevelDailyCases();
   const { history, stats, loading: historyLoading, formatDate, getRarityColor, getCaseTypeDisplayName } = useCaseHistory();
   const { toast } = useToast();
@@ -253,12 +254,26 @@ export default function Rewards() {
             <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/30 to-primary/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
             
             <div className="relative z-10 p-6">
-              <div className="flex items-center space-x-3 mb-8">
-                <div className="relative">
-                  <Crown className="w-8 h-8 text-primary" />
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <Crown className="w-8 h-8 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">Daily Cases</h2>
+                  <span className="text-sm text-muted-foreground font-mono">• Reset Daily</span>
                 </div>
-                <h2 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">Daily Cases</h2>
-                <span className="text-sm text-muted-foreground font-mono">• Reset Daily</span>
+                
+                <Button
+                  onClick={refreshLevelCases}
+                  variant="outline"
+                  size="sm"
+                  className="relative overflow-hidden backdrop-blur-sm transition-all duration-300 hover:bg-primary/10"
+                >
+                  <div className="relative z-10 flex items-center space-x-2">
+                    <Zap className="w-4 h-4" />
+                    <span>Refresh</span>
+                  </div>
+                </Button>
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
@@ -299,6 +314,13 @@ export default function Rewards() {
                         }`}>
                           {getCaseStatusText(caseData)}
                         </div>
+                        
+                        {/* Show when case will be available again */}
+                        {caseData.user_level >= caseData.level_required && !caseData.is_available && caseData.last_reset_date && (
+                          <div className="text-xs text-muted-foreground">
+                            Resets daily at midnight
+                          </div>
+                        )}
                       </div>
                       
                       <Button 
