@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { cn } from '@/lib/utils';
 import { useCountdown, getNextMidnight, formatCountdown } from '@/hooks/useCountdown';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Rewards() {
   const navigate = useNavigate();
@@ -49,6 +50,44 @@ export default function Rewards() {
     setSelectedLevelCase(null);
     // Refresh the cases to update availability
     refreshLevelCases();
+  };
+
+  const handleTestReset = async () => {
+    if (!user) return;
+    
+    try {
+      // Call the test reset function
+      const { error } = await supabase.rpc('test_reset_user_daily_cases', {
+        user_uuid: user.id
+      });
+      
+      if (error) {
+        console.error('Error resetting cases:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to reset cases. Please try again.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // Refresh the cases to show the updated state
+      refreshLevelCases();
+      
+      toast({
+        title: 'Success',
+        description: 'All daily cases have been reset for testing!',
+        variant: 'default'
+      });
+      
+    } catch (error) {
+      console.error('Error resetting cases:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reset cases. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (levelCasesLoading || historyLoading) {
@@ -278,14 +317,14 @@ export default function Rewards() {
                 </div>
                 
                 <Button
-                  onClick={refreshLevelCases}
+                  onClick={handleTestReset}
                   variant="outline"
                   size="sm"
                   className="relative overflow-hidden backdrop-blur-sm transition-all duration-300 hover:bg-primary/10"
                 >
                   <div className="relative z-10 flex items-center space-x-2">
                     <Zap className="w-4 h-4" />
-                    <span>Refresh</span>
+                    <span>Test Reset</span>
                   </div>
                 </Button>
               </div>
