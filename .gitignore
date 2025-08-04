@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# System files and core dumps
+core
+core.*
+*.core
+*.dump
+*.stackdump
