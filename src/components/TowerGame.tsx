@@ -173,58 +173,70 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     const levelReached = gameData.level_reached || 0;
     const maxLevel = gameData.max_level || 8;
     
+    // Debug logging to check data
+    console.log('🎮 TOWER REPLAY DATA:', {
+      difficulty,
+      levelReached,
+      maxLevel,
+      minePositions: minePositions.length,
+      selectedTiles: selectedTiles.length,
+      selectedTilesData: selectedTiles
+    });
+    
     const difficultyConfig = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO] || DIFFICULTY_INFO.easy;
     const tilesPerRow = difficultyConfig.tilesPerRow;
     const payoutMultipliers = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS] || [];
     
-    // Render individual tile matching actual game design
-    const renderReplayTile = (levelIndex: number, tileIndex: number) => {
-      const levelMines = minePositions[levelIndex] || [];
-      const isMine = levelMines.includes(tileIndex);
-      const isSelected = selectedTiles[levelIndex] === tileIndex;
-      const wasPlayed = levelIndex <= levelReached;
-      
-      // Use same styling logic as actual game
-      let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
-      
-             // Determine tile state for styling
-       if (isSelected && !isMine) {
-         // Safe tile that was selected (green - successful path) - HIGHLIGHTED
-         tileClass += "bg-emerald-500/40 border-2 border-emerald-400 shadow-lg shadow-emerald-500/30 ";
-       } else if (isSelected && isMine) {
-         // Mine that was selected (red - game ending) - HIGHLIGHTED
-         tileClass += "bg-red-500/40 border-2 border-red-400 shadow-lg shadow-red-500/30 ";
-       } else if (isMine) {
-         // Unrevealed mine (show for replay transparency)
-         tileClass += "bg-red-900/30 border-2 border-red-700/50 ";
-       } else if (wasPlayed) {
-         // Safe tiles on played levels (slightly dimmed)
-         tileClass += "bg-slate-700/30 border-2 border-slate-600/30 opacity-50 ";
-       } else {
-         // Future levels not reached
-         tileClass += "bg-slate-800/30 border-2 border-slate-700/30 opacity-30 ";
+         // Render individual tile matching actual game design EXACTLY
+     const renderReplayTile = (levelIndex: number, tileIndex: number) => {
+       const levelMines = minePositions[levelIndex] || [];
+       const isMine = levelMines.includes(tileIndex);
+       const isSelected = selectedTiles[levelIndex] === tileIndex;
+       
+       // In replay, ALL tiles are revealed (like when game ends in real game)
+       const revealed = { safe: !isMine };
+       
+       // Use EXACT same styling logic as actual game
+       let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
+       
+       // Match the actual game's revealed tile styling
+       if (revealed?.safe) {
+         tileClass += "bg-emerald-500/20 border-2 border-emerald-500/40 ";
+       } else if (revealed && !revealed.safe) {
+         tileClass += "bg-red-500/20 border-2 border-red-500/40 ";
        }
-      
-      return (
-        <button key={tileIndex} className={tileClass} disabled>
-          <div className="flex items-center justify-center h-full">
-            {isSelected ? (
-              // Show result icon for selected tiles
-              isMine ? (
-                <X className="w-5 h-5 text-red-400" />
-              ) : (
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-              )
-            ) : isMine ? (
-              // Show mine icon for unrevealed mines
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-            ) : (
-              // Show neutral dot for safe tiles
-              <div className="w-1.5 h-1.5 bg-slate-500 rounded-full opacity-30"></div>
-            )}
-          </div>
-          
-                     {/* Selection highlight - make selected tiles more prominent */}
+       
+       // Add extra highlighting for selected tiles (player's path)
+       if (isSelected) {
+         if (!isMine) {
+           // Enhance selected safe tiles
+           tileClass = tileClass.replace("bg-emerald-500/20", "bg-emerald-500/40");
+           tileClass = tileClass.replace("border-emerald-500/40", "border-emerald-400");
+           tileClass += "shadow-lg shadow-emerald-500/30 ";
+         } else {
+           // Enhance selected mine tiles
+           tileClass = tileClass.replace("bg-red-500/20", "bg-red-500/40");
+           tileClass = tileClass.replace("border-red-500/40", "border-red-400");
+           tileClass += "shadow-lg shadow-red-500/30 ";
+         }
+       }
+       
+       return (
+         <button key={tileIndex} className={tileClass} disabled>
+           <div className="flex items-center justify-center h-full">
+             {/* Use EXACT same icon logic as actual game */}
+             {revealed ? (
+               revealed.safe ? (
+                 <CheckCircle className="w-5 h-5 text-emerald-400" />
+               ) : (
+                 <X className="w-5 h-5 text-red-400" />
+               )
+             ) : (
+               <div className="w-1.5 h-1.5 bg-slate-500 rounded-full opacity-30"></div>
+             )}
+           </div>
+           
+           {/* Selection highlight - make selected tiles more prominent */}
            {isSelected && (
              <>
                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
@@ -232,9 +244,9 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-yellow-300 animate-pulse"></div>
              </>
            )}
-        </button>
-      );
-    };
+         </button>
+       );
+     };
     
     // Render level matching actual game design
     const renderReplayLevel = (levelIndex: number) => {
