@@ -194,16 +194,16 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
        const isSelected = selectedTiles[levelIndex] === tileIndex;
        const wasCleared = levelIndex < levelReached; // Only cleared levels show green checkmarks
        
-       // Determine what should be revealed based on progression
-       let revealed = null;
-       if (wasCleared && isSelected) {
-         // Only selected tiles on cleared levels are revealed as safe
-         revealed = { safe: true };
-       } else if (isMine) {
-         // All mines are always revealed for transparency
-         revealed = { safe: false };
-       }
-       // Everything else stays hidden (like unselected tiles in actual game)
+                // Determine what should be revealed based on progression
+         let revealed = null;
+         if (isSelected && !isMine) {
+           // All selected safe tiles show green checkmarks (user's actual choices)
+           revealed = { safe: true };
+         } else if (isMine) {
+           // All mines are always revealed for transparency
+           revealed = { safe: false };
+         }
+         // Everything else stays hidden (like unselected tiles in actual game)
        
        // Use EXACT same styling logic as actual game
        let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
