@@ -376,10 +376,10 @@ export const CyberpunkCaseOpeningModal = ({
                 <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-primary/60" />
                 
                 {/* Content */}
-                <div className="relative z-10 p-8">
+                <div className="relative z-10 p-6">
                   
                   {/* Header */}
-                  <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-4">
                       <div className="relative">
                         <div className="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
@@ -412,36 +412,7 @@ export const CyberpunkCaseOpeningModal = ({
                     
                                          {/* Preview Phase */}
                      {phase === 'preview' && (
-                       <div className="space-y-8">
-                         {/* Case Display */}
-                         <div className="text-center mb-6">
-                           <div className="relative mx-auto w-32 h-32 mb-4">
-                             <div className={`
-                               w-full h-full rounded-2xl flex items-center justify-center
-                               bg-gradient-to-br ${isFreeCase 
-                                 ? freeCaseType === 'common' ? 'from-slate-400 to-slate-600' 
-                                   : freeCaseType === 'rare' ? 'from-blue-400 to-blue-600'
-                                   : 'from-purple-400 to-purple-600'
-                                 : 'from-primary to-accent'
-                               } border-2 border-primary/30 shadow-2xl
-                               hover:scale-105 transition-transform duration-300
-                             `}>
-                               <div className="text-center text-white">
-                                 <Gift className="w-16 h-16 mx-auto mb-2" />
-                                 <div className="text-lg font-bold">
-                                   {isFreeCase ? freeCaseType?.charAt(0).toUpperCase() + freeCaseType?.slice(1) : `Level ${level}`}
-                                 </div>
-                               </div>
-                             </div>
-                             
-                             {/* Glow Effect */}
-                             <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl blur-xl animate-pulse" />
-                           </div>
-                           
-                           <h3 className="text-xl font-bold mb-2">Ready to Open</h3>
-                           <p className="text-muted-foreground">Click below to reveal your reward</p>
-                         </div>
-
+                       <div className="space-y-6">
                          {/* Static Reward Reel */}
                          <div className="space-y-4">
                            <h4 className="text-lg font-semibold text-center">Possible Rewards</h4>
