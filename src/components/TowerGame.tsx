@@ -582,7 +582,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       return;
     }
 
-    if (amount > userData.balance) {
+    if (amount > realtimeBalance) {
       setLoading(false);
       toast({
         title: "Insufficient balance",
