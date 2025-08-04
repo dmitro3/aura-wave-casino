@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Send, MessageCircle, Crown, Shield, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -41,6 +42,11 @@ export const RealtimeChat = () => {
     x: number;
     y: number;
   } | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    messageId: string;
+    username: string;
+    message: string;
+  } | null>(null);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -52,7 +58,7 @@ export const RealtimeChat = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
-  const deleteMessage = async (messageId: string) => {
+  const showDeleteConfirmation = (messageId: string) => {
     if (!isAdmin) {
       toast({
         title: "Access Denied",
@@ -62,17 +68,32 @@ export const RealtimeChat = () => {
       return;
     }
 
+    // Find the message to show details in confirmation
+    const message = messages.find(msg => msg.id === messageId);
+    if (message) {
+      setDeleteConfirmation({
+        messageId,
+        username: message.username,
+        message: message.message
+      });
+    }
+    setContextMenu(null);
+  };
+
+  const confirmDeleteMessage = async () => {
+    if (!deleteConfirmation) return;
+
     try {
       const { error } = await supabase
         .from('chat_messages')
         .delete()
-        .eq('id', messageId);
+        .eq('id', deleteConfirmation.messageId);
 
       if (error) throw error;
 
       // Remove message from local state
-      setMessages(prev => prev.filter(msg => msg.id !== messageId));
-      setContextMenu(null);
+      setMessages(prev => prev.filter(msg => msg.id !== deleteConfirmation.messageId));
+      setDeleteConfirmation(null);
 
       toast({
         title: "Message Deleted",
@@ -572,7 +593,7 @@ export const RealtimeChat = () => {
         >
           <div className="p-1">
             <button
-              onClick={() => deleteMessage(contextMenu.messageId)}
+              onClick={() => showDeleteConfirmation(contextMenu.messageId)}
               className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 rounded transition-colors flex items-center gap-2"
             >
               <svg
@@ -593,6 +614,60 @@ export const RealtimeChat = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmation} onOpenChange={() => setDeleteConfirmation(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+              Confirm Message Deletion
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>Are you sure you want to delete this message? This action cannot be undone.</p>
+              {deleteConfirmation && (
+                <div className="bg-slate-800 p-3 rounded-lg border border-slate-600">
+                  <p className="text-sm text-slate-300 mb-1">
+                    <span className="font-medium text-blue-300">{deleteConfirmation.username}</span>:
+                  </p>
+                  <p className="text-sm text-slate-200 italic">
+                    "{deleteConfirmation.message.length > 100 
+                      ? deleteConfirmation.message.substring(0, 100) + "..." 
+                      : deleteConfirmation.message}"
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmation(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteMessage}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Message
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
