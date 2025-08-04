@@ -123,6 +123,16 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   
   // Check if this should be treated as the user's own profile (no username provided, opening from header)
   const shouldShowOwnProfile = user && !username;
+
+  // Debug logging for upload button visibility
+  console.log('Profile Upload Debug:', {
+    user: user?.id,
+    userData: userData?.id,
+    username,
+    isOwnProfile,
+    shouldShowOwnProfile,
+    showUploadButton: isOwnProfile || shouldShowOwnProfile
+  });
   
   // Check admin status for the user whose profile is being viewed
   const profileUserId = userData?.id || (shouldShowOwnProfile ? user?.id : undefined);
@@ -599,48 +609,57 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                    style={{
                      clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px))'
                    }}>
-                {/* Cyberpunk Avatar */}
-                <div className="relative group/avatar">
-                  {/* Outer Energy Ring */}
-                  <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-primary/40 via-accent/60 to-primary/40 animate-cyber-avatar-scan blur-sm" />
-                  
-                  {/* Middle Tech Ring */}
-                  <div className="absolute -inset-2 rounded-full border-2 border-primary/60 bg-gradient-to-r from-primary/10 to-accent/10 backdrop-blur-sm" />
-                  
-                  {/* Holographic Scan Lines */}
-                  <div className="absolute -inset-2 rounded-full overflow-hidden">
-                    <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-accent/80 to-transparent animate-cyber-scan-horizontal top-1/3" />
-                    <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-cyber-scan-horizontal bottom-1/3" style={{ animationDelay: '1s' }} />
-                  </div>
-                  
-                  <ProfileBorder level={currentLevel} size="lg">
-                    <div className="w-full h-full rounded-full overflow-hidden relative group-hover/avatar:scale-105 transition-transform duration-500">
-                      <img 
-                        src={currentAvatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
-                        alt={`${userData.username} avatar`}
-                        className="w-full h-full object-cover"
-                      />
-                      
-                      {/* Cyberpunk Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-500" />
-                      
-                      {/* Level Crown for high levels */}
-                      {currentLevel >= 100 && (
-                        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                          <div className="relative">
-                            <Crown className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_10px_rgba(252,211,77,0.8)] animate-bounce" />
-                            <div className="absolute inset-0 rounded-full bg-yellow-400/20 blur-md animate-pulse" />
-                          </div>
-                        </div>
-                      )}
-                      
-
+                {/* Cyberpunk Avatar Section */}
+                <div className="flex flex-col items-center gap-4">
+                  {/* Avatar Container */}
+                  <div className="relative group/avatar">
+                    {/* Outer Energy Ring */}
+                    <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-primary/40 via-accent/60 to-primary/40 animate-cyber-avatar-scan blur-sm" />
+                    
+                    {/* Middle Tech Ring */}
+                    <div className="absolute -inset-2 rounded-full border-2 border-primary/60 bg-gradient-to-r from-primary/10 to-accent/10 backdrop-blur-sm" />
+                    
+                    {/* Holographic Scan Lines */}
+                    <div className="absolute -inset-2 rounded-full overflow-hidden">
+                      <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-accent/80 to-transparent animate-cyber-scan-horizontal top-1/3" />
+                      <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent animate-cyber-scan-horizontal bottom-1/3" style={{ animationDelay: '1s' }} />
                     </div>
-                  </ProfileBorder>
-                  
+                    
+                    <ProfileBorder level={currentLevel} size="lg">
+                      <div className="w-full h-full rounded-full overflow-hidden relative group-hover/avatar:scale-105 transition-transform duration-500">
+                        <img 
+                          src={currentAvatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
+                          alt={`${userData.username} avatar`}
+                          className="w-full h-full object-cover"
+                        />
+                        
+                        {/* Cyberpunk Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-500" />
+                        
+                        {/* Level Crown for high levels */}
+                        {currentLevel >= 100 && (
+                          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                            <div className="relative">
+                              <Crown className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_10px_rgba(252,211,77,0.8)] animate-bounce" />
+                              <div className="absolute inset-0 rounded-full bg-yellow-400/20 blur-md animate-pulse" />
+                            </div>
+                          </div>
+                        )}
+                        
+
+                      </div>
+                    </ProfileBorder>
+                    
+                    {/* Corner Tech Indicators */}
+                    <div className="absolute -top-1 -left-1 w-3 h-3 border-l-2 border-t-2 border-primary/80" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 border-r-2 border-t-2 border-accent/80" />
+                    <div className="absolute -bottom-1 -left-1 w-3 h-3 border-l-2 border-b-2 border-accent/80" />
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 border-r-2 border-b-2 border-primary/80" />
+                  </div>
+
                   {/* Profile Picture Upload - Only show for own profile */}
                   {(isOwnProfile || shouldShowOwnProfile) && (
-                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 z-20">
+                    <div className="mt-2">
                       <ProfilePictureUpload
                         userId={userData.id}
                         currentAvatarUrl={currentAvatarUrl}
@@ -654,12 +673,6 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                       />
                     </div>
                   )}
-                  
-                  {/* Corner Tech Indicators */}
-                  <div className="absolute -top-1 -left-1 w-3 h-3 border-l-2 border-t-2 border-primary/80" />
-                  <div className="absolute -top-1 -right-1 w-3 h-3 border-r-2 border-t-2 border-accent/80" />
-                  <div className="absolute -bottom-1 -left-1 w-3 h-3 border-l-2 border-b-2 border-accent/80" />
-                  <div className="absolute -bottom-1 -right-1 w-3 h-3 border-r-2 border-b-2 border-primary/80" />
                 </div>
 
                 {/* Cyberpunk User Info */}
