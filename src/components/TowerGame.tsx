@@ -197,8 +197,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
          }
          // Everything else stays hidden (like unselected tiles in actual game)
        
-       // Use EXACT same styling logic as actual game
-       let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
+       // Use optimized styling for replay (smaller tiles to fit entire tower)
+       let tileClass = "relative w-full h-8 rounded-lg transition-all duration-200 ";
        
        // Apply styling based on revelation state
        if (revealed?.safe) {
@@ -267,7 +267,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       return (
         <div 
           key={levelIndex} 
-          className={`p-2 rounded-lg transition-all duration-300 ${
+          className={`p-1.5 rounded-lg transition-all duration-300 ${
             wasPlayed && levelIndex < levelReached
               ? 'bg-emerald-500/10 border border-emerald-500/30' 
               : isCurrentLevel 
@@ -276,8 +276,8 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           }`}
         >
           {/* Multiplier display - centered */}
-          <div className="text-center mb-1">
-            <div className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+          <div className="text-center mb-0.5">
+            <div className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${
               wasPlayed && levelIndex < levelReached
                 ? 'bg-emerald-500/20 text-emerald-300' 
                 : isCurrentLevel 
@@ -289,7 +289,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
           </div>
           
           {/* Tiles - Modern grid */}
-          <div className={`grid gap-1.5 ${
+          <div className={`grid gap-1 ${
             tilesPerRow === 2 ? 'grid-cols-2' :
             tilesPerRow === 3 ? 'grid-cols-3' :
             tilesPerRow === 4 ? 'grid-cols-4' : 'grid-cols-3'
@@ -300,18 +300,18 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       );
     };
     
-    return (
-      <div className="space-y-0.5">
-        {/* Render levels from top to bottom (reverse order) */}
-        {payoutMultipliers
-          .slice()
-          .reverse()
-          .map((_, index) => {
-            const actualLevel = payoutMultipliers.length - 1 - index;
-            return renderReplayLevel(actualLevel);
-          })}
-      </div>
-    );
+         return (
+       <div className="space-y-1">
+         {/* Render levels from top to bottom (reverse order) */}
+         {payoutMultipliers
+           .slice()
+           .reverse()
+           .map((_, index) => {
+             const actualLevel = payoutMultipliers.length - 1 - index;
+             return renderReplayLevel(actualLevel);
+           })}
+       </div>
+     );
   };
 
   // Real-time balance sync: Update bet amount if it exceeds new balance
@@ -1384,7 +1384,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
 
       {/* Game Replay Modal */}
       <Dialog open={!!selectedGameReplay} onOpenChange={() => setSelectedGameReplay(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <Building2 className="w-6 h-6 text-primary" />
@@ -1475,7 +1475,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
               <div className="space-y-3">
                 <h3 className="text-lg font-bold text-white">Tower Layout</h3>
                 
-                <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4 max-h-96 overflow-y-auto">
+                <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4">
                   {renderReplayTower(selectedGameReplay.game_data)}
                 </div>
                 
