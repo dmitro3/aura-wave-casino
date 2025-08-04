@@ -1271,7 +1271,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                       return (
                         <div
                           key={bet.id}
-                          className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-1.5 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                          className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-1.5 hover:bg-slate-700/50 transition-colors cursor-pointer group"
                           onClick={() => setSelectedGameReplay(bet)}
                         >
                           {/* User Info & Primary Stats Row */}
@@ -1293,8 +1293,14 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <Badge className={`text-xs px-1 py-0 ${difficultyInfo.color}`}>
-                                {difficultyInfo.name.charAt(0)}
+                              <Badge 
+                                className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 group-hover:px-2 group-hover:scale-105 cursor-help relative overflow-hidden`}
+                                title={difficultyInfo.name}
+                              >
+                                <span className="group-hover:opacity-0 transition-opacity duration-300">{difficultyInfo.name.charAt(0)}</span>
+                                <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                  {difficultyInfo.name}
+                                </span>
                               </Badge>
                               <div className={`flex items-center gap-0.5 text-xs font-medium ${
                                 isWin ? 'text-emerald-400' : 'text-red-400'
