@@ -438,7 +438,7 @@ export const CyberpunkCaseOpeningModal = ({
                                  >
                                    <CardContent className="p-4 text-center">
                                      <div className="text-lg font-bold text-white mb-1">
-                                       ${reward.amount.toLocaleString()}
+                                       ${reward.amount.toFixed(2)}
                                      </div>
                                      <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
                                        {reward.rarity}
@@ -499,7 +499,7 @@ export const CyberpunkCaseOpeningModal = ({
                                   >
                                     <CardContent className="p-4 text-center">
                                       <div className="text-lg font-bold text-white mb-1">
-                                        ${reward.amount.toLocaleString()}
+                                        ${reward.amount.toFixed(2)}
                                       </div>
                                       <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
                                         {reward.rarity}
