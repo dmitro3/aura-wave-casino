@@ -1313,9 +1313,9 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                    translate-x-2 group-hover:translate-x-0
                                    transition-all duration-300 ease-out
                                    ${difficultyInfo.color} 
-                                   ${difficulty === 'easy' ? 'bg-emerald-500/30 border-emerald-400/50' : 
-                                     difficulty === 'medium' ? 'bg-amber-500/30 border-amber-400/50' : 
-                                     difficulty === 'hard' ? 'bg-rose-500/30 border-rose-400/50' : 'bg-violet-500/30 border-violet-400/50'}
+                                   ${difficulty === 'easy' ? 'bg-emerald-500/30 border-emerald-400/50 hover:bg-emerald-500/40 hover:border-emerald-400/70' : 
+                                     difficulty === 'medium' ? 'bg-amber-500/30 border-amber-400/50 hover:bg-amber-500/40 hover:border-amber-400/70' : 
+                                     difficulty === 'hard' ? 'bg-rose-500/30 border-rose-400/50 hover:bg-rose-500/40 hover:border-rose-400/70' : 'bg-violet-500/30 border-violet-400/50 hover:bg-violet-500/40 hover:border-violet-400/70'}
                                    backdrop-blur-sm z-10`}
                                    title={difficultyInfo.name}
                                  >
