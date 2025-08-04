@@ -171,6 +171,7 @@ export const CyberpunkCaseOpeningModal = ({
   const [isLocked, setIsLocked] = useState(false);
   const [possibleRewards, setPossibleRewards] = useState<RewardItem[]>([]);
   const [spinning, setSpinning] = useState(false);
+  const reelRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   // Initialize possible rewards
@@ -192,17 +193,22 @@ export const CyberpunkCaseOpeningModal = ({
   const startSpinningAnimation = async () => {
     setSpinning(true);
     
+    // Small delay to ensure the spinning phase is rendered
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Roulette-style animation configuration
     const TILE_SIZE_PX = 136; // 128px card + 8px gap
-    const SPIN_DURATION_MS = 4000; // 4 seconds exactly like roulette
+    const SPIN_DURATION_MS = 3000; // 3 seconds as requested
     
     // Calculate a random target position for smooth spinning
     const wheelCyclePx = possibleRewards.length * TILE_SIZE_PX;
     const startPosition = 0;
-    const targetPosition = startPosition - (Math.random() * 50 + 20) * wheelCyclePx; // Spin 20-70 cycles
+    const targetPosition = startPosition - (Math.random() * 30 + 15) * wheelCyclePx; // Spin 15-45 cycles
     
-    // Get the reel element
-    const reelElement = document.querySelector('.case-reel') as HTMLElement;
+    console.log('Starting animation:', { startPosition, targetPosition, wheelCyclePx });
+    
+    // Get the reel element using ref
+    const reelElement = reelRef.current;
     if (!reelElement) {
       console.error('Reel element not found');
       return;
@@ -223,12 +229,13 @@ export const CyberpunkCaseOpeningModal = ({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (reelElement) {
+          console.log('Applying transform:', targetPosition);
           reelElement.style.transform = `translateX(${targetPosition}px)`;
         }
       });
     });
     
-    // Complete animation after exactly 4 seconds
+    // Complete animation after exactly 3 seconds
     setTimeout(async () => {
       setSpinning(false);
       
@@ -476,17 +483,11 @@ export const CyberpunkCaseOpeningModal = ({
                     {/* Spinning Phase */}
                     {phase === 'spinning' && (
                       <div className="space-y-6">
-                        <div className="text-center">
-                          <h3 className="text-2xl font-bold mb-4 flex items-center justify-center space-x-3">
-                            <Target className="w-8 h-8 text-primary animate-pulse" />
-                            <span>Determining Reward...</span>
-                          </h3>
-                        </div>
-                        
                         {/* Spinning Reel */}
                         <div className="relative">
                           <div className="flex justify-center overflow-hidden">
                             <div 
+                              ref={reelRef}
                               className="case-reel flex space-x-2"
                             >
                               {/* Render enough tiles for smooth infinite scrolling (like roulette) */}
