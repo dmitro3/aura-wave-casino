@@ -180,8 +180,15 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
       maxLevel,
       minePositions: minePositions.length,
       selectedTiles: selectedTiles.length,
-      selectedTilesData: selectedTiles
+      selectedTilesData: selectedTiles,
+      selectedTilesType: typeof selectedTiles,
+      isArray: Array.isArray(selectedTiles)
     });
+    
+    // Log each level's selected tile
+    for (let i = 0; i <= levelReached; i++) {
+      console.log(`📊 Level ${i}: selectedTiles[${i}] = ${selectedTiles[i]} (type: ${typeof selectedTiles[i]})`);
+    }
     
     const difficultyConfig = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO] || DIFFICULTY_INFO.easy;
     const tilesPerRow = difficultyConfig.tilesPerRow;
@@ -193,6 +200,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
        const isMine = levelMines.includes(tileIndex);
        const isSelected = selectedTiles[levelIndex] === tileIndex;
        const wasCleared = levelIndex < levelReached; // Only cleared levels show green checkmarks
+       
+       // Debug logging for each tile to see selection data
+       if (isSelected) {
+         console.log(`🎯 SELECTED TILE FOUND: Level ${levelIndex}, Tile ${tileIndex}, IsMine: ${isMine}, SelectedTiles[${levelIndex}]: ${selectedTiles[levelIndex]}`);
+       }
        
                 // Determine what should be revealed based on progression
          let revealed = null;
