@@ -14,7 +14,7 @@ import ClickableUsername from '@/components/ClickableUsername';
 import { UserLevelDisplay } from '@/components/UserLevelDisplay';
 import { ProfileBorder } from '@/components/ProfileBorder';
 import { Badge } from '@/components/ui/badge';
-import { useMultipleAdminStatus } from '@/hooks/useAdminStatus';
+import { useAdminStatus } from '@/hooks/useAdminStatus';
 
 interface ChatMessage {
   id: string;
@@ -31,13 +31,73 @@ interface ChatMessage {
 export const RealtimeChat = () => {
   const { user } = useAuth();
   const { userData } = useUserProfile();
+  const { isAdmin } = useAdminStatus();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    messageId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const deleteMessage = async (messageId: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only administrators can delete messages.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      // Remove message from local state
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      setContextMenu(null);
+
+      toast({
+        title: "Message Deleted",
+        description: "The message has been removed from the chat.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRightClick = (event: React.MouseEvent, messageId: string) => {
+    if (!isAdmin) return;
+    
+    event.preventDefault();
+    setContextMenu({
+      messageId,
+      x: event.clientX,
+      y: event.clientY,
+    });
+  };
 
   // Get admin status for all users in current messages
   const userIds = messages.map(msg => msg.user_id);
@@ -84,6 +144,18 @@ export const RealtimeChat = () => {
           });
           // Auto scroll after a slight delay to ensure DOM is updated
           setTimeout(scrollToBottom, 100);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_messages'
+        },
+        (payload) => {
+          const deletedMsg = payload.old as ChatMessage;
+          setMessages(prev => prev.filter(msg => msg.id !== deletedMsg.id));
         }
       )
       .subscribe((status) => {
@@ -306,7 +378,11 @@ export const RealtimeChat = () => {
                 const isOwnMessage = msg.user_id === user?.id;
                 
                 return (
-                  <div key={msg.id} className={`flex gap-3 items-start animate-fade-in ${isOwnMessage ? 'flex-row-reverse' : ''} group/message relative`}>
+                  <div 
+                    key={msg.id} 
+                    className={`flex gap-3 items-start animate-fade-in ${isOwnMessage ? 'flex-row-reverse' : ''} group/message relative ${isAdmin ? 'cursor-context-menu' : ''}`}
+                    onContextMenu={(e) => handleRightClick(e, msg.id)}
+                  >
                     {/* Message glow effect on hover */}
                     <div className="absolute -inset-2 bg-gradient-to-r from-primary/5 via-accent/10 to-primary/5 rounded-xl opacity-0 group-hover/message:opacity-100 transition-all duration-300 blur-sm" />
                     
@@ -483,6 +559,40 @@ export const RealtimeChat = () => {
         </div>
               </CardContent>
       </Card>
+
+      {/* Admin Context Menu */}
+      {contextMenu && isAdmin && (
+        <div
+          className="fixed z-50 bg-slate-800 border border-red-500/30 rounded-lg shadow-lg min-w-[150px]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-1">
+            <button
+              onClick={() => deleteMessage(contextMenu.messageId)}
+              className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 rounded transition-colors flex items-center gap-2"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              Delete Message
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
