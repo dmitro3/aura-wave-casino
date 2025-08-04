@@ -1303,19 +1303,19 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                   {difficultyInfo.name.charAt(0)}
                                 </Badge>
                                 
-                                {/* Expanded Badge - Hover State */}
-                                <Badge className={`absolute top-0 right-0 text-xs px-1 py-0 rounded whitespace-nowrap cursor-help
-                                  opacity-0 group-hover:opacity-100 
-                                  scale-75 group-hover:scale-100 
-                                  translate-x-2 group-hover:translate-x-0
-                                  transition-all duration-300 ease-out
-                                  ${difficultyInfo.color} 
-                                  ${difficulty === 'easy' ? 'bg-emerald-500/30 border-emerald-400/50' : 
-                                    difficulty === 'medium' ? 'bg-yellow-500/30 border-yellow-400/50' : 
-                                    difficulty === 'hard' ? 'bg-orange-500/30 border-orange-400/50' : 'bg-red-500/30 border-red-400/50'}
-                                  backdrop-blur-sm z-10`}
-                                  title={difficultyInfo.name}
-                                >
+                                                                 {/* Expanded Badge - Hover State */}
+                                 <Badge className={`absolute top-0 right-0 text-xs px-1 py-0 rounded whitespace-nowrap cursor-help
+                                   opacity-0 group-hover:opacity-100 
+                                   scale-75 group-hover:scale-100 
+                                   translate-x-2 group-hover:translate-x-0
+                                   transition-all duration-300 ease-out
+                                   ${difficultyInfo.color} 
+                                   ${difficulty === 'easy' ? 'bg-emerald-500/30 border-emerald-400/50' : 
+                                     difficulty === 'medium' ? 'bg-amber-500/30 border-amber-400/50' : 
+                                     difficulty === 'hard' ? 'bg-rose-500/30 border-rose-400/50' : 'bg-violet-500/30 border-violet-400/50'}
+                                   backdrop-blur-sm z-10`}
+                                   title={difficultyInfo.name}
+                                 >
                                   {difficultyInfo.name}
                                 </Badge>
                               </div>
