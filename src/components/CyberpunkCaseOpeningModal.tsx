@@ -358,9 +358,6 @@ export const CyberpunkCaseOpeningModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-6xl mx-auto bg-transparent border-0 overflow-hidden p-0">
-        {/* Cyberpunk Background Overlay */}
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40" />
-        
         {/* Main Modal Container */}
         <div className="relative z-50 w-full h-full min-h-[600px] flex items-center justify-center p-4">
           <div className="relative w-full max-w-5xl">
