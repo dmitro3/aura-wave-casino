@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFreeCases } from '@/hooks/useFreeCases';
 import { useLevelDailyCases } from '@/hooks/useLevelDailyCases';
 import { useCaseHistory } from '@/hooks/useCaseHistory';
-import { EnhancedCaseOpeningModal } from '@/components/EnhancedCaseOpeningModal';
+import { CyberpunkCaseOpeningModal } from '@/components/CyberpunkCaseOpeningModal';
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { cn } from '@/lib/utils';
@@ -30,11 +30,20 @@ export default function Rewards() {
   const { history, stats, loading: historyLoading, formatDate, getRarityColor, getCaseTypeDisplayName } = useCaseHistory();
   const { toast } = useToast();
 
+  const [selectedLevelCase, setSelectedLevelCase] = useState<any | null>(null);
+
   const handleLevelCaseOpened = async (caseId: string) => {
-    const result = await openLevelCase(caseId);
-    if (result) {
-      window.location.reload();
+    // Find the case data
+    const caseData = levelDailyCases.find(c => c.id === caseId);
+    if (caseData) {
+      setSelectedLevelCase(caseData);
     }
+  };
+
+  const handleLevelCaseClosed = () => {
+    setSelectedLevelCase(null);
+    // Refresh the cases to update availability
+    refreshLevelCases();
   };
 
   if (levelCasesLoading || historyLoading) {
@@ -429,9 +438,9 @@ export default function Rewards() {
         </div>
       </div>
 
-      {/* Enhanced Case Opening Modal for Free Cases */}
+      {/* Cyberpunk Case Opening Modal for Free Cases */}
       {selectedFreeCase && (
-        <EnhancedCaseOpeningModal
+        <CyberpunkCaseOpeningModal
           isOpen={!!selectedFreeCase}
           onClose={closeFreeCaseModal}
           caseId={`free-${selectedFreeCase.type}`}
@@ -439,6 +448,25 @@ export default function Rewards() {
           onCaseOpened={handleFreeCaseOpened}
           isFreeCase={true}
           freeCaseType={selectedFreeCase.type}
+        />
+      )}
+
+      {/* Cyberpunk Case Opening Modal for Level Cases */}
+      {selectedLevelCase && (
+        <CyberpunkCaseOpeningModal
+          isOpen={!!selectedLevelCase}
+          onClose={handleLevelCaseClosed}
+          caseId={selectedLevelCase.id}
+          level={selectedLevelCase.level_required}
+          onCaseOpened={async (reward) => {
+            // Open the case via the hook
+            const result = await openLevelCase(selectedLevelCase.id);
+            if (result) {
+              // Case was opened successfully
+              handleLevelCaseClosed();
+            }
+          }}
+          isFreeCase={false}
         />
       )}
     </div>
