@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Zap, AlertTriangle, Coins, Cpu, Shield, Crown, TrendingUp, Target, Gamepad2, User, Bot, CheckCircle, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Building2, Zap, AlertTriangle, Coins, Cpu, Shield, Crown, TrendingUp, Target, Gamepad2, User, Bot, CheckCircle, X, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRealtimeFeeds } from '@/hooks/useRealtimeFeeds';
 import { useGameHistory } from '@/hooks/useGameHistory';
 import { UserProfile } from '@/hooks/useUserProfile';
@@ -118,7 +120,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   const { forceFullRefresh } = useXPSync();
   
   const { history: gameHistory, refetch: refreshHistory } = useGameHistory('tower');
-  const { recentBets } = useRealtimeFeeds();
+  const { liveBetFeed } = useRealtimeFeeds();
 
   // Real-time balance state for instant UI updates
   const [realtimeBalance, setRealtimeBalance] = useState<number>(userData?.balance || 0);
@@ -749,11 +751,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="max-w-7xl mx-auto p-4 space-y-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         
         {/* Game Controls - Modern Style */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="xl:col-span-1 space-y-4">
           <Card className="border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-3 text-white">
@@ -998,7 +1000,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
         </div>
 
         {/* Main Tower Display */}
-        <div className="lg:col-span-2">
+        <div className="xl:col-span-2">
           <Card className="border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-sm relative">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
@@ -1081,8 +1083,147 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
               </div>
             </CardContent>
           </Card>
+        </div>
 
+        {/* Live Bet History */}
+        <div className="xl:col-span-1">
+          <Card className="border border-slate-700/50 bg-gradient-to-br from-slate-900/90 to-slate-800/80 backdrop-blur-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-white">
+                <div className="p-2 rounded-lg bg-primary/20 border border-primary/30">
+                  <Clock className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Live Bets</h3>
+                  <p className="text-sm text-slate-400 font-normal">Recent tower climbs</p>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-3">
+                  {liveBetFeed
+                    .filter(bet => bet.game_type === 'tower')
+                    .slice(0, 20)
+                    .map((bet) => {
+                      const gameData = bet.game_data || {};
+                      const levelReached = gameData.level_reached || 0;
+                      const maxLevel = gameData.max_level || 8;
+                      const difficulty = gameData.difficulty || 'easy';
+                      const isWin = bet.result === 'win' || bet.profit > 0;
+                      
+                      const difficultyInfo = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO] || DIFFICULTY_INFO.easy;
+                      
+                      return (
+                        <div
+                          key={bet.id}
+                          className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-3 hover:bg-slate-700/50 transition-colors"
+                        >
+                          {/* User Info Row */}
+                          <div className="flex items-center gap-3 mb-2">
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage src={bet.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
+                              <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-blue-500 text-white">
+                                {bet.username.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <ClickableUsername 
+                                username={bet.username}
+                                className="font-medium text-sm text-slate-200 truncate hover:text-primary transition-colors"
+                              >
+                                {bet.username}
+                              </ClickableUsername>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <Badge className={`text-xs px-2 py-0.5 ${difficultyInfo.color}`}>
+                                  {difficultyInfo.name}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
 
+                          {/* Bet Details */}
+                          <div className="space-y-2">
+                            {/* Bet Amount & Result */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Coins className="w-4 h-4 text-yellow-400" />
+                                <span className="text-sm font-medium text-slate-200">
+                                  ${bet.bet_amount.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className={`flex items-center gap-1 text-sm font-medium ${
+                                isWin ? 'text-emerald-400' : 'text-red-400'
+                              }`}>
+                                {isWin ? (
+                                  <>
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span>WIN</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <X className="w-4 h-4" />
+                                    <span>LOSE</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Level Progress */}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-400">Level Progress</span>
+                                <span className="text-slate-300 font-medium">
+                                  {levelReached + 1}/{maxLevel}
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-700 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full transition-all duration-300 ${
+                                    isWin ? 'bg-emerald-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ 
+                                    width: `${Math.max(((levelReached + 1) / maxLevel) * 100, 5)}%` 
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Profit/Loss */}
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-400">Profit/Loss</span>
+                              <span className={`font-medium ${
+                                bet.profit >= 0 ? 'text-emerald-400' : 'text-red-400'
+                              }`}>
+                                {bet.profit >= 0 ? '+' : ''}${bet.profit.toFixed(2)}
+                              </span>
+                            </div>
+
+                            {/* Multiplier if available */}
+                            {bet.multiplier && bet.multiplier > 1 && (
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-400">Multiplier</span>
+                                <span className="text-primary font-medium">
+                                  {bet.multiplier.toFixed(2)}x
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  
+                  {liveBetFeed.filter(bet => bet.game_type === 'tower').length === 0 && (
+                    <div className="text-center py-8">
+                      <Building2 className="w-12 h-12 mx-auto text-slate-600 mb-3" />
+                      <p className="text-slate-400">No recent tower games</p>
+                      <p className="text-slate-500 text-sm">Bets will appear here as players climb</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
