@@ -187,44 +187,61 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     const tilesPerRow = difficultyConfig.tilesPerRow;
     const payoutMultipliers = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS] || [];
     
-         // Render individual tile matching actual game design EXACTLY
+         // Render individual tile matching actual game progression
      const renderReplayTile = (levelIndex: number, tileIndex: number) => {
        const levelMines = minePositions[levelIndex] || [];
        const isMine = levelMines.includes(tileIndex);
        const isSelected = selectedTiles[levelIndex] === tileIndex;
+       const wasCleared = levelIndex < levelReached; // Only cleared levels show green checkmarks
        
-       // In replay, ALL tiles are revealed (like when game ends in real game)
-       const revealed = { safe: !isMine };
+       // Determine what should be revealed based on progression
+       let revealed = null;
+       if (wasCleared && isSelected) {
+         // Only selected tiles on cleared levels are revealed as safe
+         revealed = { safe: true };
+       } else if (isMine) {
+         // All mines are always revealed for transparency
+         revealed = { safe: false };
+       }
+       // Everything else stays hidden (like unselected tiles in actual game)
        
        // Use EXACT same styling logic as actual game
        let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
        
-       // Match the actual game's revealed tile styling
+       // Apply styling based on revelation state
        if (revealed?.safe) {
          tileClass += "bg-emerald-500/20 border-2 border-emerald-500/40 ";
        } else if (revealed && !revealed.safe) {
          tileClass += "bg-red-500/20 border-2 border-red-500/40 ";
+       } else {
+         // Hidden tiles (unselected safe tiles, future levels)
+         tileClass += "bg-slate-700/30 border-2 border-slate-600/30 opacity-50 ";
        }
        
-       // Add extra highlighting for selected tiles (player's path)
+       // Add STRONG highlighting for selected tiles (player's path)
        if (isSelected) {
-         if (!isMine) {
-           // Enhance selected safe tiles
-           tileClass = tileClass.replace("bg-emerald-500/20", "bg-emerald-500/40");
-           tileClass = tileClass.replace("border-emerald-500/40", "border-emerald-400");
-           tileClass += "shadow-lg shadow-emerald-500/30 ";
+         if (revealed?.safe) {
+           // Enhance selected safe tiles (cleared levels)
+           tileClass = tileClass.replace("bg-emerald-500/20", "bg-emerald-500/50");
+           tileClass = tileClass.replace("border-emerald-500/40", "border-emerald-300");
+           tileClass += "shadow-xl shadow-emerald-500/50 ring-2 ring-emerald-400/60 ";
+         } else if (revealed && !revealed.safe) {
+           // Enhance selected mine tiles  
+           tileClass = tileClass.replace("bg-red-500/20", "bg-red-500/50");
+           tileClass = tileClass.replace("border-red-500/40", "border-red-300");
+           tileClass += "shadow-xl shadow-red-500/50 ring-2 ring-red-400/60 ";
          } else {
-           // Enhance selected mine tiles
-           tileClass = tileClass.replace("bg-red-500/20", "bg-red-500/40");
-           tileClass = tileClass.replace("border-red-500/40", "border-red-400");
-           tileClass += "shadow-lg shadow-red-500/30 ";
+           // Selected but hidden tile (should stand out but not reveal content)
+           tileClass = tileClass.replace("bg-slate-700/30", "bg-blue-500/30");
+           tileClass = tileClass.replace("border-slate-600/30", "border-blue-400/50");
+           tileClass += "shadow-lg shadow-blue-500/30 ring-2 ring-blue-400/40 ";
          }
        }
        
        return (
          <button key={tileIndex} className={tileClass} disabled>
            <div className="flex items-center justify-center h-full">
-             {/* Use EXACT same icon logic as actual game */}
+             {/* Show icons based on revelation state */}
              {revealed ? (
                revealed.safe ? (
                  <CheckCircle className="w-5 h-5 text-emerald-400" />
@@ -236,12 +253,13 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
              )}
            </div>
            
-           {/* Selection highlight - make selected tiles more prominent */}
+           {/* Enhanced selection indicators for user's path */}
            {isSelected && (
              <>
-               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
-               <div className="absolute inset-0 border-2 border-white/40 rounded-lg"></div>
-               <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border border-yellow-300 animate-pulse"></div>
+               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent animate-pulse"></div>
+               <div className="absolute inset-0 border-2 border-yellow-400/60 rounded-lg animate-pulse"></div>
+               <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full border-2 border-yellow-300 animate-pulse shadow-lg"></div>
+               <div className="absolute top-1 left-1 text-xs font-bold text-yellow-300 drop-shadow-lg">●</div>
              </>
            )}
          </button>
@@ -1471,22 +1489,29 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                          <CheckCircle className="w-3 h-3 text-emerald-400" />
                          <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
                        </div>
-                       <span className="text-slate-400">Selected Safe Path</span>
+                       <span className="text-slate-400">Cleared Path</span>
                      </div>
                      <div className="flex items-center gap-2">
                        <div className="relative">
                          <X className="w-3 h-3 text-red-400" />
                          <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
                        </div>
-                       <span className="text-slate-400">Selected Mine (Loss)</span>
+                       <span className="text-slate-400">Hit Mine</span>
                      </div>
                      <div className="flex items-center gap-2">
-                       <AlertTriangle className="w-3 h-3 text-red-500" />
-                       <span className="text-slate-400">Hidden Mines</span>
+                       <X className="w-3 h-3 text-red-400" />
+                       <span className="text-slate-400">All Mines</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <div className="relative">
+                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                         <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
+                       </div>
+                       <span className="text-slate-400">Selected (Hidden)</span>
                      </div>
                      <div className="flex items-center gap-2">
                        <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
-                       <span className="text-slate-400">Unselected Tiles</span>
+                       <span className="text-slate-400">Unselected</span>
                      </div>
                    </div>
                 </div>
