@@ -1294,11 +1294,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                             </div>
                             <div className="flex items-center gap-1.5">
                               <Badge 
-                                className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 group-hover:px-2 group-hover:scale-105 cursor-help relative overflow-hidden`}
+                                className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 cursor-help relative overflow-visible group-hover:z-10`}
                                 title={difficultyInfo.name}
                               >
                                 <span className="group-hover:opacity-0 transition-opacity duration-300">{difficultyInfo.name.charAt(0)}</span>
-                                <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                <span className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap px-1 py-0 rounded backdrop-blur-sm border border-current/20 bg-current/10">
                                   {difficultyInfo.name}
                                 </span>
                               </Badge>
