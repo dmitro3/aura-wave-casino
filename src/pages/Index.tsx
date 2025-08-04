@@ -1537,7 +1537,7 @@ export default function Index({ initialGame }: IndexProps) {
                         {formatXP(xpIncreaseAnimation ? animatedCurrentLevelXP : displayCurrentLevelXP)}
                       </span>
                       <span className="text-slate-500">/</span>
-                      <span className="text-primary">{formatXP(effectiveStats.current_level_xp + effectiveStats.xp_to_next_level)}</span>
+                      <span className="text-primary">{formatXP(calculateAccurateXPProgress(effectiveStats.current_level, effectiveStats.lifetime_xp).total_xp_needed_for_current_level)}</span>
                       <span className="text-slate-400">XP</span>
                       {xpIncreaseAnimation && (
                         <span className="text-green-400 animate-bounce text-xs">+</span>

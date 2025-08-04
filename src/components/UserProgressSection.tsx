@@ -79,8 +79,9 @@ export function UserProgressSection() {
                 level={levelStats.current_level} 
                 size="lg" 
                 showProgress={true}
-                            currentXP={accurateProgress.current_level_xp}
-            xpToNext={accurateProgress.xp_to_next_level}
+                currentXP={accurateProgress.current_level_xp}
+                xpToNext={accurateProgress.xp_to_next_level}
+                totalXPNeeded={accurateProgress.total_xp_needed_for_current_level}
               />
             </div>
           </div>
@@ -89,7 +90,7 @@ export function UserProgressSection() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span>XP Progress</span>
-                              <span>{formatXPProgress(accurateProgress.current_level_xp, accurateProgress.current_level_xp + accurateProgress.xp_to_next_level)}</span>
+              <span>{formatXPProgress(accurateProgress.current_level_xp, accurateProgress.total_xp_needed_for_current_level)}</span>
             </div>
             <Progress value={progressPercentage} className="h-3" />
             <div className="flex justify-between text-xs text-muted-foreground">

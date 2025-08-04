@@ -9,6 +9,7 @@ interface EnhancedLevelBadgeProps {
   showProgress?: boolean;
   currentXP?: number;
   xpToNext?: number;
+  totalXPNeeded?: number;
 }
 
 export const EnhancedLevelBadge = ({ 
@@ -17,7 +18,8 @@ export const EnhancedLevelBadge = ({
   showIcon = true, 
   showProgress = false,
   currentXP = 0,
-  xpToNext = 0
+  xpToNext = 0,
+  totalXPNeeded
 }: EnhancedLevelBadgeProps) => {
   const getLevelColor = (level: number) => {
     if (level >= 1000) return 'from-rainbow via-white to-rainbow animate-pulse'; // Ultimate
@@ -93,7 +95,7 @@ export const EnhancedLevelBadge = ({
       
       {showProgress && (
         <div className="text-xs text-muted-foreground">
-          {formatXPProgress(currentXP, currentXP + xpToNext)}
+          {formatXPProgress(currentXP, totalXPNeeded || (currentXP + xpToNext))}
         </div>
       )}
     </div>
