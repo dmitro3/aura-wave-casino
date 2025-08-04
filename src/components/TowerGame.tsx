@@ -1293,13 +1293,18 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <Badge 
-                                className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 cursor-help relative overflow-visible group-hover:z-10
-                                  group-hover:opacity-0`}
-                                title={difficultyInfo.name}
-                              >
-                                <span className="transition-opacity duration-300">{difficultyInfo.name.charAt(0)}</span>
-                                <span className={`absolute top-0 right-0 px-1 py-0 rounded whitespace-nowrap
+                              <div className="relative">
+                                {/* Circular Badge - Default State */}
+                                <Badge 
+                                  className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 cursor-help
+                                    opacity-100 group-hover:opacity-0`}
+                                  title={difficultyInfo.name}
+                                >
+                                  {difficultyInfo.name.charAt(0)}
+                                </Badge>
+                                
+                                {/* Expanded Badge - Hover State */}
+                                <Badge className={`absolute top-0 right-0 text-xs px-1 py-0 rounded whitespace-nowrap cursor-help
                                   opacity-0 group-hover:opacity-100 
                                   scale-75 group-hover:scale-100 
                                   translate-x-2 group-hover:translate-x-0
@@ -1308,10 +1313,12 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                   ${difficulty === 'easy' ? 'bg-emerald-500/30 border-emerald-400/50' : 
                                     difficulty === 'medium' ? 'bg-yellow-500/30 border-yellow-400/50' : 
                                     difficulty === 'hard' ? 'bg-orange-500/30 border-orange-400/50' : 'bg-red-500/30 border-red-400/50'}
-                                  backdrop-blur-sm`}>
+                                  backdrop-blur-sm z-10`}
+                                  title={difficultyInfo.name}
+                                >
                                   {difficultyInfo.name}
-                                </span>
-                              </Badge>
+                                </Badge>
+                              </div>
                               <div className={`flex items-center gap-0.5 text-xs font-medium ${
                                 isWin ? 'text-emerald-400' : 'text-red-400'
                               }`}>
