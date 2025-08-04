@@ -101,47 +101,183 @@ const rarityConfig = {
 };
 
 // Generate possible rewards for the reel
+// Level-based reward ranges (same as backend)
+const LEVEL_REWARDS = {
+  2: {
+    common: { min: 0.05, max: 0.07 },
+    rare: { min: 0.12, max: 0.15 },
+    epic: { min: 0.27, max: 0.33 },
+    legendary: { min: 0.80, max: 0.98 }
+  },
+  5: {
+    common: { min: 0.21, max: 0.26 },
+    rare: { min: 0.48, max: 0.59 },
+    epic: { min: 1.07, max: 1.31 },
+    legendary: { min: 3.21, max: 3.92 }
+  },
+  25: {
+    common: { min: 0.81, max: 0.99 },
+    rare: { min: 1.82, max: 2.23 },
+    epic: { min: 4.05, max: 4.95 },
+    legendary: { min: 12.15, max: 14.85 }
+  },
+  50: {
+    common: { min: 2.91, max: 3.56 },
+    rare: { min: 6.55, max: 8.01 },
+    epic: { min: 14.56, max: 17.80 },
+    legendary: { min: 43.68, max: 53.39 }
+  },
+  75: {
+    common: { min: 6.48, max: 7.92 },
+    rare: { min: 14.59, max: 17.83 },
+    epic: { min: 32.42, max: 39.62 },
+    legendary: { min: 97.25, max: 118.86 }
+  },
+  100: {
+    common: { min: 11.38, max: 13.91 },
+    rare: { min: 25.61, max: 31.30 },
+    epic: { min: 56.91, max: 69.56 },
+    legendary: { min: 170.73, max: 208.67 }
+  },
+  125: {
+    common: { min: 17.68, max: 21.61 },
+    rare: { min: 39.77, max: 48.61 },
+    epic: { min: 88.38, max: 108.03 },
+    legendary: { min: 265.15, max: 324.08 }
+  },
+  150: {
+    common: { min: 24.71, max: 30.20 },
+    rare: { min: 55.60, max: 67.96 },
+    epic: { min: 123.56, max: 151.02 },
+    legendary: { min: 370.68, max: 453.05 }
+  },
+  200: {
+    common: { min: 34.03, max: 41.59 },
+    rare: { min: 76.57, max: 93.58 },
+    epic: { min: 170.15, max: 207.96 },
+    legendary: { min: 510.45, max: 623.88 }
+  },
+  250: {
+    common: { min: 44.37, max: 54.23 },
+    rare: { min: 99.84, max: 122.02 },
+    epic: { min: 221.86, max: 271.16 },
+    legendary: { min: 665.57, max: 813.47 }
+  },
+  300: {
+    common: { min: 55.46, max: 67.79 },
+    rare: { min: 124.79, max: 152.52 },
+    epic: { min: 277.32, max: 338.94 },
+    legendary: { min: 831.95, max: 1016.82 }
+  },
+  350: {
+    common: { min: 67.43, max: 82.41 },
+    rare: { min: 151.71, max: 185.42 },
+    epic: { min: 337.13, max: 412.05 },
+    legendary: { min: 1011.40, max: 1236.16 }
+  },
+  400: {
+    common: { min: 80.76, max: 98.71 },
+    rare: { min: 181.71, max: 222.09 },
+    epic: { min: 403.80, max: 493.53 },
+    legendary: { min: 1211.40, max: 1480.58 }
+  },
+  450: {
+    common: { min: 95.26, max: 116.04 },
+    rare: { min: 214.71, max: 262.61 },
+    epic: { min: 477.56, max: 584.44 },
+    legendary: { min: 1432.67, max: 1750.04 }
+  },
+  500: {
+    common: { min: 110.90, max: 135.05 },
+    rare: { min: 250.33, max: 306.40 },
+    epic: { min: 556.18, max: 680.26 },
+    legendary: { min: 1668.55, max: 2038.98 }
+  },
+  600: {
+    common: { min: 144.24, max: 175.75 },
+    rare: { min: 325.32, max: 398.07 },
+    epic: { min: 723.72, max: 884.61 },
+    legendary: { min: 2171.15, max: 2642.31 }
+  },
+  700: {
+    common: { min: 180.27, max: 219.80 },
+    rare: { min: 406.65, max: 497.05 },
+    epic: { min: 904.97, max: 1105.14 },
+    legendary: { min: 2714.90, max: 3315.43 }
+  },
+  800: {
+    common: { min: 219.00, max: 267.38 },
+    rare: { min: 493.75, max: 603.88 },
+    epic: { min: 1099.88, max: 1344.85 },
+    legendary: { min: 3299.64, max: 4034.55 }
+  },
+  900: {
+    common: { min: 260.44, max: 317.97 },
+    rare: { min: 586.48, max: 717.12 },
+    epic: { min: 1307.99, max: 1599.63 },
+    legendary: { min: 3923.96, max: 4798.90 }
+  },
+  1000: {
+    common: { min: 304.58, max: 372.59 },
+    rare: { min: 684.64, max: 837.41 },
+    epic: { min: 1522.88, max: 1862.18 },
+    legendary: { min: 4568.65, max: 5594.31 }
+  }
+};
+
+// Rarity chances (same as backend)
+const RARITY_CHANCES = {
+  common: 75,
+  rare: 20,
+  epic: 4,
+  legendary: 1
+};
+
 const generatePossibleRewards = (level: number, isFreeCase?: boolean): RewardItem[] => {
   const rewards: RewardItem[] = [];
   const rarities: (keyof typeof rarityConfig)[] = ['common', 'rare', 'epic', 'legendary'];
-  const weights = [60, 25, 12, 3]; // Probability weights
   
-  // Base amount for calculations
-  const baseAmount = isFreeCase ? 1000 : Math.max(10, level * 2);
+  // Get the closest level for reward calculation
+  const availableLevels = Object.keys(LEVEL_REWARDS).map(Number).sort((a, b) => a - b);
+  let targetLevel = availableLevels[0]; // Default to lowest level
+  
+  for (const availableLevel of availableLevels) {
+    if (level >= availableLevel) {
+      targetLevel = availableLevel;
+    } else {
+      break;
+    }
+  }
   
   // Generate 50 possible rewards
   for (let i = 0; i < 50; i++) {
-    // Weighted random selection
+    // Weighted random selection using the same chances as backend
     const rand = Math.random() * 100;
     let cumulative = 0;
     let selectedRarity = 'common' as keyof typeof rarityConfig;
     
-    for (let j = 0; j < weights.length; j++) {
-      cumulative += weights[j];
-      if (rand <= cumulative) {
-        selectedRarity = rarities[j];
-        break;
-      }
+    if (rand < RARITY_CHANCES.legendary) {
+      selectedRarity = 'legendary';
+    } else if (rand < RARITY_CHANCES.legendary + RARITY_CHANCES.epic) {
+      selectedRarity = 'epic';
+    } else if (rand < RARITY_CHANCES.legendary + RARITY_CHANCES.epic + RARITY_CHANCES.rare) {
+      selectedRarity = 'rare';
+    } else {
+      selectedRarity = 'common';
     }
     
-    // Calculate amount based on rarity and level
-    const multipliers = {
-      common: { min: 0.5, max: 2.5 },
-      rare: { min: 3, max: 12 },
-      epic: { min: 15, max: 40 },
-      legendary: { min: 50, max: 100 }
-    };
+    // Get reward range for the target level and rarity
+    const rewardRange = LEVEL_REWARDS[targetLevel][selectedRarity];
     
-    const config = multipliers[selectedRarity];
-    const min = Math.round(baseAmount * config.min);
-    const max = Math.round(baseAmount * config.max);
-    const amount = Math.round(min + Math.random() * (max - min));
+    // Generate random amount within the range
+    const amount = rewardRange.min + (Math.random() * (rewardRange.max - rewardRange.min));
+    const roundedAmount = Math.round(amount * 100) / 100; // Round to 2 decimals
     
     const rarityData = rarityConfig[selectedRarity];
     
     rewards.push({
       rarity: selectedRarity,
-      amount: amount,
+      amount: roundedAmount,
       icon: rarityData.icon,
       color: rarityData.color,
       glow: rarityData.glow,
