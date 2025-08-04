@@ -1298,7 +1298,16 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                 title={difficultyInfo.name}
                               >
                                 <span className="group-hover:opacity-0 transition-opacity duration-300">{difficultyInfo.name.charAt(0)}</span>
-                                <span className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap px-1 py-0 rounded backdrop-blur-sm border border-current/20 bg-current/10">
+                                <span className={`absolute top-0 right-0 px-1 py-0 rounded whitespace-nowrap
+                                  opacity-0 group-hover:opacity-100 
+                                  scale-75 group-hover:scale-100 
+                                  translate-x-2 group-hover:translate-x-0
+                                  transition-all duration-300 ease-out
+                                  ${difficultyInfo.color} 
+                                  ${difficulty === 'easy' ? 'bg-emerald-500/20' : 
+                                    difficulty === 'medium' ? 'bg-yellow-500/20' : 
+                                    difficulty === 'hard' ? 'bg-orange-500/20' : 'bg-red-500/20'}
+                                  backdrop-blur-sm border border-current/30`}>
                                   {difficultyInfo.name}
                                 </span>
                               </Badge>
