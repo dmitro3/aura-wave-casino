@@ -114,7 +114,7 @@ export const LiveBetFeedComponent = () => {
                   className="flex items-center gap-3 p-3 rounded-lg bg-card/50 border hover:bg-card/80 transition-colors animate-new-item"
                 >
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
+                    <AvatarImage src={bet.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
                     <AvatarFallback>{bet.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   

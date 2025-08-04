@@ -56,15 +56,31 @@ export function useUserProfile() {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          if (payload.eventType === 'UPDATE' && payload.new?.balance !== undefined) {
-            console.log('💰 REAL-TIME BALANCE UPDATE:', payload);
-            const newBalance = parseFloat(payload.new.balance);
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            console.log('📡 REAL-TIME PROFILE UPDATE:', payload);
+            
+            const newData = payload.new;
             setUserData((prev) => {
-              if (prev && prev.balance !== newBalance) {
-                console.log('⚡ INSTANT BALANCE SYNC:', prev.balance, '→', newBalance);
-                return { ...prev, balance: newBalance };
+              if (!prev) return prev;
+              
+              const updates: any = {};
+              let hasChanges = false;
+              
+              // Check for balance changes
+              if (newData.balance !== undefined && prev.balance !== newData.balance) {
+                updates.balance = parseFloat(newData.balance);
+                hasChanges = true;
+                console.log('💰 BALANCE UPDATE:', prev.balance, '→', updates.balance);
               }
-              return prev;
+              
+              // Check for avatar_url changes
+              if (newData.avatar_url !== undefined && prev.avatar_url !== newData.avatar_url) {
+                updates.avatar_url = newData.avatar_url;
+                hasChanges = true;
+                console.log('🖼️ AVATAR UPDATE:', prev.avatar_url, '→', updates.avatar_url);
+              }
+              
+              return hasChanges ? { ...prev, ...updates } : prev;
             });
           }
         }
@@ -97,6 +113,7 @@ export function useUserProfile() {
           balance,
           last_claim_time,
           badges,
+          avatar_url,
           created_at,
           updated_at
         `)

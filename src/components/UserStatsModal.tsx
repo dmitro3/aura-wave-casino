@@ -30,6 +30,7 @@ interface UserStats {
   id: string;
   username: string;
   registration_date: string;
+  avatar_url?: string | null;
   current_level: number;
   lifetime_xp: number;
   current_xp: number;
@@ -169,6 +170,7 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
         id: profile.id,
         username: profile.username,
         registration_date: profile.registration_date,
+        avatar_url: profile.avatar_url,
         current_level: currentLevel,
         lifetime_xp: lifetimeXP,
         current_xp: accurateProgress.current_level_xp,
@@ -282,7 +284,7 @@ export default function UserStatsModal({ isOpen, onClose, username }: UserStatsM
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <Avatar className="w-10 h-10">
-              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} />
+              <AvatarImage src={userStats?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} />
               <AvatarFallback>{username.slice(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>

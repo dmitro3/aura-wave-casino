@@ -60,7 +60,7 @@ export default function StreakFeed() {
                 >
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
+                      <AvatarImage src={bet.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
                       <AvatarFallback className="bg-primary/20">
                         {bet.username.slice(0, 2).toUpperCase()}
                       </AvatarFallback>

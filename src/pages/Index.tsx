@@ -1337,7 +1337,7 @@ export default function Index({ initialGame }: IndexProps) {
                                                           <ProfileBorder level={effectiveStats.current_level} size="md">
                               <div className="w-12 h-12 rounded-full overflow-hidden relative">
                                 <img 
-                                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
+                                  src={userData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
                                   alt={`${userData.username} avatar`}
                                   className="w-full h-full object-cover"
                                 />
@@ -1420,7 +1420,7 @@ export default function Index({ initialGame }: IndexProps) {
                           <ProfileBorder level={effectiveStats.current_level} size="sm">
                             <div className="w-8 h-8 rounded-full overflow-hidden relative">
                               <img 
-                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
+                                src={userData.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
                                 alt={`${userData.username} avatar`}
                                 className="w-full h-full object-cover"
                               />

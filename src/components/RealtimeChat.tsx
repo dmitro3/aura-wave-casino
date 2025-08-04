@@ -23,6 +23,9 @@ interface ChatMessage {
   message: string;
   user_level: number;
   created_at: string;
+  profiles?: {
+    avatar_url: string | null;
+  };
 }
 
 export const RealtimeChat = () => {
@@ -54,8 +57,24 @@ export const RealtimeChat = () => {
           schema: 'public',
           table: 'chat_messages'
         },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as ChatMessage;
+          
+          // Fetch avatar_url for the new message user
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('avatar_url')
+              .eq('id', newMsg.user_id)
+              .single();
+            
+            if (profile) {
+              newMsg.profiles = { avatar_url: profile.avatar_url };
+            }
+          } catch (error) {
+            console.log('Could not fetch avatar for new message:', error);
+          }
+          
           setMessages(prev => [...prev, newMsg]);
           // Auto scroll after a slight delay to ensure DOM is updated
           setTimeout(scrollToBottom, 100);
@@ -79,7 +98,10 @@ export const RealtimeChat = () => {
     try {
       const { data, error } = await supabase
         .from('chat_messages' as any)
-        .select('*')
+        .select(`
+          *,
+          profiles!inner(avatar_url)
+        `)
         .order('created_at', { ascending: true })
         .limit(50);
 
@@ -248,7 +270,7 @@ export const RealtimeChat = () => {
                         <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 to-accent/30 rounded-full blur-sm opacity-0 group-hover/message:opacity-100 transition-all duration-300" />
                         <ProfileBorder level={msg.user_level} size="sm">
                           <Avatar className="w-full h-full">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
+                            <AvatarImage src={msg.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.username}`} />
                             <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-blue-500 text-white">
                               {msg.username.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
