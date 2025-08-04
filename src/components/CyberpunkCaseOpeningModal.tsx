@@ -170,9 +170,7 @@ export const CyberpunkCaseOpeningModal = ({
   const [reward, setReward] = useState<CaseReward | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [possibleRewards, setPossibleRewards] = useState<RewardItem[]>([]);
-  const [selectedRewardIndex, setSelectedRewardIndex] = useState(0);
   const [spinning, setSpinning] = useState(false);
-  const [spinSpeed, setSpinSpeed] = useState(0);
   const [reelPosition, setReelPosition] = useState(0);
   const { toast } = useToast();
 
@@ -181,7 +179,6 @@ export const CyberpunkCaseOpeningModal = ({
     if (isOpen) {
       const rewards = generatePossibleRewards(level, isFreeCase);
       setPossibleRewards(rewards);
-      setSelectedRewardIndex(Math.floor(rewards.length / 2)); // Start at center
     }
   }, [isOpen, level, isFreeCase]);
 
@@ -260,7 +257,7 @@ export const CyberpunkCaseOpeningModal = ({
       Math.abs(r.amount - rewardData.amount) < 5
     );
     
-    const targetIndex = targetReward ? possibleRewards.indexOf(targetReward) : Math.floor(possibleRewards.length / 2);
+    const targetIndex = targetReward ? possibleRewards.indexOf(targetReward) : 4; // Center position (4th item)
     
     // Fast spinning phase
     let currentSpeed = 50;
@@ -269,15 +266,15 @@ export const CyberpunkCaseOpeningModal = ({
     const spinInterval = setInterval(() => {
       currentPosition += currentSpeed;
       setReelPosition(currentPosition);
-      setSelectedRewardIndex(Math.floor(currentPosition / 120) % possibleRewards.length);
       
       // Gradually slow down
       if (currentSpeed > 5) {
         currentSpeed *= 0.98;
       }
       
-      // Stop when we reach the target
-      if (currentSpeed <= 5 && Math.abs(currentPosition - (targetIndex * 120)) < 10) {
+      // Stop when we reach the target (center the winning reward)
+      const targetPosition = targetIndex * 136; // 136px per item (128px card + 8px gap)
+      if (currentSpeed <= 5 && Math.abs(currentPosition - targetPosition) < 10) {
         clearInterval(spinInterval);
         setSpinning(false);
         
@@ -305,15 +302,7 @@ export const CyberpunkCaseOpeningModal = ({
     onClose();
   };
 
-  const navigateRewards = (direction: 'left' | 'right') => {
-    if (spinning) return;
-    
-    const newIndex = direction === 'left' 
-      ? Math.max(0, selectedRewardIndex - 1)
-      : Math.min(possibleRewards.length - 1, selectedRewardIndex + 1);
-    
-    setSelectedRewardIndex(newIndex);
-  };
+
 
   const getRewardRange = (level: number, rarity: string, isFreeCase?: boolean) => {
     if (isFreeCase) {
@@ -421,133 +410,99 @@ export const CyberpunkCaseOpeningModal = ({
                   {/* Main Content */}
                   <div className="space-y-8">
                     
-                    {/* Preview Phase */}
-                    {phase === 'preview' && (
-                      <div className="space-y-8">
-                        {/* Case Display */}
-                        <div className="text-center">
-                          <div className="relative mx-auto w-32 h-32 mb-6">
-                            <div className={`
-                              w-full h-full rounded-2xl flex items-center justify-center
-                              bg-gradient-to-br ${isFreeCase 
-                                ? freeCaseType === 'common' ? 'from-slate-400 to-slate-600' 
-                                  : freeCaseType === 'rare' ? 'from-blue-400 to-blue-600'
-                                  : 'from-purple-400 to-purple-600'
-                                : 'from-primary to-accent'
-                              } border-2 border-primary/30 shadow-2xl
-                              hover:scale-105 transition-transform duration-300
-                            `}>
-                              <div className="text-center text-white">
-                                <Gift className="w-16 h-16 mx-auto mb-2" />
-                                <div className="text-lg font-bold">
-                                  {isFreeCase ? freeCaseType?.charAt(0).toUpperCase() + freeCaseType?.slice(1) : `Level ${level}`}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Glow Effect */}
-                            <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl blur-xl animate-pulse" />
-                          </div>
-                          
-                          <h3 className="text-xl font-bold mb-2">Ready to Open</h3>
-                          <p className="text-muted-foreground">Click below to reveal your reward</p>
-                        </div>
+                                         {/* Preview Phase */}
+                     {phase === 'preview' && (
+                       <div className="space-y-8">
+                         {/* Case Display */}
+                         <div className="text-center mb-6">
+                           <div className="relative mx-auto w-32 h-32 mb-4">
+                             <div className={`
+                               w-full h-full rounded-2xl flex items-center justify-center
+                               bg-gradient-to-br ${isFreeCase 
+                                 ? freeCaseType === 'common' ? 'from-slate-400 to-slate-600' 
+                                   : freeCaseType === 'rare' ? 'from-blue-400 to-blue-600'
+                                   : 'from-purple-400 to-purple-600'
+                                 : 'from-primary to-accent'
+                               } border-2 border-primary/30 shadow-2xl
+                               hover:scale-105 transition-transform duration-300
+                             `}>
+                               <div className="text-center text-white">
+                                 <Gift className="w-16 h-16 mx-auto mb-2" />
+                                 <div className="text-lg font-bold">
+                                   {isFreeCase ? freeCaseType?.charAt(0).toUpperCase() + freeCaseType?.slice(1) : `Level ${level}`}
+                                 </div>
+                               </div>
+                             </div>
+                             
+                             {/* Glow Effect */}
+                             <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl blur-xl animate-pulse" />
+                           </div>
+                           
+                           <h3 className="text-xl font-bold mb-2">Ready to Open</h3>
+                           <p className="text-muted-foreground">Click below to reveal your reward</p>
+                         </div>
 
-                        {/* Reward Preview Reel */}
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-lg font-semibold">Possible Rewards</h4>
-                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                              <span>Navigate:</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigateRewards('left')}
-                                disabled={selectedRewardIndex === 0}
-                                className="p-1"
-                              >
-                                <ChevronLeft className="w-4 h-4" />
-                              </Button>
-                              <span>{selectedRewardIndex + 1} / {possibleRewards.length}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigateRewards('right')}
-                                disabled={selectedRewardIndex === possibleRewards.length - 1}
-                                className="p-1"
-                              >
-                                <ChevronRight className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          
-                          {/* Reward Display */}
-                          <div className="relative">
-                            <div className="flex justify-center">
-                              {possibleRewards.slice(Math.max(0, selectedRewardIndex - 1), selectedRewardIndex + 2).map((reward, index) => {
-                                const isCenter = index === 1;
-                                const actualIndex = selectedRewardIndex - 1 + index;
-                                
-                                return (
-                                  <div
-                                    key={actualIndex}
-                                    className={cn(
-                                      "mx-2 transition-all duration-300",
-                                      isCenter ? "scale-110 z-10" : "scale-90 opacity-60"
-                                    )}
-                                  >
-                                    <Card className={`
-                                      w-32 h-40 relative overflow-hidden
-                                      ${reward.bgGradient} border-2 ${reward.borderColor}
-                                      ${isCenter ? reward.glow : ''}
-                                      ${reward.shimmer ? 'animate-pulse' : ''}
-                                    `}>
-                                      <CardContent className="p-4 text-center">
-                                        <div className="text-3xl mb-2">{reward.icon}</div>
-                                        <div className="text-lg font-bold text-white mb-1">
-                                          ${reward.amount.toLocaleString()}
-                                        </div>
-                                        <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
-                                          {reward.rarity}
-                                        </div>
-                                      </CardContent>
-                                      
-                                      {/* Shimmer Effect */}
-                                      {reward.shimmer && (
-                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-pulse" />
-                                      )}
-                                    </Card>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            
-                            {/* Center Indicator */}
-                            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-full bg-gradient-to-b from-primary/80 to-primary/40 z-20">
-                              <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
-                              <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
-                            </div>
-                          </div>
-                        </div>
+                         {/* Static Reward Reel */}
+                         <div className="space-y-4">
+                           <h4 className="text-lg font-semibold text-center">Possible Rewards</h4>
+                           
+                           {/* Reward Display */}
+                           <div className="relative">
+                             <div className="flex justify-center overflow-hidden">
+                               <div className="flex space-x-4">
+                                 {possibleRewards.slice(0, 9).map((reward, index) => (
+                                   <Card
+                                     key={index}
+                                     className={`
+                                       w-32 h-40 flex-shrink-0 relative overflow-hidden
+                                       ${reward.bgGradient} border-2 ${reward.borderColor}
+                                       ${reward.shimmer ? 'animate-pulse' : ''}
+                                     `}
+                                   >
+                                     <CardContent className="p-4 text-center">
+                                       <div className="text-3xl mb-2">{reward.icon}</div>
+                                       <div className="text-lg font-bold text-white mb-1">
+                                         ${reward.amount.toLocaleString()}
+                                       </div>
+                                       <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
+                                         {reward.rarity}
+                                       </div>
+                                     </CardContent>
+                                     
+                                     {reward.shimmer && (
+                                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-pulse" />
+                                     )}
+                                   </Card>
+                                 ))}
+                               </div>
+                             </div>
+                             
+                             {/* Center Indicator */}
+                             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1 h-full bg-gradient-to-b from-primary/80 to-primary/40 z-20">
+                               <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
+                               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-primary rounded-full shadow-lg" />
+                             </div>
+                           </div>
+                         </div>
 
-                        {/* Open Button */}
-                        <div className="text-center">
-                          <Button 
-                            onClick={openCase}
-                            disabled={isLocked}
-                            className="relative overflow-hidden px-8 py-4 text-lg font-bold bg-gradient-to-r from-primary to-accent hover:from-primary/80 hover:to-accent/80 text-white border border-primary/30 shadow-2xl hover:shadow-primary/25 transition-all duration-300"
-                          >
-                            <div className="relative z-10 flex items-center space-x-3">
-                              <Play className="w-6 h-6" />
-                              <span>Open Case</span>
-                            </div>
-                            
-                            {/* Button Glow */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 blur-xl animate-pulse" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                         {/* Open Button */}
+                         <div className="text-center">
+                           <Button 
+                             onClick={openCase}
+                             disabled={isLocked}
+                             className="relative overflow-hidden px-8 py-4 text-lg font-bold bg-gradient-to-r from-primary to-accent hover:from-primary/80 hover:to-accent/80 text-white border border-primary/30 shadow-2xl hover:shadow-primary/25 transition-all duration-300"
+                           >
+                             <div className="relative z-10 flex items-center space-x-3">
+                               <Play className="w-6 h-6" />
+                               <span>Open Case</span>
+                             </div>
+                             
+                             {/* Button Glow */}
+                             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 blur-xl animate-pulse" />
+                           </Button>
+                         </div>
+                       </div>
+                     )}
 
                     {/* Opening Phase */}
                     {phase === 'opening' && (
