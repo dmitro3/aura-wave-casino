@@ -1006,19 +1006,19 @@ async function completeRound(supabase: any, round: any) {
 
         // Update user stats and XP using unified system
         try {
-          const { data: statsResult, error: statsError } = await supabase.rpc('update_user_level_stats', {
+          const { data: statsResult, error: statsError } = await supabase.rpc('update_user_stats_and_level', {
             p_user_id: bet.user_id,
             p_game_type: 'roulette',
             p_bet_amount: bet.bet_amount,
+            p_result: isWin ? 'win' : 'loss',
             p_profit: profit,
-            p_is_win: isWin
+            p_streak_length: 0
           });
 
           if (statsError) {
             console.error('❌ Stats update error for bet:', bet.id, statsError);
           } else {
-            total_xp_awarded += statsResult.xp_added || 0;
-            console.log(`✅ Stats updated for bet ${bet.id}: ${statsResult.xp_added} XP`);
+            console.log(`✅ Stats updated for bet ${bet.id}: ${isWin ? 'WIN' : 'LOSS'}`);
           }
         } catch (rpcError) {
           console.warn('⚠️ Stats function not available yet (migration not applied):', rpcError);

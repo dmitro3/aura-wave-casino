@@ -329,14 +329,13 @@ serve(async (req) => {
 
           // Update user stats and XP for the loss
           try {
-            const { error: statsError } = await supabase.rpc('update_user_level_stats', {
+            const { error: statsError } = await supabase.rpc('update_user_stats_and_level', {
               p_user_id: user.id,
               p_game_type: 'tower',
               p_bet_amount: game.bet_amount,
+              p_result: 'loss',
               p_profit: -game.bet_amount,
-              p_is_win: false,
-              p_difficulty: game.difficulty,
-              p_completed: false  // This is NOT a completion, they hit a mine
+              p_streak_length: 0
             });
 
             if (statsError) {
@@ -430,14 +429,13 @@ serve(async (req) => {
 
             // Update user stats and XP for the win (auto completion)
             try {
-              const { error: statsError } = await supabase.rpc('update_user_level_stats', {
+              const { error: statsError } = await supabase.rpc('update_user_stats_and_level', {
                 p_user_id: user.id,
                 p_game_type: 'tower',
                 p_bet_amount: game.bet_amount,
+                p_result: 'win',
                 p_profit: finalPayout - game.bet_amount,
-                p_is_win: true,
-                p_difficulty: game.difficulty,
-                p_completed: true  // This is a completion since they reached max level
+                p_streak_length: 0
               });
 
               if (statsError) {
@@ -543,14 +541,13 @@ serve(async (req) => {
 
         // Update user stats and XP for the cash out (manual cash-out, not completion)
         try {
-          const { error: statsError } = await supabase.rpc('update_user_level_stats', {
+          const { error: statsError } = await supabase.rpc('update_user_stats_and_level', {
             p_user_id: user.id,
             p_game_type: 'tower',
             p_bet_amount: game.bet_amount,
+            p_result: 'win',
             p_profit: payout - game.bet_amount,
-            p_is_win: true,
-            p_difficulty: game.difficulty,
-            p_completed: false  // This is NOT a completion, just a manual cash-out
+            p_streak_length: 0
           });
 
           if (statsError) {
