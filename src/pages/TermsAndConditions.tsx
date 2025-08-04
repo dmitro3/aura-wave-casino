@@ -43,7 +43,7 @@ export default function TermsAndConditions() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Terms and Conditions</h1>
           <p className="text-slate-400">Effective Date: {today}</p>
-          <p className="text-slate-400">Website: https://aura-wave-casino.lovable.app</p>
+          <p className="text-slate-400">Website: https://hexcity.lovable.app</p>
         </div>
 
         {/* Content */}
@@ -53,7 +53,7 @@ export default function TermsAndConditions() {
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">1. Introduction</h2>
             <p className="text-slate-300 leading-relaxed">
-              Welcome to Aura Wave Casino, a simulated gambling platform designed purely for entertainment. 
+              Welcome to HexCity, a simulated gambling platform designed purely for entertainment. 
               By accessing or using our website, you agree to be bound by these Terms and Conditions ("Terms"). 
               If you do not agree, please do not use the site.
             </p>
@@ -76,7 +76,7 @@ export default function TermsAndConditions() {
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">3. Simulated Gambling & No Real-World Value</h2>
             <p className="text-slate-300 mb-4">
-              Aura Wave Casino provides simulated games using virtual coins. These coins:
+              HexCity provides simulated games using virtual coins. These coins:
             </p>
             <ul className="list-disc list-inside text-slate-300 space-y-2 ml-4">
               <li>Have no real-world monetary value</li>
@@ -156,7 +156,7 @@ export default function TermsAndConditions() {
           <section>
             <h2 className="text-2xl font-bold text-primary mb-4">10. Limitation of Liability</h2>
             <p className="text-slate-300 mb-4">
-              Aura Wave Casino and its operators shall not be liable for:
+              HexCity and its operators shall not be liable for:
             </p>
             <ul className="list-disc list-inside text-slate-300 space-y-2 ml-4">
               <li>Any losses (virtual or otherwise) incurred from playing</li>

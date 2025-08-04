@@ -867,7 +867,7 @@ export default function Index({ initialGame }: IndexProps) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass p-8 rounded-2xl text-center">
           <div className="text-2xl mb-4">🎮</div>
-          <p className="text-muted-foreground">Loading ArcadeFinance...</p>
+                          <p className="text-muted-foreground">Loading HexCity...</p>
         </div>
       </div>
     );
@@ -1002,7 +1002,7 @@ export default function Index({ initialGame }: IndexProps) {
                     <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-xl blur-md group-hover/logo:blur-lg transition-all duration-300" />
                     <div className="relative">
                       <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] bg-clip-text text-transparent animate-cyber-logo-shine">
-                        ArcadeFinance
+                        HexCity
                       </h1>
                       <div className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary/0 via-primary/60 to-primary/0 animate-pulse" />
                     </div>

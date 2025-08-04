@@ -35,7 +35,7 @@ export default function ResponsibleGambling() {
           {/* Introduction */}
           <section>
             <p className="text-slate-300 leading-relaxed">
-              At Aura Wave Casino, we are committed to promoting responsible play. While our platform uses virtual coins and simulated games with no real-world monetary value, we recognize that gambling-like activities can still affect behavior and well-being.
+              At HexCity, we are committed to promoting responsible play. While our platform uses virtual coins and simulated games with no real-world monetary value, we recognize that gambling-like activities can still affect behavior and well-being.
             </p>
           </section>
 
@@ -46,7 +46,7 @@ export default function ResponsibleGambling() {
               Our Commitment
             </h2>
             <p className="text-slate-300 leading-relaxed">
-              Aura Wave Casino is designed strictly for entertainment purposes. We do not offer real-money gambling or any form of financial reward. However, we encourage all players to use our site in a healthy, balanced, and recreational manner.
+              HexCity is designed strictly for entertainment purposes. We do not offer real-money gambling or any form of financial reward. However, we encourage all players to use our site in a healthy, balanced, and recreational manner.
             </p>
           </section>
 
@@ -168,7 +168,7 @@ export default function ResponsibleGambling() {
           <section className="bg-slate-800/30 border border-slate-600/50 rounded-lg p-6">
             <h2 className="text-xl font-bold text-primary mb-4">Final Note</h2>
             <p className="text-slate-300 leading-relaxed">
-              Your well-being matters more than the game. Aura Wave Casino is here to provide a fun and safe simulated experience. If it ever becomes something more than that, take action. We support your decision to play responsibly — or not at all.
+              Your well-being matters more than the game. HexCity is here to provide a fun and safe simulated experience. If it ever becomes something more than that, take action. We support your decision to play responsibly — or not at all.
             </p>
           </section>
 
