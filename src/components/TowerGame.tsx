@@ -163,7 +163,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     };
   }, [userData?.id, realtimeBalance]);
 
-  // Function to render replay tower with all mines revealed
+  // Function to render replay tower with all mines revealed - matching actual game design
   const renderReplayTower = (gameData: any) => {
     if (!gameData) return null;
     
@@ -175,67 +175,115 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
     
     const difficultyConfig = DIFFICULTY_INFO[difficulty as keyof typeof DIFFICULTY_INFO] || DIFFICULTY_INFO.easy;
     const tilesPerRow = difficultyConfig.tilesPerRow;
+    const payoutMultipliers = PAYOUT_MULTIPLIERS[difficulty as keyof typeof PAYOUT_MULTIPLIERS] || [];
+    
+    // Render individual tile matching actual game design
+    const renderReplayTile = (levelIndex: number, tileIndex: number) => {
+      const levelMines = minePositions[levelIndex] || [];
+      const isMine = levelMines.includes(tileIndex);
+      const isSelected = selectedTiles[levelIndex] === tileIndex;
+      const wasPlayed = levelIndex <= levelReached;
+      
+      // Use same styling logic as actual game
+      let tileClass = "relative w-full h-10 rounded-lg transition-all duration-200 ";
+      
+      // Determine tile state for styling
+      if (isSelected && !isMine) {
+        // Safe tile that was selected (green - successful path)
+        tileClass += "bg-emerald-500/20 border-2 border-emerald-500/40 ";
+      } else if (isSelected && isMine) {
+        // Mine that was selected (red - game ending)
+        tileClass += "bg-red-500/20 border-2 border-red-500/40 ";
+      } else if (isMine) {
+        // Unrevealed mine (show for replay transparency)
+        tileClass += "bg-red-900/30 border-2 border-red-700/50 ";
+      } else if (wasPlayed) {
+        // Safe tiles on played levels (slightly dimmed)
+        tileClass += "bg-slate-700/30 border-2 border-slate-600/30 opacity-50 ";
+      } else {
+        // Future levels not reached
+        tileClass += "bg-slate-800/30 border-2 border-slate-700/30 opacity-30 ";
+      }
+      
+      return (
+        <button key={tileIndex} className={tileClass} disabled>
+          <div className="flex items-center justify-center h-full">
+            {isSelected ? (
+              // Show result icon for selected tiles
+              isMine ? (
+                <X className="w-5 h-5 text-red-400" />
+              ) : (
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
+              )
+            ) : isMine ? (
+              // Show mine icon for unrevealed mines
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+            ) : (
+              // Show neutral dot for safe tiles
+              <div className="w-1.5 h-1.5 bg-slate-500 rounded-full opacity-30"></div>
+            )}
+          </div>
+          
+          {/* Selection highlight */}
+          {isSelected && (
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+          )}
+        </button>
+      );
+    };
+    
+    // Render level matching actual game design
+    const renderReplayLevel = (levelIndex: number) => {
+      const multiplier = payoutMultipliers[levelIndex];
+      const wasPlayed = levelIndex <= levelReached;
+      const isCurrentLevel = levelIndex === levelReached;
+      
+      return (
+        <div 
+          key={levelIndex} 
+          className={`p-2 rounded-lg transition-all duration-300 ${
+            wasPlayed && levelIndex < levelReached
+              ? 'bg-emerald-500/10 border border-emerald-500/30' 
+              : isCurrentLevel 
+                ? 'bg-primary/10 border border-primary/30 shadow-lg shadow-primary/10' 
+                : 'bg-slate-800/50 border border-slate-700/50'
+          }`}
+        >
+          {/* Multiplier display - centered */}
+          <div className="text-center mb-1">
+            <div className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+              wasPlayed && levelIndex < levelReached
+                ? 'bg-emerald-500/20 text-emerald-300' 
+                : isCurrentLevel 
+                  ? 'bg-primary/20 text-primary' 
+                  : 'bg-slate-700/50 text-slate-400'
+            }`}>
+              {multiplier ? multiplier.toFixed(2) : '1.00'}x
+            </div>
+          </div>
+          
+          {/* Tiles - Modern grid */}
+          <div className={`grid gap-1.5 ${
+            tilesPerRow === 2 ? 'grid-cols-2' :
+            tilesPerRow === 3 ? 'grid-cols-3' :
+            tilesPerRow === 4 ? 'grid-cols-4' : 'grid-cols-3'
+          }`}>
+            {Array.from({ length: tilesPerRow }, (_, i) => renderReplayTile(levelIndex, i))}
+          </div>
+        </div>
+      );
+    };
     
     return (
-      <div className="space-y-1">
-        {Array.from({ length: maxLevel }, (_, levelIndex) => {
-          const level = maxLevel - 1 - levelIndex; // Reverse order (top to bottom)
-          const levelMines = minePositions[level] || [];
-          const selectedTile = selectedTiles[level];
-          const wasPlayed = level <= levelReached;
-          
-          return (
-            <div key={level} className="flex justify-center gap-1">
-              {Array.from({ length: tilesPerRow }, (_, tileIndex) => {
-                const isMine = levelMines.includes(tileIndex);
-                const isSelected = selectedTile === tileIndex;
-                const isRevealed = true; // Always show everything in replay
-                
-                let tileClass = "w-12 h-12 border-2 rounded-lg flex items-center justify-center transition-all duration-300 text-sm font-bold relative overflow-hidden";
-                
-                if (isSelected && !isMine) {
-                  // Safe tile that was selected (green path)
-                  tileClass += " bg-emerald-500/30 border-emerald-400 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.5)]";
-                } else if (isSelected && isMine) {
-                  // Mine that was selected (player hit it - red)
-                  tileClass += " bg-red-500/30 border-red-400 text-red-300 shadow-[0_0_15px_rgba(239,68,68,0.5)]";
-                } else if (isMine) {
-                  // Unrevealed mine (dark red)
-                  tileClass += " bg-red-900/30 border-red-700 text-red-500";
-                } else {
-                  // Safe unrevealed tile
-                  tileClass += " bg-slate-700/30 border-slate-600 text-slate-400";
-                }
-                
-                // Add level indicator styling
-                if (!wasPlayed) {
-                  tileClass += " opacity-50";
-                }
-                
-                return (
-                  <div key={tileIndex} className={tileClass}>
-                    {/* Tile content */}
-                    {isMine ? (
-                      <AlertTriangle className="w-6 h-6" />
-                    ) : (
-                      <Coins className="w-5 h-5" />
-                    )}
-                    
-                    {/* Selection indicator */}
-                    {isSelected && (
-                      <div className="absolute inset-0 border-2 border-white/60 rounded-lg animate-pulse" />
-                    )}
-                    
-                    {/* Level number in corner */}
-                    <div className="absolute top-0.5 left-0.5 text-xs text-white/60 font-mono">
-                      {level + 1}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+      <div className="space-y-0.5">
+        {/* Render levels from top to bottom (reverse order) */}
+        {payoutMultipliers
+          .slice()
+          .reverse()
+          .map((_, index) => {
+            const actualLevel = payoutMultipliers.length - 1 - index;
+            return renderReplayLevel(actualLevel);
+          })}
       </div>
     );
   };
@@ -1401,20 +1449,24 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-white">Complete Tower Layout</h3>
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-emerald-500/30 border border-emerald-400 rounded"></div>
-                      <span className="text-slate-400">Selected Path</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-red-900/30 border border-red-700 rounded"></div>
-                      <span className="text-slate-400">Mines</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-slate-700/30 border border-slate-600 rounded"></div>
-                      <span className="text-slate-400">Safe Tiles</span>
-                    </div>
-                  </div>
+                                     <div className="flex items-center gap-3 text-xs flex-wrap">
+                     <div className="flex items-center gap-2">
+                       <CheckCircle className="w-3 h-3 text-emerald-400" />
+                       <span className="text-slate-400">Safe Path</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <X className="w-3 h-3 text-red-400" />
+                       <span className="text-slate-400">Hit Mine</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <AlertTriangle className="w-3 h-3 text-red-500" />
+                       <span className="text-slate-400">Hidden Mines</span>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <div className="w-2 h-2 bg-slate-500 rounded-full"></div>
+                       <span className="text-slate-400">Unselected</span>
+                     </div>
+                   </div>
                 </div>
                 
                 <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4 max-h-96 overflow-y-auto">
