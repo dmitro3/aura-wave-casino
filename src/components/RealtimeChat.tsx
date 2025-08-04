@@ -75,7 +75,13 @@ export const RealtimeChat = () => {
             console.log('Could not fetch avatar for new message:', error);
           }
           
-          setMessages(prev => [...prev, newMsg]);
+          setMessages(prev => {
+            const updatedMessages = [...prev, newMsg];
+            // Keep only the last 100 messages in the UI
+            return updatedMessages.length > 100 
+              ? updatedMessages.slice(-100) 
+              : updatedMessages;
+          });
           // Auto scroll after a slight delay to ensure DOM is updated
           setTimeout(scrollToBottom, 100);
         }
@@ -96,19 +102,20 @@ export const RealtimeChat = () => {
 
   const loadMessages = async () => {
     try {
-      // First, load chat messages (guaranteed to work)
+      // Load last 100 messages for UI display (database stores all messages)
+      // This keeps the chat performant while preserving message history
       const { data: messages, error: messagesError } = await supabase
         .from('chat_messages' as any)
         .select('*')
-        .order('created_at', { ascending: true })
-        .limit(50);
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (messagesError) {
         console.error('Error loading chat messages:', messagesError);
         return;
       }
 
-      console.log('Chat messages loaded:', messages?.length || 0);
+      console.log('Chat messages loaded:', messages?.length || 0, '(displaying last 100 messages)');
 
       // Then, enhance with avatar data
       if (messages && messages.length > 0) {
@@ -120,25 +127,27 @@ export const RealtimeChat = () => {
             .select('id, avatar_url')
             .in('id', userIds);
 
-          if (!profilesError && profiles) {
-            // Create a map of user_id to avatar_url
-            const avatarMap = new Map(profiles.map(p => [p.id, p.avatar_url]));
-            
-            // Enhance messages with avatar URLs
-            const enhancedMessages = messages.map(msg => ({
-              ...msg,
-              profiles: avatarMap.has(msg.user_id) ? { avatar_url: avatarMap.get(msg.user_id) } : null
-            }));
+                     if (!profilesError && profiles) {
+             // Create a map of user_id to avatar_url
+             const avatarMap = new Map(profiles.map(p => [p.id, p.avatar_url]));
+             
+             // Enhance messages with avatar URLs and reverse order (oldest first)
+             const enhancedMessages = messages
+               .map(msg => ({
+                 ...msg,
+                 profiles: avatarMap.has(msg.user_id) ? { avatar_url: avatarMap.get(msg.user_id) } : null
+               }))
+               .reverse();
 
-            setMessages(enhancedMessages as unknown as ChatMessage[]);
-          } else {
-            // If profile fetch fails, just use messages without avatars
-            setMessages(messages as unknown as ChatMessage[]);
-          }
-        } catch (profileError) {
-          console.log('Could not fetch avatars, using messages without:', profileError);
-          setMessages(messages as unknown as ChatMessage[]);
-        }
+             setMessages(enhancedMessages as unknown as ChatMessage[]);
+           } else {
+             // If profile fetch fails, just use messages without avatars (reversed)
+             setMessages(messages.reverse() as unknown as ChatMessage[]);
+           }
+                 } catch (profileError) {
+           console.log('Could not fetch avatars, using messages without:', profileError);
+           setMessages(messages.reverse() as unknown as ChatMessage[]);
+         }
       } else {
         setMessages([]);
       }
