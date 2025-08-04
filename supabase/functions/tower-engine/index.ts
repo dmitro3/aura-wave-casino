@@ -357,6 +357,23 @@ serve(async (req) => {
               .eq('id', user.id)
               .single();
 
+            // Get all tile selections from tower_levels to build selected_tiles array
+            const { data: levelData } = await supabase
+              .from('tower_levels')
+              .select('level_number, tile_selected')
+              .eq('game_id', game_id)
+              .order('level_number');
+
+            // Build selected_tiles array - index by level_number
+            const selectedTiles: number[] = [];
+            if (levelData) {
+              for (const level of levelData) {
+                selectedTiles[level.level_number] = level.tile_selected;
+              }
+            }
+            // Add the current tile selection that just hit the mine
+            selectedTiles[game.current_level] = tile_index;
+
             await supabase
               .from('live_bet_feed')
               .insert({
@@ -373,7 +390,7 @@ serve(async (req) => {
                   level_reached: game.current_level,
                   max_level: DIFFICULTY_CONFIGS[game.difficulty].maxLevel,
                   mine_positions: game.mine_positions,
-                  selected_tiles: game.selected_tiles || []
+                  selected_tiles: selectedTiles
                 }
               });
 
@@ -602,6 +619,21 @@ serve(async (req) => {
             .eq('id', user.id)
             .single();
 
+          // Get all tile selections from tower_levels to build selected_tiles array
+          const { data: levelData } = await supabase
+            .from('tower_levels')
+            .select('level_number, tile_selected')
+            .eq('game_id', game_id)
+            .order('level_number');
+
+          // Build selected_tiles array - index by level_number
+          const selectedTiles: number[] = [];
+          if (levelData) {
+            for (const level of levelData) {
+              selectedTiles[level.level_number] = level.tile_selected;
+            }
+          }
+
           await supabase
             .from('live_bet_feed')
             .insert({
@@ -618,7 +650,7 @@ serve(async (req) => {
                 level_reached: game.current_level,
                 max_level: config.maxLevel,
                 mine_positions: game.mine_positions,
-                selected_tiles: game.selected_tiles || []
+                selected_tiles: selectedTiles
               }
             });
 
