@@ -1475,7 +1475,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
               <div className="space-y-3">
                 <h3 className="text-lg font-bold text-white">Tower Layout</h3>
                 
-                <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4">
+                <div className="bg-slate-900/50 border border-slate-600/30 rounded-lg p-4 max-h-[60vh] overflow-y-auto">
                   {renderReplayTower(selectedGameReplay.game_data)}
                 </div>
                 
