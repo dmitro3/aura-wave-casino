@@ -1271,13 +1271,13 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                       return (
                         <div
                           key={bet.id}
-                          className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-2 hover:bg-slate-700/50 transition-colors cursor-pointer"
+                          className="bg-slate-800/50 border border-slate-600/50 rounded-lg p-1.5 hover:bg-slate-700/50 transition-colors cursor-pointer"
                           onClick={() => setSelectedGameReplay(bet)}
                         >
                           {/* User Info & Primary Stats Row */}
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="w-6 h-6">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <Avatar className="w-5 h-5">
                                 <AvatarImage src={bet.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${bet.username}`} />
                                 <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-blue-500 text-white">
                                   {bet.username.slice(0, 2).toUpperCase()}
@@ -1292,11 +1292,11 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                 </ClickableUsername>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge className={`text-xs px-1.5 py-0.5 ${difficultyInfo.color}`}>
-                                {difficultyInfo.name}
+                            <div className="flex items-center gap-1.5">
+                              <Badge className={`text-xs px-1 py-0 ${difficultyInfo.color}`}>
+                                {difficultyInfo.name.charAt(0)}
                               </Badge>
-                              <div className={`flex items-center gap-1 text-xs font-medium ${
+                              <div className={`flex items-center gap-0.5 text-xs font-medium ${
                                 isWin ? 'text-emerald-400' : 'text-red-400'
                               }`}>
                                 {isWin ? (
@@ -1322,7 +1322,7 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                 ${bet.bet_amount.toFixed(2)}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-xs text-slate-400">
                                 {levelReached}/{maxLevel}
                               </span>
@@ -1339,10 +1339,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                             </div>
                           </div>
 
-                          {/* Compact Progress Bar */}
-                          <div className="w-full bg-slate-700 rounded-full h-1.5">
+                          {/* Ultra-Compact Progress Bar */}
+                          <div className="w-full bg-slate-700 rounded-full h-1">
                             <div 
-                              className={`h-1.5 rounded-full transition-all duration-300 ${
+                              className={`h-1 rounded-full transition-all duration-300 ${
                                 isWin ? 'bg-emerald-500' : 'bg-red-500'
                               }`}
                               style={{ 
