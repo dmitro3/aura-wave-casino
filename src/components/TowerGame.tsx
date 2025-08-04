@@ -1297,7 +1297,10 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                                 {/* Circular Badge - Default State */}
                                 <Badge 
                                   className={`text-xs px-1 py-0 ${difficultyInfo.color} transition-all duration-300 cursor-help
-                                    opacity-100 group-hover:opacity-0`}
+                                    opacity-100 group-hover:opacity-0
+                                    ${difficulty === 'easy' ? 'hover:bg-emerald-500/30 hover:border-emerald-400/50' : 
+                                      difficulty === 'medium' ? 'hover:bg-amber-500/30 hover:border-amber-400/50' : 
+                                      difficulty === 'hard' ? 'hover:bg-rose-500/30 hover:border-rose-400/50' : 'hover:bg-violet-500/30 hover:border-violet-400/50'}`}
                                   title={difficultyInfo.name}
                                 >
                                   {difficultyInfo.name.charAt(0)}
