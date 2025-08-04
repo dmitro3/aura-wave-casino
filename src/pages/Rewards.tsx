@@ -10,6 +10,7 @@ import { CyberpunkCaseOpeningModal } from '@/components/CyberpunkCaseOpeningModa
 import { useToast } from '@/hooks/use-toast';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { cn } from '@/lib/utils';
+import { useCountdown, getNextMidnight, formatCountdown } from '@/hooks/useCountdown';
 
 export default function Rewards() {
   const navigate = useNavigate();
@@ -31,6 +32,10 @@ export default function Rewards() {
   const { toast } = useToast();
 
   const [selectedLevelCase, setSelectedLevelCase] = useState<any | null>(null);
+  
+  // Countdown to next midnight
+  const nextMidnight = getNextMidnight();
+  const countdown = useCountdown(nextMidnight);
 
   const handleLevelCaseOpened = async (caseId: string) => {
     // Find the case data and just open the modal (don't actually open the case yet)
@@ -327,7 +332,7 @@ export default function Rewards() {
                         {/* Show when case will be available again */}
                         {caseData.user_level >= caseData.level_required && !caseData.is_available && caseData.last_reset_date && (
                           <div className="text-xs text-muted-foreground">
-                            Resets daily at midnight
+                            Resets in: {formatCountdown(countdown)}
                           </div>
                         )}
                       </div>

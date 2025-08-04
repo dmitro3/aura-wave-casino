@@ -198,6 +198,17 @@ export const CyberpunkCaseOpeningModal = ({
   const startSpinningAnimation = async () => {
     setSpinning(true);
     
+    // Roulette-style animation with proper tile rendering
+    const TILE_SIZE_PX = 136; // 128px card + 8px gap
+    const VISIBLE_TILES = 9; // Show 9 tiles at once
+    const REEL_WIDTH_PX = VISIBLE_TILES * TILE_SIZE_PX;
+    const CENTER_MARKER_PX = REEL_WIDTH_PX / 2;
+    
+    // Create enough tiles for smooth infinite scrolling (like roulette)
+    const TILE_REPEATS = 40; // Repeat the possible rewards 40 times
+    const TOTAL_TILES = possibleRewards.length * TILE_REPEATS;
+    const TOTAL_REEL_WIDTH_PX = TOTAL_TILES * TILE_SIZE_PX;
+    
     // Fast spinning phase - similar to roulette
     let currentSpeed = 100;
     let currentPosition = 0;
@@ -207,7 +218,20 @@ export const CyberpunkCaseOpeningModal = ({
     const spinInterval = setInterval(() => {
       spinDuration += 50;
       currentPosition += currentSpeed;
-      setReelPosition(currentPosition);
+      
+      // Normalize position to prevent tiles from disappearing
+      const wheelCyclePx = possibleRewards.length * TILE_SIZE_PX;
+      let normalizedPosition = currentPosition % wheelCyclePx;
+      
+      // Keep position within safe bounds
+      while (normalizedPosition < -wheelCyclePx * 10) {
+        normalizedPosition += wheelCyclePx;
+      }
+      while (normalizedPosition > wheelCyclePx * 10) {
+        normalizedPosition -= wheelCyclePx;
+      }
+      
+      setReelPosition(normalizedPosition);
       
       // Gradually slow down over time
       const progress = spinDuration / totalSpinDuration;
@@ -497,24 +521,27 @@ export const CyberpunkCaseOpeningModal = ({
                               className="flex space-x-2 transition-transform duration-75 ease-out"
                               style={{ transform: `translateX(-${reelPosition}px)` }}
                             >
-                              {possibleRewards.map((reward, index) => (
-                                <Card
-                                  key={index}
-                                  className={`
-                                    w-32 h-32 flex-shrink-0 relative overflow-hidden
-                                    ${reward.bgGradient} border-2 ${reward.borderColor}
-                                  `}
-                                >
-                                  <CardContent className="p-4 text-center">
-                                    <div className="text-lg font-bold text-white mb-1">
-                                      ${reward.amount.toLocaleString()}
-                                    </div>
-                                    <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
-                                      {reward.rarity}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
+                              {/* Render enough tiles for smooth infinite scrolling (like roulette) */}
+                              {Array.from({ length: 40 }, (_, repeat) => 
+                                possibleRewards.map((reward, index) => (
+                                  <Card
+                                    key={`${repeat}-${index}`}
+                                    className={`
+                                      w-32 h-32 flex-shrink-0 relative overflow-hidden
+                                      ${reward.bgGradient} border-2 ${reward.borderColor}
+                                    `}
+                                  >
+                                    <CardContent className="p-4 text-center">
+                                      <div className="text-lg font-bold text-white mb-1">
+                                        ${reward.amount.toLocaleString()}
+                                      </div>
+                                      <div className={cn("text-xs font-medium capitalize", reward.textColor)}>
+                                        {reward.rarity}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))
+                              ).flat()}
                             </div>
                           </div>
                           
