@@ -96,17 +96,53 @@ export const RealtimeChat = () => {
 
   const loadMessages = async () => {
     try {
-      const { data, error } = await supabase
+      // First, load chat messages (guaranteed to work)
+      const { data: messages, error: messagesError } = await supabase
         .from('chat_messages' as any)
-        .select(`
-          *,
-          profiles!inner(avatar_url)
-        `)
+        .select('*')
         .order('created_at', { ascending: true })
         .limit(50);
 
-      if (error) throw error;
-      setMessages((data as unknown as ChatMessage[]) || []);
+      if (messagesError) {
+        console.error('Error loading chat messages:', messagesError);
+        return;
+      }
+
+      console.log('Chat messages loaded:', messages?.length || 0);
+
+      // Then, enhance with avatar data
+      if (messages && messages.length > 0) {
+        const userIds = [...new Set(messages.map(msg => msg.user_id))];
+        
+        try {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, avatar_url')
+            .in('id', userIds);
+
+          if (!profilesError && profiles) {
+            // Create a map of user_id to avatar_url
+            const avatarMap = new Map(profiles.map(p => [p.id, p.avatar_url]));
+            
+            // Enhance messages with avatar URLs
+            const enhancedMessages = messages.map(msg => ({
+              ...msg,
+              profiles: avatarMap.has(msg.user_id) ? { avatar_url: avatarMap.get(msg.user_id) } : null
+            }));
+
+            setMessages(enhancedMessages as unknown as ChatMessage[]);
+          } else {
+            // If profile fetch fails, just use messages without avatars
+            setMessages(messages as unknown as ChatMessage[]);
+          }
+        } catch (profileError) {
+          console.log('Could not fetch avatars, using messages without:', profileError);
+          setMessages(messages as unknown as ChatMessage[]);
+        }
+      } else {
+        setMessages([]);
+      }
+
       setTimeout(scrollToBottom, 100);
     } catch (error: any) {
       console.error('Error loading messages:', error);
