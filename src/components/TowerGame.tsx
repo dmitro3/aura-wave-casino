@@ -1427,9 +1427,20 @@ export default function TowerGame({ userData, onUpdateUser }: TowerGameProps) {
                       </Avatar>
                       <ClickableUsername 
                         username={selectedGameReplay.username}
-                        className="font-medium text-slate-200 hover:text-primary transition-colors"
+                        className="font-medium text-slate-200 group relative overflow-hidden"
                       >
-                        {selectedGameReplay.username}
+                        <span className="relative z-10 transition-colors duration-300 group-hover:text-primary">
+                          {selectedGameReplay.username.split('').map((char, index) => (
+                            <span 
+                              key={index}
+                              className="inline-block transition-all duration-300 hover:scale-110 hover:text-primary hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.8)]"
+                              style={{ transitionDelay: `${index * 20}ms` }}
+                            >
+                              {char}
+                            </span>
+                          ))}
+                        </span>
+                        <span className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/20 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></span>
                       </ClickableUsername>
                     </div>
                   </div>
