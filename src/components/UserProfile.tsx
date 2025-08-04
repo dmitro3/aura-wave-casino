@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { UserProfile as UserProfileType } from '@/hooks/useUserProfile';
 import { ProfileBorder } from './ProfileBorder';
+import { ProfilePictureUpload } from './ProfilePictureUpload';
 import { useUserLevelStats } from '@/hooks/useUserLevelStats';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -110,6 +111,9 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
   const [tipAmount, setTipAmount] = useState('');
   const [tipMessage, setTipMessage] = useState('');
   const [isSendingTip, setIsSendingTip] = useState(false);
+
+  // Avatar state
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
 
   // Determine which userData to use
   const userData = propUserData || fetchedUserData;
@@ -303,6 +307,9 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
             gameStats,
             badges: [] // You might want to fetch this from a badges table
           };
+
+          // Set avatar URL from profile
+          setCurrentAvatarUrl(profile.avatar_url);
 
 
           setFetchedUserData(fetchedUser);
@@ -609,7 +616,7 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
                   <ProfileBorder level={currentLevel} size="lg">
                     <div className="w-full h-full rounded-full overflow-hidden relative group-hover/avatar:scale-105 transition-transform duration-500">
                       <img 
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
+                        src={currentAvatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`}
                         alt={`${userData.username} avatar`}
                         className="w-full h-full object-cover"
                       />
@@ -630,6 +637,23 @@ export default function UserProfile({ isOpen, onClose, userData: propUserData, u
 
                     </div>
                   </ProfileBorder>
+                  
+                  {/* Profile Picture Upload - Only show for own profile */}
+                  {(isOwnProfile || shouldShowOwnProfile) && (
+                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 z-20">
+                      <ProfilePictureUpload
+                        userId={userData.id}
+                        currentAvatarUrl={currentAvatarUrl}
+                        onAvatarUpdate={(newUrl) => {
+                          setCurrentAvatarUrl(newUrl || null);
+                          // Refresh user data if callback provided
+                          if (onUserDataUpdate) {
+                            onUserDataUpdate();
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
                   
                   {/* Corner Tech Indicators */}
                   <div className="absolute -top-1 -left-1 w-3 h-3 border-l-2 border-t-2 border-primary/80" />

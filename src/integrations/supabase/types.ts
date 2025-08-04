@@ -541,6 +541,7 @@ export type Database = {
       profiles: {
         Row: {
           available_cases: number | null
+          avatar_url: string | null
           badges: string[]
           balance: number
           border_tier: number | null
@@ -560,6 +561,7 @@ export type Database = {
         }
         Insert: {
           available_cases?: number | null
+          avatar_url?: string | null
           badges?: string[]
           balance?: number
           border_tier?: number | null
@@ -579,6 +581,7 @@ export type Database = {
         }
         Update: {
           available_cases?: number | null
+          avatar_url?: string | null
           badges?: string[]
           balance?: number
           border_tier?: number | null

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { calculateAccurateXPProgress } from "@/lib/levelRequirements";
 import { formatXPProgress } from "@/lib/xpUtils";
 import { ProfileBorder } from "@/components/ProfileBorder";
@@ -13,6 +13,7 @@ interface UserLevelDisplayProps {
     current_level_xp: number;
     xp_to_next_level: number;
   };
+  avatarUrl?: string | null;
   size?: 'sm' | 'md' | 'lg';
   showXP?: boolean;
 }
@@ -20,6 +21,7 @@ interface UserLevelDisplayProps {
 export function UserLevelDisplay({ 
   username, 
   levelStats, 
+  avatarUrl,
   size = 'md', 
   showXP = false 
 }: UserLevelDisplayProps) {
@@ -59,6 +61,7 @@ export function UserLevelDisplay({
     <div className={`flex items-center ${classes.container}`}>
       <ProfileBorder level={levelStats.current_level} size={size}>
         <Avatar className={classes.avatar}>
+          {avatarUrl && <AvatarImage src={avatarUrl} alt={`${username}'s profile`} />}
           <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white font-bold">
             {username.slice(0, 2).toUpperCase()}
           </AvatarFallback>

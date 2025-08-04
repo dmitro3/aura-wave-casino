@@ -10,6 +10,7 @@ export interface UserProfile {
   balance: number
   last_claim_time: string
   badges: string[]
+  avatar_url?: string | null
   // Level and XP data comes from user_level_stats
   levelStats?: {
     current_level: number
